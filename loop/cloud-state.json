@@ -25,10 +25,12 @@
       "note": "Claude Code config, progress checklist (116 tasks), ADR, dev-users placeholder. Hooks tested; slash menu needs a new session to confirm."
     },
     "S-04": {
-      "status": "in-progress",
+      "status": "done",
       "attempts": 1,
       "claimedAt": "2026-10-09T07:38:12.896Z",
-      "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e"
+      "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e",
+      "finishedAt": "2026-10-09T08:10:47.612Z",
+      "note": "CI + staging deploy workflows, 4 Dockerfiles, PR template, Dependabot, deploy docs. Reviewed; images and CI steps verified locally; workflows not yet run on GitHub."
     }
   },
   "approvals": [],
@@ -39,6 +41,7 @@
     "2026-10-09T05:48:08.995Z finish S-02 done",
     "2026-10-09T05:58:05.637Z claim S-03 attempt 1",
     "2026-10-09T06:00:38.196Z finish S-03 done",
-    "2026-10-09T07:38:12.903Z claim S-04 attempt 1"
+    "2026-10-09T07:38:12.903Z claim S-04 attempt 1",
+    "2026-10-09T08:10:47.612Z finish S-04 done"
   ]
 }
