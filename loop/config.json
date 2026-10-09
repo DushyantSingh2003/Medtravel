@@ -43,18 +43,19 @@
 
   "claude": {
     "command": "claude",
-    "model": null,
-    "effort": null,
+    "model": "opus",
+    "effort": "high",
     "permissionMode": "bypassPermissions",
     "maxTurns": 250,
     "maxTaskUsd": null,
     "timeoutMinutes": 150,
-    "extraArgs": []
+    "extraArgs": ["--fallback-model", "sonnet"]
   },
   "review": { "enabled": true, "rounds": 1, "blockingSeverities": ["critical", "high", "medium"], "maxTurns": 80 },
   "securityReview": { "enabled": true, "blockingSeverities": ["critical", "high"] },
   "maxFixRounds": 3,
   "maxAttempts": 2,
+  "cloudStaleClaimHours": 4,
   "maxTotalUsd": null,
 
   "verify": { "commands": ["pnpm install", "pnpm check"], "timeoutMinutes": 45 },
