@@ -17,10 +17,12 @@
       "note": "Compose stack, pnpm dev, README. Postgres/Redis/Mailpit/ClamAV and all apps verified; MinIO containers and full pnpm dev unverified (quay.io blocked in build env)."
     },
     "S-03": {
-      "status": "in-progress",
+      "status": "done",
       "attempts": 1,
       "claimedAt": "2026-10-09T05:58:05.631Z",
-      "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e"
+      "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e",
+      "finishedAt": "2026-10-09T06:00:38.196Z",
+      "note": "Claude Code config, progress checklist (116 tasks), ADR, dev-users placeholder. Hooks tested; slash menu needs a new session to confirm."
     }
   },
   "approvals": [],
@@ -29,6 +31,7 @@
     "2026-10-09T05:35:05.271Z finish S-01 done",
     "2026-10-09T05:38:07.094Z claim S-02 attempt 1",
     "2026-10-09T05:48:08.995Z finish S-02 done",
-    "2026-10-09T05:58:05.637Z claim S-03 attempt 1"
+    "2026-10-09T05:58:05.637Z claim S-03 attempt 1",
+    "2026-10-09T06:00:38.196Z finish S-03 done"
   ]
 }
