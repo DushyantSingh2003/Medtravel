@@ -11,3 +11,6 @@ Appended by build tasks. Format: `- [<TASK-ID>] <question> — assumed: <what wa
 - [S-02] MinIO is no longer on Docker Hub — assumed: official `quay.io/minio/minio` and `quay.io/minio/mc` with unpinned `latest` tags; the exact release tags could not be looked up here. Pin them.
 - [S-02] The API and worker refuse to start without `.env`, but a fresh clone has none — assumed: `pnpm infra:up` copies each `.env.example` to a gitignored `.env` when missing.
 - [S-02] Nest does not load `.env` itself — assumed: the API and worker `dev` scripts run through `node --env-file=.env`.
+- [S-03] The plan's `CLAUDE.md` says `pnpm check` includes API e2e and points at `apps/api/src/logger.ts` — assumed: neither is true yet, so the file states what `pnpm check` runs today and the real logger path, and adds a short "Stack notes" section.
+- [S-03] The plan's `protect-files.sh` blocks `.env`, which would also block `.env.example` that `CLAUDE.md` tells sessions to edit — assumed: `.env.example` stays editable; `.env` and `.env.*` are blocked.
+- [S-03] `docs/progress.md` ticks S-01..S-03 only, per the task, so it does not reflect any deferred verification (S-02's MinIO check) as a tick difference — assumed: deferrals are listed under "Notes and deferred work".
