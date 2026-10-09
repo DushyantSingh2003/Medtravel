@@ -13,17 +13,24 @@ set -euo pipefail
 app="${1:?usage: smoke-image.sh <api|worker|web|portal> <image>}"
 image="${2:?usage: smoke-image.sh <api|worker|web|portal> <image>}"
 name="smoke-$app-$$"
-log="$(mktemp)"
 
 cleanup() {
-  docker logs "$name" > "$log" 2>&1 || true
   docker rm -f "$name" > /dev/null 2>&1 || true
 }
 fail() {
   echo "::error::$app image smoke test failed: $1" >&2
   echo "--- container log ---" >&2
-  tail -n 40 "$log" >&2 || true
+  docker logs "$name" 2>&1 | tail -n 40 >&2 || true
   exit 1
+}
+
+# True when the container's log contains the text. The log is read into a variable first:
+# piping `docker logs` straight into `grep -q` fails under `pipefail` whenever grep exits at
+# the first match and docker is killed by SIGPIPE, which depends on timing.
+log_contains() {
+  local logs
+  logs="$(docker logs "$name" 2>&1)" || true
+  grep -q -- "$1" <<< "$logs"
 }
 trap cleanup EXIT
 
@@ -61,13 +68,13 @@ case "$app" in
   worker)
     # No port: it must stay up and finish wiring its queue.
     for _ in $(seq 1 15); do
-      docker logs "$name" 2>&1 | grep -q "NotificationsModule dependencies initialized" && break
+      log_contains "NotificationsModule dependencies initialized" && break
       [ "$(docker inspect -f '{{.State.Running}}' "$name")" = "true" ] || fail "worker exited"
       sleep 1
     done
     sleep 3
     [ "$(docker inspect -f '{{.State.Running}}' "$name")" = "true" ] || fail "worker exited after starting"
-    docker logs "$name" 2>&1 | grep -q "NotificationsModule dependencies initialized" || fail "worker never initialised its queue"
+    log_contains "NotificationsModule dependencies initialized" || fail "worker never initialised its queue"
     ;;
   *)
     fail "unknown app '$app'"
