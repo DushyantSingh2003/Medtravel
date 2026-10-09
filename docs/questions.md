@@ -8,3 +8,6 @@ Appended by build tasks. Format: `- [<TASK-ID>] <question> — assumed: <what wa
 - [S-01] `nestjs-zod` 5.5 declares peer ranges that exclude Nest 12 — assumed: safe to use, since it imports and works (validated by the API e2e test); the peer range is stale. Re-check when it publishes a Nest 12 range.
 - [S-01] Tailwind 4 has no JS config, so the plan's "Tailwind preset" — assumed: a shared `theme.css` with an `@theme` block in `packages/ui`.
 - [S-01] BullMQ on native ESM cannot lazy-load ioredis from connection options — assumed: the worker passes a constructed `ioredis` client.
+- [S-02] MinIO is no longer on Docker Hub — assumed: official `quay.io/minio/minio` and `quay.io/minio/mc` with unpinned `latest` tags; the exact release tags could not be looked up here. Pin them.
+- [S-02] The API and worker refuse to start without `.env`, but a fresh clone has none — assumed: `pnpm infra:up` copies each `.env.example` to a gitignored `.env` when missing.
+- [S-02] Nest does not load `.env` itself — assumed: the API and worker `dev` scripts run through `node --env-file=.env`.
