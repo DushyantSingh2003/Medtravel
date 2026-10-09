@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "nest build",
-    "dev": "nest start --watch",
+    "dev": "nest start --watch --exec \"node --env-file=.env\"",
     "start": "node dist/main.js",
     "openapi:export": "DATABASE_URL=${DATABASE_URL:-postgresql://x:x@localhost:5432/x} REDIS_URL=${REDIS_URL:-redis://localhost:6379} tsx src/scripts/export-openapi.ts",
     "lint": "eslint src test",

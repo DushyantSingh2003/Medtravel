@@ -9,7 +9,11 @@
     "pnpm": ">=10.0.0"
   },
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "pnpm infra:up && turbo run dev",
+    "infra:up": "node scripts/setup-env.mjs && docker compose -f infra/docker-compose.yml up -d --wait",
+    "infra:down": "docker compose -f infra/docker-compose.yml down",
+    "infra:reset": "docker compose -f infra/docker-compose.yml down -v",
+    "infra:logs": "docker compose -f infra/docker-compose.yml logs -f",
     "build": "turbo run build",
     "check": "turbo run lint typecheck test",
     "lint": "turbo run lint",
