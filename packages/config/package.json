@@ -1,0 +1,23 @@
+{
+  "name": "@medtravel/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./eslint/base": "./eslint/base.mjs",
+    "./eslint/next": "./eslint/next.mjs",
+    "./tsconfig/base.json": "./tsconfig/base.json",
+    "./tsconfig/nest.json": "./tsconfig/nest.json",
+    "./tsconfig/next.json": "./tsconfig/next.json",
+    "./tsconfig/react-lib.json": "./tsconfig/react-lib.json",
+    "./vitest/node": "./vitest/node.mjs",
+    "./vitest/react": "./vitest/react.mjs"
+  },
+  "dependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.13.0",
+    "typescript-eslint": "^8.71.1",
+    "vitest": "^4.1.11"
+  }
+}

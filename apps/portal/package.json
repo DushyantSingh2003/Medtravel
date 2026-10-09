@@ -1,0 +1,36 @@
+{
+  "name": "@medtravel/portal",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --port 3002",
+    "build": "next build",
+    "start": "next start --port 3002",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@medtravel/api-client": "workspace:*",
+    "@medtravel/contracts": "workspace:*",
+    "@medtravel/i18n": "workspace:*",
+    "@medtravel/ui": "workspace:*",
+    "next": "16.4.0",
+    "next-intl": "^4.14.9",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@medtravel/config": "workspace:*",
+    "@tailwindcss/turbopack": "^4.3.3",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "16.4.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.11"
+  }
+}

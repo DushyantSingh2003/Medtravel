@@ -1,0 +1,18 @@
+{
+  "common": {
+    "appName": "MedTravel",
+    "loading": "Loading…",
+    "error": "Something went wrong",
+    "retry": "Try again",
+    "language": "Language"
+  },
+  "home": {
+    "title": "Treatment abroad, handled end to end",
+    "subtitle": "Share your reports, get an expert opinion and a clear quote, and travel with everything arranged.",
+    "cta": "Get a free opinion"
+  },
+  "portal": {
+    "title": "MedTravel portal",
+    "signIn": "Sign in"
+  }
+}
