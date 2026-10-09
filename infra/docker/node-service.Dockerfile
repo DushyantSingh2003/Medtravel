@@ -19,18 +19,20 @@ RUN corepack enable
 WORKDIR /repo
 
 # ---- dependencies: only the lockfile is needed, so this layer is cached until it changes ----
+# The package store is written into this layer on purpose (not a BuildKit cache mount): layer
+# caches such as GitHub Actions' export layers but not mount contents, so a cached layer paired
+# with an empty mount would make the offline install below fail. The store never reaches the
+# runtime image.
 FROM base AS deps
 COPY pnpm-lock.yaml pnpm-workspace.yaml .npmrc .pnpmfile.cjs package.json ./
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm fetch
+RUN pnpm fetch
 
 # ---- build: compile the app and the workspace packages it depends on ----
 FROM deps AS build
 ARG APP
 RUN test -n "$APP" || (echo "build-arg APP is required (api or worker)" >&2; exit 1)
 COPY . .
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm install --offline --frozen-lockfile
+RUN pnpm install --offline --frozen-lockfile
 RUN pnpm turbo run build --filter=@medtravel/${APP}...
 # A self-contained directory: the app, its compiled workspace packages and production
 # dependencies only (no dev tooling, no sources of other apps). The Prisma CLI is kept out by

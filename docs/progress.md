@@ -11,7 +11,7 @@ Tasks: 116 in the plan. Done: S-01 to S-04.
 - [x] **S-01** Monorepo scaffold
 - [x] **S-02** Local services with Docker
 - [x] **S-03** Claude Code configuration and progress tracker
-- [x] **S-04** CI pipeline and staging deploy
+- [x] **S-04** CI pipeline and staging deploy — pending its first green run on GitHub (see deferred notes)
 - [ ] **S-05** Design system (packages/ui)
 - [ ] **S-06** App shells and layouts
 

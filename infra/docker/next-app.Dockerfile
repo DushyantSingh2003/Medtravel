@@ -19,10 +19,13 @@ ENV PNPM_HOME=/pnpm \
 RUN corepack enable
 WORKDIR /repo
 
+# The package store is written into this layer on purpose (not a BuildKit cache mount): layer
+# caches such as GitHub Actions' export layers but not mount contents, so a cached layer paired
+# with an empty mount would make the offline install below fail. The store never reaches the
+# runtime image.
 FROM base AS deps
 COPY pnpm-lock.yaml pnpm-workspace.yaml .npmrc .pnpmfile.cjs package.json ./
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm fetch
+RUN pnpm fetch
 
 FROM deps AS build
 ARG APP
@@ -31,8 +34,7 @@ RUN test -n "$APP" || (echo "build-arg APP is required (web or portal)" >&2; exi
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \
     NEXT_OUTPUT=standalone
 COPY . .
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm install --offline --frozen-lockfile
+RUN pnpm install --offline --frozen-lockfile
 RUN pnpm turbo run build --filter=@medtravel/${APP}...
 
 FROM node:${NODE_VERSION}-alpine AS runtime

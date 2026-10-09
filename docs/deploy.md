@@ -45,14 +45,16 @@ docker build -f infra/docker/next-app.Dockerfile --build-arg APP=web \
 ## GitHub configuration
 
 Set under **Settings → Secrets and variables → Actions**. Values that are not secret are
-*variables*, not secrets.
+*variables*, not secrets. Set them as **repository** variables: the deploy job's `if` condition is
+evaluated before the job's environment is applied, so a variable that exists only on the
+`staging` environment is invisible to it and the deploy silently skips.
 
 ### Required for deploy
 
 | Name | Kind | Example | Used for |
 | --- | --- | --- | --- |
 | `AWS_ROLE_ARN` | variable | `arn:aws:iam::123456789012:role/medtravel-staging-github-deploy` | IAM role the workflow assumes through GitHub OIDC. Setting it switches the deploy on. |
-| `STAGING_API_URL` | variable | `https://api.staging.example.com` | Compiled into the web and portal bundles as `NEXT_PUBLIC_API_URL` |
+| `STAGING_API_URL` | variable | `https://api.staging.example.com` | Compiled into the web and portal bundles as `NEXT_PUBLIC_API_URL`. The deploy fails fast for web and portal if it is empty. |
 
 There are **no AWS access keys** in GitHub: the workflow uses OIDC (`id-token: write`).
 
@@ -77,13 +79,27 @@ Created by Terraform in L-05; listed so they can be made by hand in the meantime
 1. **Four ECR repositories**: `medtravel-api`, `medtravel-worker`, `medtravel-web`, `medtravel-portal`.
 2. **An ECS cluster** and **four Fargate services** named as above. Each task definition uses the
    matching repository with the tag **`staging`**.
-3. **An IAM role** trusted by GitHub OIDC (`token.actions.githubusercontent.com`) with a trust
-   condition limited to this repository and the `main` branch or `staging` environment, allowing:
+3. **An IAM role** trusted by GitHub OIDC (identity provider `token.actions.githubusercontent.com`).
+   Because the deploy job uses the `staging` environment, the token's subject is
+   `repo:<org>/<repo>:environment:staging` and does **not** contain the branch. The trust policy
+   condition must therefore be:
+   - `token.actions.githubusercontent.com:aud` equals `sts.amazonaws.com`
+   - `token.actions.githubusercontent.com:sub` equals `repo:<org>/<repo>:environment:staging`
+
+   (A condition on `refs/heads/main` would never match and role assumption would fail.) Branch
+   limiting is done in two other places: the workflow only deploys when `github.ref` is
+   `refs/heads/main`, and the `staging` environment should restrict **Deployment branches** to
+   `main` (Settings → Environments → staging).
+
+   The role needs:
    - `ecr:GetAuthorizationToken`
    - `ecr:BatchCheckLayerAvailability`, `ecr:InitiateLayerUpload`, `ecr:UploadLayerPart`,
      `ecr:CompleteLayerUpload`, `ecr:PutImage`, `ecr:BatchGetImage`, `ecr:GetDownloadUrlForLayer`
      on the four repositories
    - `ecs:UpdateService` and `ecs:DescribeServices` on the four services
+4. **Mutable image tags** on the four ECR repositories. `:staging` is pushed again on every
+   deploy, so an immutable-tag repository (a common default in Terraform modules) makes the
+   second deploy fail on `PutImage`.
 
 ### How a deploy rolls out
 
@@ -100,7 +116,22 @@ Terraform is in place.
 Dependabot (`.github/dependabot.yml`) opens weekly, grouped update pull requests for npm and for
 GitHub Actions. Docker base-image updates are manual: change `NODE_VERSION` in the Dockerfiles.
 
-## Branch protection (recommended)
+## Branch protection (required before deploys are enabled)
 
-On `main` and `develop`, require the `CI` checks (**Lint, typecheck, unit tests**, **API e2e**,
-**Build all apps and smoke test**, **Docker image**) to pass before merging.
+`deploy-staging.yml` runs on every push to `main` and does **not** wait for CI. Branch
+protection is what guarantees only checked code reaches it, so set it on `main` (and `develop`)
+**before** setting `AWS_ROLE_ARN`: require a pull request and require these status checks to pass.
+Matrix jobs appear as separate checks and must each be added:
+
+- `Lint, typecheck, unit tests`
+- `API e2e (Postgres + Redis)`
+- `Build all apps and smoke test`
+- `Docker image (api)`, `Docker image (worker)`, `Docker image (web)`, `Docker image (portal)`
+
+As a second line of defence the deploy boots each image (`scripts/smoke-image.sh`) before pushing it.
+
+## Supply chain
+
+Workflow actions are pinned by major version tag (`@v4`). The deploy workflow holds
+`id-token: write`, so consider pinning the third-party actions in it (`aws-actions/*`,
+`docker/*`) to commit SHAs; Dependabot can keep SHA pins updated.

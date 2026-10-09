@@ -20,7 +20,9 @@ permissions:
 jobs:
   deploy:
     name: Deploy ${{ matrix.app }}
-    if: ${{ vars.AWS_ROLE_ARN != '' }}
+    # Only the main branch deploys, even for a manual run: the OIDC subject for this job is the
+    # environment, not the branch, so the branch restriction has to be here.
+    if: ${{ github.ref == 'refs/heads/main' && vars.AWS_ROLE_ARN != '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment: staging
@@ -28,6 +30,16 @@ jobs:
       fail-fast: false
       matrix:
         app: [api, worker, web, portal]
+    services:
+      # The worker image connects to Redis when it starts; the image is boot-tested before it is pushed.
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
     env:
       AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
       ECS_CLUSTER: ${{ vars.ECS_CLUSTER || 'medtravel-staging' }}
@@ -54,22 +66,44 @@ jobs:
             web|portal) echo "file=infra/docker/next-app.Dockerfile" >> "$GITHUB_OUTPUT" ;;
           esac
 
-      # Tagged with the commit (immutable, for rollbacks) and with `staging` (the tag the ECS
-      # task definitions point at).
+      - name: Require the API URL for the Next apps
+        if: ${{ contains(fromJSON('["web","portal"]'), matrix.app) && vars.STAGING_API_URL == '' }}
+        run: |
+          echo "::error::Repository variable STAGING_API_URL is not set. web and portal compile it into the browser bundle."
+          exit 1
+
+      # Build once into the local daemon and boot it, so a broken image is never pushed.
       - uses: docker/build-push-action@v6
         with:
           context: .
           file: ${{ steps.dockerfile.outputs.file }}
           build-args: |
             APP=${{ matrix.app }}
-            NEXT_PUBLIC_API_URL=${{ vars.STAGING_API_URL }}
+            ${{ contains(fromJSON('["web","portal"]'), matrix.app) && format('NEXT_PUBLIC_API_URL={0}', vars.STAGING_API_URL) || '' }}
+          load: true
+          push: false
+          tags: medtravel-${{ matrix.app }}:deploy
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,scope=${{ matrix.app }},mode=max
+
+      - name: Boot the image
+        run: scripts/smoke-image.sh ${{ matrix.app }} medtravel-${{ matrix.app }}:deploy
+
+      # Tagged with the commit (immutable, for rollbacks) and with `staging` (the tag the ECS
+      # task definitions point at). Every layer is cached from the build above.
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ steps.dockerfile.outputs.file }}
+          build-args: |
+            APP=${{ matrix.app }}
+            ${{ contains(fromJSON('["web","portal"]'), matrix.app) && format('NEXT_PUBLIC_API_URL={0}', vars.STAGING_API_URL) || '' }}
           push: true
           provenance: false
           tags: |
             ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_PREFIX }}-${{ matrix.app }}:${{ github.sha }}
             ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_PREFIX }}-${{ matrix.app }}:staging
           cache-from: type=gha,scope=${{ matrix.app }}
-          cache-to: type=gha,scope=${{ matrix.app }},mode=max
 
       - name: Roll the ECS service
         run: |

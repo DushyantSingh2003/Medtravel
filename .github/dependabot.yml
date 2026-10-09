@@ -6,13 +6,17 @@ updates:
       interval: weekly
     open-pull-requests-limit: 10
     groups:
-      # One pull request per ecosystem keeps the review load manageable; majors stay separate.
+      # Minor and patch updates are grouped to keep the review load manageable; every major
+      # version arrives as its own pull request.
       nest:
         patterns: ['@nestjs/*', 'nestjs-*']
+        update-types: [minor, patch]
       next-react:
         patterns: ['next', 'next-intl', 'react', 'react-dom', 'eslint-config-next', '@types/react*']
+        update-types: [minor, patch]
       prisma:
         patterns: ['prisma', '@prisma/*']
+        update-types: [minor, patch]
       tooling:
         patterns: ['eslint*', '@eslint/*', 'typescript-eslint', 'prettier', 'turbo', 'vitest', '@vitest/*', '@playwright/*']
         update-types: [minor, patch]
