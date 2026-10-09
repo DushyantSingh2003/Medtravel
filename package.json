@@ -1,0 +1,42 @@
+{
+  "name": "medtravel",
+  "version": "0.0.0",
+  "private": true,
+  "description": "MedTravel medical travel platform monorepo",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "check": "turbo run lint typecheck test",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "e2e": "pnpm --filter @medtravel/e2e e2e",
+    "api:generate": "pnpm --filter @medtravel/api openapi:export && pnpm --filter @medtravel/api-client generate",
+    "db:migrate": "pnpm --filter @medtravel/db db:migrate",
+    "db:seed": "pnpm --filter @medtravel/db db:seed",
+    "db:studio": "pnpm --filter @medtravel/db db:studio",
+    "format": "prettier --write \"**/*.{ts,tsx,mjs,cjs,js,jsx,json,md,css}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,mjs,cjs,js,jsx,json,md,css}\""
+  },
+  "devDependencies": {
+    "@medtravel/config": "workspace:*",
+    "prettier": "^3.9.9",
+    "turbo": "^2.11.7"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "@prisma/engines",
+      "@swc/core",
+      "esbuild",
+      "msgpackr-extract",
+      "prisma",
+      "unrs-resolver"
+    ]
+  }
+}

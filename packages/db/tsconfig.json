@@ -1,0 +1,12 @@
+{
+  "extends": "@medtravel/config/tsconfig/base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": ".",
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "noUncheckedIndexedAccess": false
+  },
+  "include": ["src/**/*.ts", "generated/**/*.ts"],
+  "exclude": ["node_modules", "dist", "src/**/*.spec.ts", "prisma/seed.ts", "prisma7.config.ts"]
+}

@@ -1,0 +1,42 @@
+/*
+ * Shared Tailwind 4 theme for every MedTravel front end.
+ *
+ * Tailwind 4 has no JavaScript config file: design tokens are declared here with @theme and
+ * both Next apps import this file from their own globals.css.
+ */
+@import 'tailwindcss';
+
+@theme {
+  /* Brand — calm medical blue with a warm accent for calls to action. */
+  --color-brand-50: #eef6ff;
+  --color-brand-100: #d9ebff;
+  --color-brand-200: #bcdcff;
+  --color-brand-300: #8ec6ff;
+  --color-brand-400: #59a6ff;
+  --color-brand-500: #2f83f7;
+  --color-brand-600: #1b63d9;
+  --color-brand-700: #184fae;
+  --color-brand-800: #1a448b;
+  --color-brand-900: #1b3b72;
+
+  --color-accent-400: #ffb454;
+  --color-accent-500: #f59324;
+  --color-accent-600: #d97708;
+
+  /* Status colours used by case stages and SLA timers. */
+  --color-success-500: #16a34a;
+  --color-warning-500: #d97706;
+  --color-danger-500: #dc2626;
+
+  --font-sans: var(--font-app-sans), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-card: 0.75rem;
+}
+
+/*
+ * Arabic reads right-to-left. Components use logical properties (ps-*, pe-*, ms-*, me-*)
+ * so the same markup works in both directions; this only flips the document default.
+ */
+[dir='rtl'] {
+  text-align: start;
+}

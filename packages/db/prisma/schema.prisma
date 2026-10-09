@@ -1,0 +1,16 @@
+// MedTravel database schema.
+//
+// Models are added by the tasks that need them (F-01 onward); S-01 only establishes the
+// datasource, the generator and the migration workflow.
+//
+// Prisma 7 note: the connection URL lives in prisma7.config.ts (for the CLI) and is passed
+// to the driver adapter at runtime — it is no longer part of this file.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}

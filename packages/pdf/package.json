@@ -1,0 +1,26 @@
+{
+  "name": "@medtravel/pdf",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run"
+  },
+  "dependencies": { "@react-pdf/renderer": "^4.9.0" },
+  "peerDependencies": { "react": "^19.0.0" },
+  "devDependencies": {
+    "@medtravel/config": "workspace:*",
+    "@types/react": "^19.3.0",
+    "eslint": "^9.39.5",
+    "react": "^19.3.0",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.11"
+  }
+}
