@@ -1,0 +1,22 @@
+# Keep the build context small and keep secrets out of images.
+**/node_modules
+**/.next
+**/dist
+**/.turbo
+**/*.tsbuildinfo
+**/coverage
+**/test-results
+**/playwright-report
+.git
+.github
+.loop
+.claude
+loop
+docs
+infra
+e2e
+**/.env
+**/.env.*
+!**/.env.example
+**/*.log
+.DS_Store
