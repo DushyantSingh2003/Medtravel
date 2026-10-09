@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git reset *)",
+      "Bash(git checkout -b *)",
+      "Bash(git switch *)",
+      "Bash(git merge *)",
+      "Bash(git rebase *)",
+      "Bash(git stash *)",
+      "Bash(git remote *)",
+      "Bash(git config *)",
+      "Bash(gh *)",
+      "Bash(sudo *)",
+      "Bash(su *)",
+      "Bash(ssh *)",
+      "Bash(scp *)",
+      "Bash(shutdown *)",
+      "Bash(reboot *)",
+      "Bash(systemctl *)",
+      "Bash(crontab *)",
+      "Bash(docker system prune *)",
+      "Bash(docker volume prune *)"
+    ]
+  }
+}
