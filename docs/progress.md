@@ -11,7 +11,7 @@ Tasks: 116 in the plan. Done: S-01 to S-04.
 - [x] **S-01** Monorepo scaffold
 - [x] **S-02** Local services with Docker
 - [x] **S-03** Claude Code configuration and progress tracker
-- [x] **S-04** CI pipeline and staging deploy — pending its first green run on GitHub (see deferred notes)
+- [x] **S-04** CI pipeline and staging deploy — CI green on `develop` (run 2); deploy workflow not yet run (see deferred notes)
 - [ ] **S-05** Design system (packages/ui)
 - [ ] **S-06** App shells and layouts
 
@@ -168,9 +168,11 @@ Tasks: 116 in the plan. Done: S-01 to S-04.
 
 ### Deferred from S-04
 
-- **Unverified:** the workflows have not run on GitHub (they cannot run here). "A test PR runs the
-  whole pipeline green" is not demonstrated; the same steps passed in a local dry run. The deploy
-  workflow has never run and needs the AWS role, ECR repositories and ECS services (L-05).
+- **Verified on GitHub:** `ci.yml` ran green on `develop` (run 2: lint/typecheck/tests, API e2e,
+  build + Playwright, all four image builds and boots). Run 1 had caught a flaky check in
+  `scripts/smoke-image.sh`, since fixed.
+- **Not yet verified:** CI on an actual pull request (it ran on a push to `develop`), and the whole
+  deploy workflow, which has never run and needs the AWS role, ECR repositories and ECS services (L-05).
 - Set the repository variables in `docs/deploy.md` and enable branch protection on `main`/`develop`.
 - Image sizes (measured): api 469 MB, worker 470 MB, web and portal 320 MB; the `node:22-alpine`
   base is about 238 MB of that. Consider a smaller base if size matters.
