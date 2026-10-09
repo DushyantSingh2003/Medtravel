@@ -1,0 +1,82 @@
+name: Deploy to staging
+
+# Builds the four images, pushes them to Amazon ECR and rolls the staging ECS services.
+# It does nothing until the repository variable AWS_ROLE_ARN is set (see docs/deploy.md), so
+# merging to main before AWS exists is safe.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write # lets the job assume the AWS role through GitHub OIDC; no long-lived keys
+
+jobs:
+  deploy:
+    name: Deploy ${{ matrix.app }}
+    if: ${{ vars.AWS_ROLE_ARN != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: staging
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [api, worker, web, portal]
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
+      ECS_CLUSTER: ${{ vars.ECS_CLUSTER || 'medtravel-staging' }}
+      ECR_REPOSITORY_PREFIX: ${{ vars.ECR_REPOSITORY_PREFIX || 'medtravel' }}
+      ECS_SERVICE_PREFIX: ${{ vars.ECS_SERVICE_PREFIX || 'medtravel-staging' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Choose Dockerfile
+        id: dockerfile
+        run: |
+          case "${{ matrix.app }}" in
+            api|worker) echo "file=infra/docker/node-service.Dockerfile" >> "$GITHUB_OUTPUT" ;;
+            web|portal) echo "file=infra/docker/next-app.Dockerfile" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      # Tagged with the commit (immutable, for rollbacks) and with `staging` (the tag the ECS
+      # task definitions point at).
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ steps.dockerfile.outputs.file }}
+          build-args: |
+            APP=${{ matrix.app }}
+            NEXT_PUBLIC_API_URL=${{ vars.STAGING_API_URL }}
+          push: true
+          provenance: false
+          tags: |
+            ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_PREFIX }}-${{ matrix.app }}:${{ github.sha }}
+            ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_PREFIX }}-${{ matrix.app }}:staging
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,scope=${{ matrix.app }},mode=max
+
+      - name: Roll the ECS service
+        run: |
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE_PREFIX-${{ matrix.app }}" \
+            --force-new-deployment > /dev/null
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE_PREFIX-${{ matrix.app }}"

@@ -1,0 +1,190 @@
+name: CI
+
+on:
+  pull_request:
+  # The build loop merges task branches straight into develop without a pull request,
+  # so develop is checked on push as well.
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CI: true
+  TURBO_TELEMETRY_DISABLED: 1
+  DO_NOT_TRACK: 1
+  NEXT_TELEMETRY_DISABLED: 1
+  # Optional Turborepo remote cache. Unset, Turborepo uses only the local .turbo cache below.
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
+jobs:
+  checks:
+    name: Lint, typecheck, unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-checks-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-checks-${{ runner.os }}-
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  api-e2e:
+    name: API e2e (Postgres + Redis)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: medtravel
+          POSTGRES_PASSWORD: medtravel
+          POSTGRES_DB: medtravel
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U medtravel -d medtravel"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+    env:
+      DATABASE_URL: postgresql://medtravel:medtravel@localhost:5432/medtravel?schema=public
+      REDIS_URL: redis://localhost:6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-e2e-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-e2e-${{ runner.os }}-
+      - run: pnpm install --frozen-lockfile
+      # The API imports the compiled workspace packages, so build the ones it depends on first.
+      - run: pnpm turbo run build --filter=@medtravel/api...
+      - run: pnpm --filter @medtravel/api test:e2e
+
+  build:
+    name: Build all apps and smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+      DATABASE_URL: postgresql://medtravel:medtravel@localhost:5432/medtravel?schema=public
+      REDIS_URL: redis://localhost:6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-build-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-build-${{ runner.os }}-
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+      # `pnpm check` has passed while an app failed to start before, so boot the built apps and
+      # hit them instead of trusting the build alone.
+      - name: Start API and website
+        run: |
+          (cd apps/api && PORT=3001 NODE_ENV=production node dist/main.js > "$RUNNER_TEMP/api.log" 2>&1 &)
+          (cd apps/web && npx next start --port 3000 > "$RUNNER_TEMP/web.log" 2>&1 &)
+          for url in http://localhost:3001/health http://localhost:3000/en; do
+            for i in $(seq 1 30); do
+              curl -fsS -o /dev/null "$url" && break
+              [ "$i" = 30 ] && { echo "::error::$url did not come up"; cat "$RUNNER_TEMP"/*.log; exit 1; }
+              sleep 2
+            done
+          done
+          curl -fsS http://localhost:3001/docs -o /dev/null
+      - run: pnpm --filter @medtravel/e2e exec playwright install --with-deps chromium
+      - name: Playwright smoke test
+        run: pnpm e2e
+        env:
+          WEB_BASE_URL: http://localhost:3000
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Show app logs
+        if: failure()
+        run: tail -n 100 "$RUNNER_TEMP"/*.log || true
+
+  docker:
+    name: Docker image (${{ matrix.app }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [api, worker, web, portal]
+    services:
+      # The worker connects to Redis when it starts.
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      # Build only; images are pushed by the deploy-staging workflow on merge to main.
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/${{ contains(fromJSON('["api","worker"]'), matrix.app) && 'node-service' || 'next-app' }}.Dockerfile
+          build-args: |
+            APP=${{ matrix.app }}
+          load: true
+          push: false
+          tags: medtravel-${{ matrix.app }}:ci
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,scope=${{ matrix.app }},mode=max
+      # A successful build does not prove the image starts (a missing production dependency only
+      # shows up at runtime), so run it.
+      - name: Boot the image
+        run: scripts/smoke-image.sh ${{ matrix.app }} medtravel-${{ matrix.app }}:ci

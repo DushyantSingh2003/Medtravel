@@ -59,6 +59,10 @@ If a port is taken, copy the root `.env.example` to `.env` and change it (for ex
 - The shared packages (`@medtravel/contracts`, `ui`, `i18n`, ...) are compiled once when `pnpm dev` starts. If you edit one while the apps are running, run `pnpm build` and restart the affected app.
 - The first start of an empty database runs `infra/postgres/init/01-extensions.sql`. To re-run it, use `pnpm infra:reset`.
 
+## CI and deploy
+
+Pull requests run lint, typecheck, unit tests, API e2e, a full build with a Playwright smoke test, and a build-and-boot check of every Docker image. Merging to `main` deploys to staging once AWS is configured. See [`docs/deploy.md`](docs/deploy.md) for the workflows, the images and the GitHub variables they need.
+
 ## Layout
 
 ```

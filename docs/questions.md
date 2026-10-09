@@ -14,3 +14,8 @@ Appended by build tasks. Format: `- [<TASK-ID>] <question> — assumed: <what wa
 - [S-03] The plan's `CLAUDE.md` says `pnpm check` includes API e2e and points at `apps/api/src/logger.ts` — assumed: neither is true yet, so the file states what `pnpm check` runs today and the real logger path, and adds a short "Stack notes" section.
 - [S-03] The plan's `protect-files.sh` blocks `.env`, which would also block `.env.example` that `CLAUDE.md` tells sessions to edit — assumed: `.env.example` stays editable; `.env` and `.env.*` are blocked.
 - [S-03] `docs/progress.md` ticks S-01..S-03 only, per the task, so it does not reflect any deferred verification (S-02's MinIO check) as a tick difference — assumed: deferrals are listed under "Notes and deferred work".
+- [S-04] The task asks for CI on pull requests, but the build loop merges into `develop` without one — assumed: CI also runs on pushes to `develop`.
+- [S-04] The task asks for images on merge to `main` — assumed: images are also built (not pushed) and boot-tested on every pull request, so a broken Dockerfile fails before merge.
+- [S-04] ECS needs a way to pick up new images before Terraform exists (L-05) — assumed: a mutable `:staging` tag plus `update-service --force-new-deployment`, with a commit-tagged image pushed for rollbacks.
+- [S-04] The AWS resources and GitHub variables do not exist yet — assumed: the deploy workflow stays dormant until `AWS_ROLE_ARN` is set; names default to `medtravel-staging` / `medtravel-<app>` and can be overridden.
+- [S-04] `dump.rdb` (a Redis snapshot holding only a test key from verification) was committed in S-01 by `git add -A` — assumed: remove it and ignore `*.rdb`; it stays in history but contains no secrets.
