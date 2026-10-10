@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { isUiGalleryEnabled } from '../../../../../lib/ui-gallery';
 
 /**
+ * Demo and test endpoint, never served unless ENABLE_UI_GALLERY=true (see lib/ui-gallery.ts).
+ *
  * Minimal in-memory imitation of the S3 multipart upload API, used only by the /ui-gallery demo so
  * the FileUploader can run a real multipart upload (create, upload parts, list parts, complete)
  * without AWS. Nothing is stored: only part sizes are tracked.
@@ -21,20 +23,46 @@ const store = ((globalThis as { __uiGalleryS3?: Map<string, Upload> }).__uiGalle
   string,
   Upload
 >());
+/** Oldest uploads are dropped beyond this, so the in-memory store cannot grow without bound. */
+const MAX_UPLOADS = 100;
+
+/** The key comes from the URL, so every value placed in the XML is escaped. */
+const escapeXml = (value: string) =>
+  value.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
+
+const SAFE_HEADERS = {
+  'content-type': 'application/xml; charset=utf-8',
+  // The response is data for Uppy, never a document: do not sniff it into HTML, and sandbox it if
+  // someone navigates to it.
+  'x-content-type-options': 'nosniff',
+  'content-security-policy': 'sandbox',
+  'cache-control': 'no-store',
+};
 
 const xml = (body: string, status = 200) =>
   new NextResponse(`<?xml version="1.0" encoding="UTF-8"?>${body}`, {
     status,
-    headers: { 'content-type': 'application/xml' },
+    headers: SAFE_HEADERS,
   });
+
+/** Only the gallery page itself may call this: reject requests the browser marks as cross-site. */
+function isSameOrigin(request: NextRequest): boolean {
+  const site = request.headers.get('sec-fetch-site');
+  if (site && site !== 'same-origin') return false;
+  const origin = request.headers.get('origin');
+  return !origin || origin === new URL(request.url).origin;
+}
 
 type Context = { params: Promise<{ key: string[] }> };
 
 async function handle(request: NextRequest, context: Context) {
   if (!isUiGalleryEnabled()) return new NextResponse(null, { status: 404 });
+  if (!isSameOrigin(request)) return new NextResponse(null, { status: 403 });
 
   const { key: segments } = await context.params;
-  const key = segments.map(decodeURIComponent).join('/');
+  // Next has already percent-decoded the path segments; decoding again would break names like "100%.pdf".
+  const key = segments.join('/');
+  const safeKey = escapeXml(key);
   const url = new URL(request.url);
   const uploadId = url.searchParams.get('uploadId');
   const partNumber = url.searchParams.get('partNumber');
@@ -53,10 +81,12 @@ async function handle(request: NextRequest, context: Context) {
   }
 
   if (method === 'POST' && url.searchParams.has('uploads')) {
-    const id = `mock-${Math.random().toString(36).slice(2, 10)}`;
+    const id = `mock-${crypto.randomUUID()}`;
     store.set(id, { key, parts: new Map(), failedOnce: false, partPuts: 0 });
+    for (const oldest of [...store.keys()].slice(0, Math.max(0, store.size - MAX_UPLOADS)))
+      store.delete(oldest);
     return xml(
-      `<InitiateMultipartUploadResult><Bucket>gallery</Bucket><Key>${key}</Key><UploadId>${id}</UploadId></InitiateMultipartUploadResult>`,
+      `<InitiateMultipartUploadResult><Bucket>gallery</Bucket><Key>${safeKey}</Key><UploadId>${id}</UploadId></InitiateMultipartUploadResult>`,
     );
   }
 
@@ -86,14 +116,14 @@ async function handle(request: NextRequest, context: Context) {
       )
       .join('');
     return xml(
-      `<ListPartsResult><Bucket>gallery</Bucket><Key>${key}</Key><UploadId>${uploadId}</UploadId><IsTruncated>false</IsTruncated>${parts}</ListPartsResult>`,
+      `<ListPartsResult><Bucket>gallery</Bucket><Key>${safeKey}</Key><UploadId>${escapeXml(uploadId ?? '')}</UploadId><IsTruncated>false</IsTruncated>${parts}</ListPartsResult>`,
     );
   }
 
   if (method === 'POST' && uploadId) {
     if (!upload) return new NextResponse(null, { status: 404 });
     return xml(
-      `<CompleteMultipartUploadResult><Location>${url.origin}/mock-bucket/${key}</Location><Bucket>gallery</Bucket><Key>${key}</Key><ETag>&quot;done&quot;</ETag></CompleteMultipartUploadResult>`,
+      `<CompleteMultipartUploadResult><Location>${escapeXml(url.origin)}/mock-bucket/${safeKey}</Location><Bucket>gallery</Bucket><Key>${safeKey}</Key><ETag>&quot;done&quot;</ETag></CompleteMultipartUploadResult>`,
     );
   }
 
@@ -103,12 +133,8 @@ async function handle(request: NextRequest, context: Context) {
   }
 
   if (method === 'PUT') {
-    // Single (non-multipart) upload.
-    const body = await request.arrayBuffer();
-    return new NextResponse(null, {
-      status: 200,
-      headers: { etag: `"single-${body.byteLength}"` },
-    });
+    // Single (non-multipart) upload. Nothing is stored, so the body is not read into memory.
+    return new NextResponse(null, { status: 200, headers: { etag: '"single"' } });
   }
 
   return new NextResponse(null, { status: 400 });

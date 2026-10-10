@@ -13,7 +13,11 @@ export function DrawerClose(props: ComponentProps<typeof DrawerPrimitive.Close>)
   return <DrawerPrimitive.Close {...props} />;
 }
 
-export function DrawerContent({ className, children, ...props }: ComponentProps<typeof DrawerPrimitive.Content>) {
+export function DrawerContent({
+  className,
+  children,
+  ...props
+}: ComponentProps<typeof DrawerPrimitive.Content>) {
   return (
     <DrawerPrimitive.Portal>
       <DrawerPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50" />
@@ -25,15 +29,31 @@ export function DrawerContent({ className, children, ...props }: ComponentProps<
         )}
         {...props}
       >
-        <div className="mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full bg-muted" aria-hidden="true" />
+        <div
+          className="mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full bg-muted"
+          aria-hidden="true"
+        />
         <div className="flex flex-col gap-4 overflow-y-auto p-5 sm:p-6">{children}</div>
       </DrawerPrimitive.Content>
     </DrawerPrimitive.Portal>
   );
 }
 export function DrawerTitle({ className, ...props }: ComponentProps<typeof DrawerPrimitive.Title>) {
-  return <DrawerPrimitive.Title className={cn('text-lg leading-tight font-semibold', className)} {...props} />;
+  return (
+    <DrawerPrimitive.Title
+      className={cn('text-lg leading-tight font-semibold', className)}
+      {...props}
+    />
+  );
 }
-export function DrawerDescription({ className, ...props }: ComponentProps<typeof DrawerPrimitive.Description>) {
-  return <DrawerPrimitive.Description className={cn('text-sm text-muted-foreground', className)} {...props} />;
+export function DrawerDescription({
+  className,
+  ...props
+}: ComponentProps<typeof DrawerPrimitive.Description>) {
+  return (
+    <DrawerPrimitive.Description
+      className={cn('text-sm text-muted-foreground', className)}
+      {...props}
+    />
+  );
 }

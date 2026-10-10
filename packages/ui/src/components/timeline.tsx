@@ -20,7 +20,15 @@ const dot: Record<NonNullable<TimelineItem['tone']>, string> = {
   destructive: 'bg-destructive text-destructive-foreground',
 };
 
-export function Timeline({ items, label, className }: { items: TimelineItem[]; label: string; className?: string }) {
+export function Timeline({
+  items,
+  label,
+  className,
+}: {
+  items: TimelineItem[];
+  label: string;
+  className?: string;
+}) {
   return (
     <ol aria-label={label} className={cn('relative', className)}>
       {items.map((item, index) => (
@@ -44,7 +52,9 @@ export function Timeline({ items, label, className }: { items: TimelineItem[]; l
                 {item.timeLabel}
               </time>
             </div>
-            {item.description ? <p className="mt-0.5 text-sm text-muted-foreground">{item.description}</p> : null}
+            {item.description ? (
+              <p className="mt-0.5 text-sm text-muted-foreground">{item.description}</p>
+            ) : null}
           </div>
         </li>
       ))}

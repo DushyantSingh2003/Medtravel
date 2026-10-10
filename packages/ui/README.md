@@ -8,7 +8,9 @@ pnpm dev                       # then open http://localhost:3002/en/ui-gallery  
 pnpm --filter @medtravel/ui test
 ```
 
-The gallery is on in development. In production it returns 404 unless `ENABLE_UI_GALLERY=true`.
+The gallery and its mock storage endpoint are opt-in: they return 404 unless `ENABLE_UI_GALLERY=true`.
+`apps/portal/.env.example` sets it for local development (an existing `apps/portal/.env` needs the line
+added) and CI sets it for the browser tests. Never set it on a deployed environment.
 
 ## Using it
 
@@ -18,8 +20,13 @@ The gallery is on in development. In production it returns 404 unless `ENABLE_UI
 ```
 
 ```tsx
-// root layout: direction for Radix, tooltips and the toast area
-<UiProvider dir={directionOf(locale)}>{children}</UiProvider>
+// root layout: direction for Radix, tooltips and the toast area (its two spoken labels are translated)
+<UiProvider
+  dir={directionOf(locale)}
+  labels={{ notifications: t('notifications'), closeToast: t('closeToast') }}
+>
+  {children}
+</UiProvider>
 ```
 
 ```tsx
@@ -39,7 +46,13 @@ import { Button, DataTable, FormInput } from '@medtravel/ui';
   a test fails on hard-coded `bg-white` / `text-slate-900`. Dark mode is defined and checked but not
   yet switchable in the app.
 - **Money is integer minor units.** `CurrencyInput` stores cents/paise/fils, never decimals.
-- **Latin digits in Arabic** for dates, money and phone numbers (`intlLocale`).
+- **Latin digits in Arabic** for dates, money, phone numbers and file sizes (`intlLocale`).
+- **Dates are calendar days.** Keep them as `YYYY-MM-DD` strings in forms and API calls
+  (`toDateOnly` / `fromDateOnly`); `FormDatePicker` does. A `Date` sent through `JSON.stringify` is a
+  UTC instant and lands on the wrong day in India (UTC+5:30).
+- **Money parsing is strict.** `parseMinorUnits` returns `null` for anything ambiguous (`1,234` in KWD,
+  `1.234` in USD, `1.2.3`) instead of guessing, and `CurrencyInput` keeps the text and sets
+  `aria-invalid` rather than silently storing a wrong amount.
 - **Keyboard and screen readers.** Dialogs trap focus, menus and selects use arrow keys, errors are
   linked to fields with `aria-describedby` and announced, drag and drop works from the keyboard.
 - **Names and mixed text** that may be in another script are wrapped in `<bdi>` so an Arabic name in
@@ -47,16 +60,16 @@ import { Button, DataTable, FormInput } from '@medtravel/ui';
 
 ## What is here
 
-| Group | Components |
-| --- | --- |
-| Inputs | `Input` `Textarea` `Label` `Select` `Combobox` `DatePicker` `PhoneInput` `CurrencyInput` `Checkbox` `Radio` `Switch` |
-| Forms | `FormField` plus `FormInput` `FormTextarea` `FormSelect` `FormCombobox` `FormDatePicker` `FormPhoneInput` `FormCurrencyInput` `FormCheckbox` `FormSwitch` (React Hook Form) |
-| Actions and overlays | `Button` `Dialog` `ConfirmDialog` `Sheet` `Drawer` `DropdownMenu` `Popover` `Tooltip` `Toaster` / `toast` |
-| Display | `Badge` `StatusBadge` `Card` `Avatar` `Skeleton` `Tabs` `EmptyState` `ErrorState` `StatCard` |
-| Layout | `PageHeader` `Breadcrumbs` |
-| Data | `DataTable` (TanStack Table, server-side paging/sort/search, column visibility, selection, CSV export, row virtualisation) |
-| Files | `FileUploader` (Uppy, S3 multipart through presigned URLs, 500 MB limit, type filter) |
-| Case workflow | `StageTracker` (12 stages) `Timeline` `ChatPanel` `KanbanBoard` (dnd-kit) |
+| Group                | Components                                                                                                                                                                                                                        |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Inputs               | `Input` `Textarea` `Label` `Select` `Combobox` `DatePicker` `PhoneInput` `CurrencyInput` `Checkbox` `Radio` `Switch`                                                                                                              |
+| Forms                | `FormField` plus `FormInput` `FormTextarea` `FormSelect` `FormCombobox` `FormDatePicker` `FormPhoneInput` `FormCurrencyInput` `FormCheckbox` `FormSwitch` (React Hook Form)                                                       |
+| Actions and overlays | `Button` `Dialog` `ConfirmDialog` `Sheet` `Drawer` `DropdownMenu` `Popover` `Tooltip` `Toaster` / `toast`                                                                                                                         |
+| Display              | `Badge` `StatusBadge` `Card` `Avatar` `Skeleton` `Tabs` `EmptyState` `ErrorState` `StatCard`                                                                                                                                      |
+| Layout               | `PageHeader` `Breadcrumbs`                                                                                                                                                                                                        |
+| Data                 | `DataTable` (TanStack Table, server-side paging/sort/search, column visibility, row selection, CSV export of the rows on the current page, row virtualisation). Column filters go in the `toolbar` slot and the caller refetches. |
+| Files                | `FileUploader` (Uppy, S3 multipart through presigned URLs, 500 MB limit, type filter, Start and Cancel all, retry that re-sends only the failed part)                                                                             |
+| Case workflow        | `StageTracker` (12 stages) `Timeline` `ChatPanel` `KanbanBoard` (dnd-kit)                                                                                                                                                         |
 
 ## Notes for whoever extends it
 
@@ -65,6 +78,10 @@ import { Button, DataTable, FormInput } from '@medtravel/ui';
   not in an app (`CLAUDE.md`).
 - The package is compiled to `dist` and consumed by bundlers (Next), so relative imports have no
   `.js` extension. After editing, run `pnpm build` and restart the apps that use it.
+- `FileUploader` retries a failed upload within the session. It does not resume after a page reload
+  (that needs the API to track upload ids; F-06). Its file-type and size checks are a convenience: some
+  browsers report `''` for DICOM, so list extensions too, and the API must validate every upload again.
+  Object keys are random UUIDs by default so file names (personal data) stay out of the bucket path.
 - `FileUploader` takes a `signRequest(request)` callback that returns a presigned S3 URL for each
   request Uppy makes (create, upload part, list parts, complete). The real implementation is the API's
   file service (F-06); the gallery uses a mock endpoint (`apps/portal/app/api/ui-gallery/s3`).

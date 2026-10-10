@@ -1,7 +1,10 @@
+import type { Locale } from '@medtravel/contracts';
+import { intlLocale } from './format';
+
 /** 500 MiB, the largest medical file the platform accepts (PRD file service). */
 export const MAX_UPLOAD_BYTES = 500 * 1024 * 1024;
 
-export type FileRejection = 'too_large' | 'wrong_type' | 'too_many' | 'duplicate';
+export type FileRejection = 'empty' | 'too_large' | 'wrong_type' | 'too_many' | 'duplicate';
 
 export interface UploadRestrictions {
   maxFileSize: number;
@@ -23,28 +26,45 @@ export function matchesFileType(file: { name: string; type: string }, allowed: s
   });
 }
 
-/** Why a file cannot be added, or `null` when it can. Checked before Uppy sees the file. */
+/**
+ * Why a file cannot be added, or `null` when it can. Checked before Uppy sees the file.
+ * This is a convenience for the user only: browsers report `file.type` as '' for some medical formats
+ * (DICOM), so allow-lists should include extensions, and the API must validate every upload again.
+ */
 export function rejectionFor(
   file: { name: string; size: number; type: string },
   restrictions: UploadRestrictions,
   existing: { name: string; size: number }[],
 ): FileRejection | null {
-  if (restrictions.maxNumberOfFiles !== null && existing.length >= restrictions.maxNumberOfFiles) return 'too_many';
+  if (restrictions.maxNumberOfFiles !== null && existing.length >= restrictions.maxNumberOfFiles)
+    return 'too_many';
+  if (file.size === 0) return 'empty';
   if (file.size > restrictions.maxFileSize) return 'too_large';
   if (!matchesFileType(file, restrictions.allowedFileTypes)) return 'wrong_type';
-  if (existing.some((other) => other.name === file.name && other.size === file.size)) return 'duplicate';
+  if (existing.some((other) => other.name === file.name && other.size === file.size))
+    return 'duplicate';
   return null;
 }
 
-/** "1.5 MB", "500 MB". Binary units (1 MB = 1024 KB) to match how operating systems report sizes. */
-export function formatBytes(bytes: number, locale = 'en'): string {
-  const units = ['B', 'KB', 'MB', 'GB'];
-  let value = bytes;
+export type ByteUnits = readonly [string, string, string, string];
+
+const DEFAULT_BYTE_UNITS: ByteUnits = ['B', 'KB', 'MB', 'GB'];
+
+/**
+ * "1.5 KB", "500 MB". Binary units (1 MB = 1024 KB) to match how operating systems report sizes.
+ * Digits are Latin in every locale, like money and dates. Pass `units` to translate the symbols.
+ */
+export function formatBytes(
+  bytes: number,
+  locale: Locale = 'en',
+  units: ByteUnits = DEFAULT_BYTE_UNITS,
+): string {
+  let value = Math.max(0, bytes);
   let unit = 0;
   while (value >= 1024 && unit < units.length - 1) {
     value /= 1024;
     unit += 1;
   }
   const digits = unit === 0 || value >= 100 ? 0 : 1;
-  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: digits }).format(value)} ${units[unit]}`;
+  return `${new Intl.NumberFormat(intlLocale(locale), { maximumFractionDigits: digits }).format(value)} ${units[unit]}`;
 }

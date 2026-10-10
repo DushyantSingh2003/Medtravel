@@ -25,7 +25,7 @@ const labels: DataTableLabels = {
   columns: 'Columns',
   exportCsv: 'Export',
   selectAll: 'Select all',
-  selectRow: 'Select row',
+  selectRow: (name) => `Select ${name}`,
   previous: 'Previous',
   next: 'Next',
   rowsPerPage: 'Rows per page',
@@ -42,7 +42,11 @@ describe('DataTable', () => {
   it('renders a captioned table with a header and a row per record', () => {
     render(<DataTable columns={columns} data={rows} getRowId={(r) => r.id} labels={labels} />);
     const table = screen.getByRole('table');
-    expect(within(table).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Name', 'City']);
+    expect(
+      within(table)
+        .getAllByRole('columnheader')
+        .map((h) => h.textContent),
+    ).toEqual(['Name', 'City']);
     expect(within(table).getAllByRole('row')).toHaveLength(4);
     expect(screen.getByText('محمد')).toBeInTheDocument();
   });
@@ -57,7 +61,13 @@ describe('DataTable', () => {
           data={rows}
           getRowId={(r) => r.id}
           labels={labels}
-          sorting={{ value: sorting, onChange: (next) => { onChange(next); setSorting(next); } }}
+          sorting={{
+            value: sorting,
+            onChange: (next) => {
+              onChange(next);
+              setSorting(next);
+            },
+          }}
         />
       );
     }
@@ -72,23 +82,48 @@ describe('DataTable', () => {
     expect(header).toHaveAttribute('aria-sort', 'descending');
   });
 
-  it('does not render the data in a different order itself: sorting is the server\'s job', async () => {
-    render(<DataTable columns={columns} data={rows} getRowId={(r) => r.id} labels={labels} sorting={{ value: [{ id: 'name', desc: true }], onChange: () => {} }} />);
-    const names = screen.getAllByRole('row').slice(1).map((r) => within(r).getAllByRole('cell')[0]?.textContent);
+  it("does not render the data in a different order itself: sorting is the server's job", async () => {
+    render(
+      <DataTable
+        columns={columns}
+        data={rows}
+        getRowId={(r) => r.id}
+        labels={labels}
+        sorting={{ value: [{ id: 'name', desc: true }], onChange: () => {} }}
+      />,
+    );
+    const names = screen
+      .getAllByRole('row')
+      .slice(1)
+      .map((r) => within(r).getAllByRole('cell')[0]?.textContent);
     expect(names).toEqual(['Asha', '=cmd|calc', 'محمد']);
   });
 
   it('pages through server-side results', async () => {
     const onChange = vi.fn();
     const { rerender } = render(
-      <DataTable columns={columns} data={rows} getRowId={(r) => r.id} labels={labels} pagination={{ pageIndex: 0, pageSize: 10, total: 25, onChange }} />,
+      <DataTable
+        columns={columns}
+        data={rows}
+        getRowId={(r) => r.id}
+        labels={labels}
+        pagination={{ pageIndex: 0, pageSize: 10, total: 25, onChange }}
+      />,
     );
     expect(screen.getByText('25 results')).toBeInTheDocument();
     expect(screen.getByText('Page 1 of 3')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled();
     await userEvent.click(screen.getByRole('button', { name: 'Next' }));
     expect(onChange).toHaveBeenCalledWith({ pageIndex: 1, pageSize: 10 });
-    rerender(<DataTable columns={columns} data={rows} getRowId={(r) => r.id} labels={labels} pagination={{ pageIndex: 2, pageSize: 10, total: 25, onChange }} />);
+    rerender(
+      <DataTable
+        columns={columns}
+        data={rows}
+        getRowId={(r) => r.id}
+        labels={labels}
+        pagination={{ pageIndex: 2, pageSize: 10, total: 25, onChange }}
+      />,
+    );
     expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
   });
 
@@ -96,10 +131,25 @@ describe('DataTable', () => {
     const onChange = vi.fn();
     function Harness() {
       const [value, setValue] = useState<RowSelectionState>({});
-      return <DataTable columns={columns} data={rows} getRowId={(r) => r.id} labels={labels} selection={{ value, onChange: (v) => { onChange(v); setValue(v); } }} />;
+      return (
+        <DataTable
+          columns={columns}
+          data={rows}
+          getRowId={(r) => r.id}
+          getRowLabel={(r) => r.name}
+          labels={labels}
+          selection={{
+            value,
+            onChange: (v) => {
+              onChange(v);
+              setValue(v);
+            },
+          }}
+        />
+      );
     }
     render(<Harness />);
-    await userEvent.click(screen.getAllByRole('checkbox', { name: 'Select row' })[1]!);
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select =cmd|calc' }));
     expect(onChange).toHaveBeenLastCalledWith({ '2': true });
     expect(screen.getByText('1 selected')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('checkbox', { name: 'Select all' }));
@@ -108,11 +158,24 @@ describe('DataTable', () => {
 
   it('shows empty, loading and error states', async () => {
     const onRetry = vi.fn();
-    const { rerender } = render(<DataTable columns={columns} data={[]} getRowId={(r) => r.id} labels={labels} />);
+    const { rerender } = render(
+      <DataTable columns={columns} data={[]} getRowId={(r) => r.id} labels={labels} />,
+    );
     expect(screen.getByText('Nothing found')).toBeInTheDocument();
-    rerender(<DataTable columns={columns} data={[]} getRowId={(r) => r.id} labels={labels} loading />);
+    rerender(
+      <DataTable columns={columns} data={[]} getRowId={(r) => r.id} labels={labels} loading />,
+    );
     expect(screen.getByRole('region', { name: 'People' })).toHaveAttribute('aria-busy', 'true');
-    rerender(<DataTable columns={columns} data={[]} getRowId={(r) => r.id} labels={labels} error onRetry={onRetry} />);
+    rerender(
+      <DataTable
+        columns={columns}
+        data={[]}
+        getRowId={(r) => r.id}
+        labels={labels}
+        error
+        onRetry={onRetry}
+      />,
+    );
     expect(screen.getByRole('alert')).toHaveTextContent('Failed to load');
     await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(onRetry).toHaveBeenCalled();
@@ -122,7 +185,9 @@ describe('DataTable', () => {
     render(<DataTable columns={columns} data={rows} getRowId={(r) => r.id} labels={labels} />);
     await userEvent.click(screen.getByRole('button', { name: 'Columns' }));
     await userEvent.click(await screen.findByRole('menuitemcheckbox', { name: 'City' }));
-    await waitFor(() => expect(screen.queryByRole('columnheader', { name: 'City', hidden: true })).toBeNull());
+    await waitFor(() =>
+      expect(screen.queryByRole('columnheader', { name: 'City', hidden: true })).toBeNull(),
+    );
     // The open menu hides the page from assistive technology, so look through it.
     expect(screen.getByRole('columnheader', { name: 'Name', hidden: true })).toBeInTheDocument();
   });
@@ -132,14 +197,102 @@ describe('DataTable', () => {
     URL.createObjectURL = vi.fn((b: Blob) => ((blob = b), 'blob:test'));
     URL.revokeObjectURL = vi.fn();
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
-    render(<DataTable columns={columns} data={rows} getRowId={(r) => r.id} labels={labels} exportFileName="people" />);
+    render(
+      <DataTable
+        columns={columns}
+        data={rows}
+        getRowId={(r) => r.id}
+        labels={labels}
+        exportFileName="people"
+      />,
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Export' }));
     expect(click).toHaveBeenCalled();
     // Blob.text() strips the byte-order mark, so check the raw bytes: EF BB BF makes Excel read UTF-8.
     const bytes = new Uint8Array(await blob!.arrayBuffer());
     expect([...bytes.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
     const text = await blob!.text();
-    expect(text.split('\r\n')).toEqual(['Name,City', 'Asha,Delhi', "'=cmd|calc,\"Mumbai, MH\"", 'محمد,Chennai']);
+    expect(text.split('\r\n')).toEqual([
+      'Name,City',
+      'Asha,Delhi',
+      '\'=cmd|calc,"Mumbai, MH"',
+      'محمد,Chennai',
+    ]);
     click.mockRestore();
+  });
+
+  it('names each row checkbox after its row', () => {
+    render(
+      <DataTable
+        columns={columns}
+        data={rows}
+        getRowId={(r) => r.id}
+        getRowLabel={(r) => r.name}
+        labels={labels}
+        selection={{ value: {}, onChange: () => {} }}
+      />,
+    );
+    expect(screen.getByRole('checkbox', { name: 'Select Asha' })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Select محمد' })).toBeInTheDocument();
+  });
+
+  it('tells screen readers the table is loading and disables the CSV export meanwhile', () => {
+    render(
+      <DataTable
+        columns={columns}
+        data={rows}
+        getRowId={(r) => r.id}
+        labels={labels}
+        loading
+        exportFileName="people"
+      />,
+    );
+    expect(screen.getByText('Loading')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Export' })).toBeDisabled();
+  });
+
+  it('returns to the first page when the search text changes', async () => {
+    const onPage = vi.fn();
+    render(
+      <DataTable
+        columns={columns}
+        data={rows}
+        getRowId={(r) => r.id}
+        labels={labels}
+        search={{ value: '', onChange: () => {} }}
+        pagination={{ pageIndex: 3, pageSize: 10, total: 100, onChange: onPage }}
+      />,
+    );
+    await userEvent.type(screen.getByRole('searchbox'), 'a');
+    expect(onPage).toHaveBeenCalledWith({ pageIndex: 0, pageSize: 10 });
+  });
+
+  it('moves to the last page that exists when the total shrinks', () => {
+    const onPage = vi.fn();
+    render(
+      <DataTable
+        columns={columns}
+        data={[]}
+        getRowId={(r) => r.id}
+        labels={labels}
+        pagination={{ pageIndex: 4, pageSize: 10, total: 15, onChange: onPage }}
+      />,
+    );
+    expect(onPage).toHaveBeenCalledWith({ pageIndex: 1, pageSize: 10 });
+  });
+
+  it('can start sorting ascending and does not offer multi-column sort', async () => {
+    const onSort = vi.fn();
+    render(
+      <DataTable
+        columns={columns}
+        data={rows}
+        getRowId={(r) => r.id}
+        labels={labels}
+        sorting={{ value: [], onChange: onSort }}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /Name/ }));
+    expect(onSort).toHaveBeenLastCalledWith([{ id: 'name', desc: false }]);
   });
 });

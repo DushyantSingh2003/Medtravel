@@ -1,15 +1,19 @@
 'use client';
 
+import type { Locale } from '@medtravel/contracts';
 import Uppy, { type Meta } from '@uppy/core';
 import AwsS3, { type AwsBody, type AwsS3Options } from '@uppy/aws-s3';
 import { AlertCircle, CheckCircle2, FileText, RotateCw, UploadCloud, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { cn } from '../lib/cn';
 import { MAX_UPLOAD_BYTES, formatBytes, rejectionFor, type FileRejection } from '../lib/files';
 import { Button } from './button';
 
 /** Signs one S3 request (create/part/list/complete) and returns a presigned URL. See the API's file service. */
-export type SignS3Request = Extract<AwsS3Options<Meta, AwsBody>, { signRequest: unknown }>['signRequest'];
+export type SignS3Request = Extract<
+  AwsS3Options<Meta, AwsBody>,
+  { signRequest: unknown }
+>['signRequest'];
 
 export interface FileUploaderLabels {
   dropTitle: string;
@@ -19,6 +23,9 @@ export interface FileUploaderLabels {
   restrictionsHint: string;
   remove: string;
   retry: string;
+  /** Button that starts the queue when `autoUpload` is off. */
+  start: string;
+  /** Button that stops every upload that is not finished and removes those files from the list. */
   cancelAll: string;
   uploading: string;
   done: string;
@@ -42,14 +49,23 @@ export interface UploadedFile {
 export interface FileUploaderProps {
   signRequest: SignS3Request;
   labels: FileUploaderLabels;
-  locale?: string;
+  locale?: Locale;
   maxFileSize?: number;
   allowedFileTypes?: string[];
   maxNumberOfFiles?: number | null;
-  /** Start uploading as soon as files are chosen. Default true. */
+  /** Start uploading as soon as files are chosen. Default true. When off, a Start button is shown. */
   autoUpload?: boolean;
-  /** Always use multipart upload (parts of 8 MiB, resumable). Default: files over 100 MB, Uppy's default. */
+  /**
+   * Always use multipart upload (parts of 8 MiB; a failed part is retried on its own). Default: files over
+   * 100 MB, Uppy's default. Changing it restarts the uploader and clears the list.
+   */
   alwaysMultipart?: boolean;
+  /**
+   * Object key for each file in the bucket. Default: a random UUID, so a patient's file name (which
+   * can be personal data) never reaches the bucket path, URLs or logs. Prefer minting the key in the
+   * API and validating it in `signRequest`.
+   */
+  generateObjectKey?: (file: { name: string; size: number; type: string }) => string;
   disabled?: boolean;
   onUploaded?: (file: UploadedFile) => void;
   onRemoved?: (id: string) => void;
@@ -74,6 +90,7 @@ export function FileUploader({
   maxNumberOfFiles = null,
   autoUpload = true,
   alwaysMultipart = false,
+  generateObjectKey,
   disabled,
   onUploaded,
   onRemoved,
@@ -82,9 +99,18 @@ export function FileUploader({
   const [items, setItems] = useState<Item[]>([]);
   const [problems, setProblems] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
+  const [announcement, setAnnouncement] = useState('');
   const uppyRef = useRef<Uppy<Meta, AwsBody> | null>(null);
-  const callbacks = useRef({ onUploaded, onRemoved });
-  callbacks.current = { onUploaded, onRemoved };
+  // Read through refs so a new closure (fresh auth or CSRF token, another case id) is used by the
+  // next request without recreating the uploader and losing queued files.
+  const signRef = useRef(signRequest);
+  const keyRef = useRef(generateObjectKey);
+  const callbacks = useRef({ onUploaded, onRemoved, labels });
+  useEffect(() => {
+    signRef.current = signRequest;
+    keyRef.current = generateObjectKey;
+    callbacks.current = { onUploaded, onRemoved, labels };
+  });
   const restrictions = useMemo(
     () => ({ maxFileSize, allowedFileTypes, maxNumberOfFiles }),
     // allowedFileTypes is compared by content so a new array literal each render does not recreate Uppy.
@@ -92,21 +118,37 @@ export function FileUploader({
     [maxFileSize, allowedFileTypes.join('|'), maxNumberOfFiles],
   );
 
-  const patch = (id: string, change: Partial<Item>) =>
-    setItems((current) => current.map((item) => (item.id === id ? { ...item, ...change } : item)));
+  const patch = useCallback(
+    (id: string, change: Partial<Item>) =>
+      setItems((current) =>
+        current.map((item) => (item.id === id ? { ...item, ...change } : item)),
+      ),
+    [],
+  );
 
   useEffect(() => {
     const uppy = new Uppy<Meta, AwsBody>({ autoProceed: false });
-    uppy.use(AwsS3, { signRequest, ...(alwaysMultipart ? { shouldUseMultipart: true } : {}) });
+    uppy.use(AwsS3, {
+      signRequest: (request) => signRef.current(request),
+      // The key is random so a patient's file name (which can be personal data) never ends up in the
+      // bucket path, in URLs or in logs. The original name travels in the file record instead.
+      generateObjectKey: (file) =>
+        keyRef.current?.({ name: file.name ?? '', size: file.size ?? 0, type: file.type }) ??
+        crypto.randomUUID(),
+      ...(alwaysMultipart ? { shouldUseMultipart: true } : {}),
+    });
 
     uppy.on('upload-progress', (file, progress) => {
       if (!file) return;
-      const percentage = progress.bytesTotal ? Math.round((progress.bytesUploaded / progress.bytesTotal) * 100) : 0;
+      const percentage = progress.bytesTotal
+        ? Math.round((progress.bytesUploaded / progress.bytesTotal) * 100)
+        : 0;
       patch(file.id, { status: 'uploading', percentage });
     });
     uppy.on('upload-success', (file, response) => {
       if (!file) return;
       patch(file.id, { status: 'done', percentage: 100 });
+      setAnnouncement(`${file.name ?? ''}: ${callbacks.current.labels.done}`);
       callbacks.current.onUploaded?.({
         id: file.id,
         name: file.name ?? '',
@@ -116,16 +158,26 @@ export function FileUploader({
       });
     });
     uppy.on('upload-error', (file) => {
-      if (file) patch(file.id, { status: 'error' });
+      if (!file) return;
+      patch(file.id, { status: 'error' });
+      setAnnouncement(`${file.name ?? ''}: ${callbacks.current.labels.failed}`);
     });
     uppyRef.current = uppy;
     return () => {
       uppy.destroy();
       uppyRef.current = null;
+      setItems([]);
     };
-    // The signer and multipart mode are fixed for the lifetime of an uploader.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [alwaysMultipart, patch]);
+
+  const busy = items.some((item) => item.status === 'uploading');
+  useEffect(() => {
+    if (!busy) return;
+    // Leaving the page cancels the upload; the browser asks first.
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [busy]);
 
   function addFiles(list: FileList | File[]) {
     const uppy = uppyRef.current;
@@ -140,11 +192,14 @@ export function FileUploader({
         continue;
       }
       const id = uppy.addFile({ name: file.name, type: file.type, data: file, source: 'local' });
-      setItems((current) => [...current, { id, name: file.name, size: file.size, type: file.type, status: 'queued', percentage: 0 }]);
+      setItems((current) => [
+        ...current,
+        { id, name: file.name, size: file.size, type: file.type, status: 'queued', percentage: 0 },
+      ]);
       accepted += 1;
     }
     setProblems(rejected);
-    if (accepted > 0 && autoUpload) void uppy.upload();
+    if (accepted > 0 && autoUpload) uppy.upload().catch(() => undefined);
   }
 
   function remove(id: string) {
@@ -155,20 +210,48 @@ export function FileUploader({
 
   function retry(id: string) {
     patch(id, { status: 'uploading' });
-    void uppyRef.current?.retryUpload(id);
+    uppyRef.current?.retryUpload(id).catch(() => patch(id, { status: 'error' }));
   }
 
+  function start() {
+    uppyRef.current?.upload().catch(() => undefined);
+  }
+
+  function cancelAll() {
+    const unfinished = items.filter((item) => item.status !== 'done');
+    for (const item of unfinished) {
+      uppyRef.current?.removeFile(item.id);
+      callbacks.current.onRemoved?.(item.id);
+    }
+    setItems((current) => current.filter((item) => item.status === 'done'));
+  }
+
+  const hasQueued = items.some((item) => item.status === 'queued');
+  const hasUnfinished = items.some((item) => item.status !== 'done');
+
   const statusText = (item: Item) =>
-    item.status === 'done' ? labels.done : item.status === 'error' ? labels.failed : item.status === 'uploading' ? labels.uploading : labels.queued;
+    item.status === 'done'
+      ? labels.done
+      : item.status === 'error'
+        ? labels.failed
+        : item.status === 'uploading'
+          ? labels.uploading
+          : labels.queued;
 
   return (
     <div data-slot="file-uploader" className={cn('space-y-3', className)}>
+      <p role="status" className="sr-only">
+        {announcement}
+      </p>
       <label
         onDragOver={(event: DragEvent) => {
           event.preventDefault();
           if (!disabled) setDragging(true);
         }}
-        onDragLeave={() => setDragging(false)}
+        onDragLeave={(event: DragEvent) => {
+          // Moving over a child element also fires dragleave; only clear when truly leaving.
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false);
+        }}
         onDrop={(event: DragEvent) => {
           event.preventDefault();
           setDragging(false);
@@ -210,7 +293,7 @@ export function FileUploader({
       ) : null}
 
       {items.length > 0 ? (
-        <ul aria-label={labels.listLabel} aria-live="polite" className="divide-y rounded-xl border">
+        <ul aria-label={labels.listLabel} className="divide-y rounded-xl border">
           {items.map((item) => (
             <li key={item.id} data-status={item.status} className="flex items-center gap-3 p-3">
               <FileText className="size-8 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -227,13 +310,24 @@ export function FileUploader({
                   className="h-1.5 overflow-hidden rounded-full bg-muted"
                 >
                   <div
-                    className={cn('h-full transition-all', item.status === 'error' ? 'bg-destructive' : item.status === 'done' ? 'bg-success' : 'bg-primary')}
+                    className={cn(
+                      'h-full transition-all',
+                      item.status === 'error'
+                        ? 'bg-destructive'
+                        : item.status === 'done'
+                          ? 'bg-success'
+                          : 'bg-primary',
+                    )}
                     style={{ width: `${item.percentage}%` }}
                   />
                 </div>
                 <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  {item.status === 'done' ? <CheckCircle2 className="size-3.5 text-success" aria-hidden="true" /> : null}
-                  {item.status === 'error' ? <AlertCircle className="size-3.5 text-destructive" aria-hidden="true" /> : null}
+                  {item.status === 'done' ? (
+                    <CheckCircle2 className="size-3.5 text-success" aria-hidden="true" />
+                  ) : null}
+                  {item.status === 'error' ? (
+                    <AlertCircle className="size-3.5 text-destructive" aria-hidden="true" />
+                  ) : null}
                   <span dir="ltr">{formatBytes(item.size, locale)}</span>
                   <span aria-hidden="true">·</span>
                   <span>{statusText(item)}</span>
@@ -241,16 +335,37 @@ export function FileUploader({
                 </p>
               </div>
               {item.status === 'error' ? (
-                <Button variant="ghost" size="icon" aria-label={`${labels.retry}: ${item.name}`} onClick={() => retry(item.id)}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`${labels.retry}: ${item.name}`}
+                  onClick={() => retry(item.id)}
+                >
                   <RotateCw />
                 </Button>
               ) : null}
-              <Button variant="ghost" size="icon" aria-label={`${labels.remove}: ${item.name}`} onClick={() => remove(item.id)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`${labels.remove}: ${item.name}`}
+                onClick={() => remove(item.id)}
+              >
                 <X />
               </Button>
             </li>
           ))}
         </ul>
+      ) : null}
+
+      {hasQueued || hasUnfinished ? (
+        <div className="flex flex-wrap justify-end gap-2">
+          {hasQueued && !autoUpload ? <Button onClick={start}>{labels.start}</Button> : null}
+          {hasUnfinished ? (
+            <Button variant="outline" onClick={cancelAll}>
+              {labels.cancelAll}
+            </Button>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );

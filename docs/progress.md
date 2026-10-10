@@ -172,7 +172,9 @@ Tasks: 116 in the plan. Done: S-01 to S-05.
 - Confirm the brand colours and fonts (placeholders in the task; blue, amber, Inter + Noto Sans Arabic chosen).
 - A dark-mode toggle (the tokens and components are ready; the apps do not switch yet).
 - Real S3 signing for `FileUploader` comes from the file service (F-06); the gallery uses a mock endpoint.
-  Resuming an upload after a page reload is not included.
+  Resuming an upload after a page reload is not included (needs the API to track upload ids).
+- `/ui-gallery` is opt-in via `ENABLE_UI_GALLERY=true`; add the line to an existing `apps/portal/.env`.
+- DataTable column filters: callers put them in the `toolbar` slot and refetch; no built-in filter UI.
 - Not exercised with a real screen reader; automated accessibility checks (axe) pass.
 - TanStack Table 9 and react-day-picker 10 exist; the 8.x and 9.x lines are used.
 - The CI job that builds and runs browser tests was renamed "Build all apps and browser tests"; update

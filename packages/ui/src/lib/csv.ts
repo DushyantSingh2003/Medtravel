@@ -5,12 +5,20 @@
  * be run as a formula (CSV injection). Such cells are prefixed with an apostrophe, which
  * spreadsheets treat as "text". Patient and hospital names are user-supplied, so this matters.
  */
-const FORMULA_START = /^[=+\-@\t\r]/;
+// Spreadsheets skip leading whitespace and control characters before deciding a cell is a formula.
+// eslint-disable-next-line no-control-regex
+const FORMULA_START = /^[\u0000-\u0020\u00a0]*[=+\-@]|^[\t\r]/;
 
+/**
+ * Numbers are written as numbers (a refund of -5 stays -5 in the sheet); only text is guarded.
+ * An invalid Date becomes an empty cell rather than throwing in the middle of an export.
+ */
 export function csvCell(value: unknown): string {
   if (value === null || value === undefined) return '';
-  let text = value instanceof Date ? value.toISOString() : String(value);
-  if (FORMULA_START.test(text)) text = `'${text}`;
+  let text: string;
+  if (value instanceof Date) text = Number.isNaN(value.getTime()) ? '' : value.toISOString();
+  else text = String(value);
+  if (typeof value !== 'number' && FORMULA_START.test(text)) text = `'${text}`;
   return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
@@ -31,5 +39,6 @@ export function downloadCsv(fileName: string, csv: string): void {
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
-  URL.revokeObjectURL(url);
+  // Revoking straight away cancels the download in Safari and older Firefox.
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }

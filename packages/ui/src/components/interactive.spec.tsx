@@ -7,7 +7,14 @@ import { FileUploader, type FileUploaderLabels } from './file-uploader';
 import { MAX_UPLOAD_BYTES } from '../lib/files';
 
 describe('ConfirmDialog', () => {
-  const base = { title: 'Cancel case?', description: 'Cannot be undone', confirmLabel: 'Cancel case', cancelLabel: 'Keep', closeLabel: 'Close', errorLabel: 'Could not cancel the case' };
+  const base = {
+    title: 'Cancel case?',
+    description: 'Cannot be undone',
+    confirmLabel: 'Cancel case',
+    cancelLabel: 'Keep',
+    closeLabel: 'Close',
+    errorLabel: 'Could not cancel the case',
+  };
 
   it('is a labelled modal with an accessible close button', () => {
     render(<ConfirmDialog open onOpenChange={() => {}} onConfirm={() => {}} {...base} />);
@@ -22,7 +29,10 @@ describe('ConfirmDialog', () => {
     render(<ConfirmDialog open onOpenChange={onOpenChange} onConfirm={onConfirm} {...base} />);
     await userEvent.click(screen.getByRole('button', { name: 'Cancel case' }));
     expect(onConfirm).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole('button', { name: 'Cancel case' })).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('button', { name: 'Cancel case' })).toHaveAttribute(
+      'aria-busy',
+      'true',
+    );
     expect(screen.getByRole('button', { name: 'Keep' })).toBeDisabled();
     expect(onOpenChange).not.toHaveBeenCalled();
     await act(async () => finish());
@@ -33,7 +43,15 @@ describe('ConfirmDialog', () => {
     const onOpenChange = vi.fn();
     const onError = vi.fn();
     const failure = new Error('boom');
-    render(<ConfirmDialog open onOpenChange={onOpenChange} onConfirm={() => Promise.reject(failure)} onError={onError} {...base} />);
+    render(
+      <ConfirmDialog
+        open
+        onOpenChange={onOpenChange}
+        onConfirm={() => Promise.reject(failure)}
+        onError={onError}
+        {...base}
+      />,
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Cancel case' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not cancel the case');
     expect(onError).toHaveBeenCalledWith(failure);
@@ -44,7 +62,10 @@ describe('ConfirmDialog', () => {
 
   it('clears the error when the user retries and it succeeds', async () => {
     const onOpenChange = vi.fn();
-    const onConfirm = vi.fn().mockRejectedValueOnce(new Error('boom')).mockResolvedValueOnce(undefined);
+    const onConfirm = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce(undefined);
     render(<ConfirmDialog open onOpenChange={onOpenChange} onConfirm={onConfirm} {...base} />);
     await userEvent.click(screen.getByRole('button', { name: 'Cancel case' }));
     await screen.findByRole('alert');
@@ -64,8 +85,30 @@ describe('ConfirmDialog', () => {
 });
 
 describe('ChatPanel', () => {
-  const labels: ChatPanelLabels = { log: 'Messages', placeholder: 'Write a message', send: 'Send', attach: 'Attach', removeAttachment: 'Remove', empty: 'No messages' };
-  const msg = { id: '1', author: { name: 'Asha' }, own: false, body: 'Hello', dateTime: '2026-03-02T09:30:00Z', timeLabel: '2 Mar' };
+  const labels: ChatPanelLabels = {
+    log: 'Messages',
+    placeholder: 'Write a message',
+    send: 'Send',
+    attach: 'Attach',
+    removeAttachment: 'Remove',
+    empty: 'No messages',
+    sendFailed: 'Could not send',
+    rejected: {
+      empty: (n) => `${n} is empty`,
+      too_large: (n) => `${n} is too large`,
+      wrong_type: (n) => `${n} is the wrong type`,
+      too_many: (n) => `${n} too many`,
+      duplicate: (n) => `${n} duplicate`,
+    },
+  };
+  const msg = {
+    id: '1',
+    author: { name: 'Asha' },
+    own: false,
+    body: 'Hello',
+    dateTime: '2026-03-02T09:30:00Z',
+    timeLabel: '2 Mar',
+  };
 
   it('shows messages in a live log and an empty message when there are none', () => {
     const { rerender } = render(<ChatPanel messages={[]} onSend={() => {}} labels={labels} />);
@@ -101,12 +144,97 @@ describe('ChatPanel', () => {
     const { container } = render(<ChatPanel messages={[]} onSend={onSend} labels={labels} />);
     const keep = new File(['y'], 'keep.pdf', { type: 'application/pdf' });
     const drop = new File(['x'], 'drop.pdf', { type: 'application/pdf' });
-    await userEvent.upload(container.querySelector('input[type=file]') as HTMLInputElement, [drop, keep]);
+    await userEvent.upload(container.querySelector('input[type=file]') as HTMLInputElement, [
+      drop,
+      keep,
+    ]);
     expect(screen.getByText('drop.pdf')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Remove: drop.pdf' }));
     expect(screen.queryByText('drop.pdf')).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: 'Send' }));
     expect(onSend).toHaveBeenCalledWith({ text: '', files: [keep] });
+  });
+
+  it('keeps the text and shows an error when sending fails', async () => {
+    const onSend = vi.fn().mockRejectedValue(new Error('offline'));
+    render(<ChatPanel messages={[]} onSend={onSend} labels={labels} />);
+    const box = screen.getByRole('textbox', { name: 'Write a message' }) as HTMLTextAreaElement;
+    await userEvent.type(box, 'important{Enter}');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not send');
+    expect(box.value).toBe('important');
+  });
+
+  it('sends once when Enter is pressed twice quickly', async () => {
+    let finish: () => void = () => {};
+    const onSend = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    render(<ChatPanel messages={[]} onSend={onSend} labels={labels} />);
+    const box = screen.getByRole('textbox', { name: 'Write a message' });
+    fireEvent.change(box, { target: { value: 'hello' } });
+    fireEvent.keyDown(box, { key: 'Enter' });
+    fireEvent.keyDown(box, { key: 'Enter' });
+    expect(onSend).toHaveBeenCalledTimes(1);
+    await act(async () => finish());
+  });
+
+  it('does not send on the Enter that ends a Safari composition (keyCode 229)', () => {
+    const onSend = vi.fn();
+    render(<ChatPanel messages={[]} onSend={onSend} labels={labels} />);
+    const box = screen.getByRole('textbox', { name: 'Write a message' });
+    fireEvent.change(box, { target: { value: 'مرحبا' } });
+    fireEvent.keyDown(box, { key: 'Enter', keyCode: 229 });
+    expect(onSend).not.toHaveBeenCalled();
+  });
+
+  it('rejects an attachment that is too large or empty instead of queueing it', () => {
+    const { container } = render(
+      <ChatPanel messages={[]} onSend={() => {}} labels={labels} maxFileSize={10} />,
+    );
+    const input = container.querySelector('input[type=file]') as HTMLInputElement;
+    const big = new File(['x'], 'big.pdf', { type: 'application/pdf' });
+    Object.defineProperty(big, 'size', { value: 11 });
+    fireEvent.change(input, {
+      target: { files: [big, new File([], 'empty.pdf', { type: 'application/pdf' })] },
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent('big.pdf is too large');
+    expect(screen.getByRole('alert')).toHaveTextContent('empty.pdf is empty');
+    expect(screen.queryByRole('button', { name: /Remove/ })).toBeNull();
+  });
+
+  it('links only http(s) and relative attachment URLs', () => {
+    render(
+      <ChatPanel
+        messages={[
+          {
+            ...msg,
+            attachments: [
+              { id: 'a', name: 'ok.pdf', size: 10, href: 'https://files.example/ok.pdf' },
+              { id: 'b', name: 'bad.pdf', size: 10, href: 'javascript:alert(1)' },
+            ],
+          },
+        ]}
+        onSend={() => {}}
+        labels={labels}
+      />,
+    );
+    expect(screen.getByRole('link', { name: /ok\.pdf/ })).toHaveAttribute(
+      'href',
+      'https://files.example/ok.pdf',
+    );
+    expect(screen.queryByRole('link', { name: /bad\.pdf/ })).toBeNull();
+    expect(screen.getByText('bad.pdf')).toBeInTheDocument();
+  });
+
+  it('never scrolls the page when a message arrives', () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const { rerender } = render(<ChatPanel messages={[]} onSend={() => {}} labels={labels} />);
+    rerender(<ChatPanel messages={[msg]} onSend={() => {}} labels={labels} />);
+    expect(scrollIntoView).not.toHaveBeenCalled();
   });
 
   it('disables the composer when told to', () => {
@@ -123,6 +251,7 @@ describe('FileUploader', () => {
     restrictionsHint: 'PDF up to 500 MB',
     remove: 'Remove',
     retry: 'Retry',
+    start: 'Start upload',
     cancelAll: 'Cancel all',
     uploading: 'Uploading',
     done: 'Done',
@@ -131,6 +260,7 @@ describe('FileUploader', () => {
     progress: (name) => `Progress of ${name}`,
     listLabel: 'Files',
     rejected: {
+      empty: (n) => `${n} is empty`,
       too_large: (n) => `${n} is too large`,
       wrong_type: (n) => `${n} is the wrong type`,
       too_many: (n) => `${n} too many`,
@@ -140,8 +270,19 @@ describe('FileUploader', () => {
   const signRequest = vi.fn();
 
   function setup(props: Partial<React.ComponentProps<typeof FileUploader>> = {}) {
-    const utils = render(<FileUploader signRequest={signRequest} labels={labels} allowedFileTypes={['application/pdf']} autoUpload={false} {...props} />);
-    return { ...utils, input: utils.container.querySelector('input[type=file]') as HTMLInputElement };
+    const utils = render(
+      <FileUploader
+        signRequest={signRequest}
+        labels={labels}
+        allowedFileTypes={['application/pdf']}
+        autoUpload={false}
+        {...props}
+      />,
+    );
+    return {
+      ...utils,
+      input: utils.container.querySelector('input[type=file]') as HTMLInputElement,
+    };
   }
   const pdf = (name = 'report.pdf', size = 1024) => {
     const file = new File(['x'], name, { type: 'application/pdf' });
@@ -153,7 +294,10 @@ describe('FileUploader', () => {
     const { input } = setup();
     await userEvent.upload(input, pdf());
     expect(screen.getByText('report.pdf')).toBeInTheDocument();
-    expect(screen.getByRole('progressbar', { name: 'Progress of report.pdf' })).toHaveAttribute('aria-valuenow', '0');
+    expect(screen.getByRole('progressbar', { name: 'Progress of report.pdf' })).toHaveAttribute(
+      'aria-valuenow',
+      '0',
+    );
     expect(signRequest).not.toHaveBeenCalled();
   });
 
@@ -166,7 +310,9 @@ describe('FileUploader', () => {
 
   it('rejects a file type that is not allowed', async () => {
     const { input } = setup();
-    fireEvent.change(input, { target: { files: [new File(['x'], 'virus.exe', { type: 'application/x-msdownload' })] } });
+    fireEvent.change(input, {
+      target: { files: [new File(['x'], 'virus.exe', { type: 'application/x-msdownload' })] },
+    });
     expect(await screen.findByRole('alert')).toHaveTextContent('virus.exe is the wrong type');
   });
 
@@ -184,6 +330,62 @@ describe('FileUploader', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Remove: report.pdf' }));
     expect(screen.queryByText('report.pdf')).toBeNull();
     expect(onRemoved).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows a Start button when autoUpload is off and signs with the latest signer after a prop change', async () => {
+    const first = vi.fn().mockRejectedValue(new Error('no network'));
+    const second = vi.fn().mockRejectedValue(new Error('no network'));
+    const { input, rerender } = setup({ signRequest: first });
+    await userEvent.upload(input, pdf());
+    await userEvent.click(screen.getByRole('button', { name: 'Start upload' }));
+    await waitFor(() => expect(first).toHaveBeenCalled());
+    expect(await screen.findByText('Failed', { selector: 'span' })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('report.pdf: Failed');
+
+    rerender(
+      <FileUploader
+        signRequest={second}
+        labels={labels}
+        allowedFileTypes={['application/pdf']}
+        autoUpload={false}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Retry: report.pdf' }));
+    await waitFor(() => expect(second).toHaveBeenCalled());
+    expect(screen.getByText('report.pdf')).toBeInTheDocument();
+  });
+
+  it('hides Start when files upload automatically', async () => {
+    const { input } = setup({
+      autoUpload: true,
+      signRequest: vi.fn().mockRejectedValue(new Error('x')),
+    });
+    await userEvent.upload(input, pdf());
+    expect(screen.queryByRole('button', { name: 'Start upload' })).toBeNull();
+  });
+
+  it('cancels every unfinished file with Cancel all', async () => {
+    const onRemoved = vi.fn();
+    const { input } = setup({ onRemoved });
+    await userEvent.upload(input, [pdf('a.pdf', 10), pdf('b.pdf', 20)]);
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel all' }));
+    expect(screen.queryByText('a.pdf')).toBeNull();
+    expect(screen.queryByText('b.pdf')).toBeNull();
+    expect(onRemoved).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects an empty file', async () => {
+    const { input } = setup();
+    fireEvent.change(input, {
+      target: { files: [new File([], 'blank.pdf', { type: 'application/pdf' })] },
+    });
+    expect(await screen.findByRole('alert')).toHaveTextContent('blank.pdf is empty');
+  });
+
+  it('does not announce every progress tick: the list is not a live region', async () => {
+    const { input } = setup();
+    await userEvent.upload(input, pdf());
+    expect(screen.getByRole('list', { name: 'Files' })).not.toHaveAttribute('aria-live');
   });
 
   it('restricts the native file picker to the allowed types', () => {

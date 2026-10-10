@@ -11,7 +11,13 @@ export interface PageHeaderProps {
   className?: string;
 }
 
-export function PageHeader({ title, description, breadcrumbs, actions, className }: PageHeaderProps) {
+export function PageHeader({
+  title,
+  description,
+  breadcrumbs,
+  actions,
+  className,
+}: PageHeaderProps) {
   return (
     <header data-slot="page-header" className={cn('flex flex-col gap-3', className)}>
       {breadcrumbs ? <Breadcrumbs {...breadcrumbs} /> : null}

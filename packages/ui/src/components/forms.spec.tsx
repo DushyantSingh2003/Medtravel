@@ -11,9 +11,26 @@ import { FormCheckbox, FormInput } from './form-fields';
 import { PhoneInput } from './phone-input';
 
 describe('CurrencyInput', () => {
-  function Harness({ currency = 'USD', onValue }: { currency?: string; onValue: (v: number | null) => void }) {
+  function Harness({
+    currency = 'USD',
+    onValue,
+  }: {
+    currency?: string;
+    onValue: (v: number | null) => void;
+  }) {
     const [value, setValue] = useState<number | null>(null);
-    return <CurrencyInput aria-label="Amount" value={value} currency={currency} locale="en" onChange={(v) => { setValue(v); onValue(v); }} />;
+    return (
+      <CurrencyInput
+        aria-label="Amount"
+        value={value}
+        currency={currency}
+        locale="en"
+        onChange={(v) => {
+          setValue(v);
+          onValue(v);
+        }}
+      />
+    );
   }
 
   it('turns typed decimals into integer minor units without float error', async () => {
@@ -40,6 +57,69 @@ describe('CurrencyInput', () => {
     expect(onValue).toHaveBeenLastCalledWith(null);
   });
 
+  it('follows an external value change, such as a form reset', () => {
+    const { rerender } = render(
+      <CurrencyInput
+        aria-label="Amount"
+        value={1050}
+        currency="USD"
+        locale="en"
+        onChange={() => {}}
+      />,
+    );
+    const input = screen.getByLabelText('Amount') as HTMLInputElement;
+    expect(input.value).toBe('$10.50');
+    rerender(
+      <CurrencyInput
+        aria-label="Amount"
+        value={2500}
+        currency="USD"
+        locale="en"
+        onChange={() => {}}
+      />,
+    );
+    expect(input.value).toBe('$25.00');
+    rerender(
+      <CurrencyInput
+        aria-label="Amount"
+        value={null}
+        currency="USD"
+        locale="en"
+        onChange={() => {}}
+      />,
+    );
+    expect(input.value).toBe('');
+  });
+
+  it('renders the formatted value on first paint', () => {
+    const { container } = render(
+      <CurrencyInput
+        aria-label="Amount"
+        value={123456}
+        currency="USD"
+        locale="en"
+        onChange={() => {}}
+      />,
+    );
+    expect((container.querySelector('input') as HTMLInputElement).value).toBe('$1,234.56');
+  });
+
+  it('keeps unparseable text and flags it instead of erasing it on blur', async () => {
+    render(<Harness onValue={() => {}} />);
+    const input = screen.getByLabelText('Amount') as HTMLInputElement;
+    await userEvent.type(input, '1.2.3');
+    await userEvent.tab();
+    expect(input.value).toBe('1.2.3');
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('supports negative amounts such as refunds', async () => {
+    const onValue = vi.fn();
+    render(<Harness onValue={onValue} />);
+    await userEvent.type(screen.getByLabelText('Amount'), '-10.50');
+    expect(onValue).toHaveBeenLastCalledWith(-1050);
+  });
+
   it('respects currencies without minor units', async () => {
     const onValue = vi.fn();
     render(<Harness currency="JPY" onValue={onValue} />);
@@ -53,7 +133,9 @@ describe('PhoneInput', () => {
 
   it('reports E.164 once the number is valid, and an empty string while it is not', async () => {
     const onChange = vi.fn();
-    render(<PhoneInput value="" onChange={onChange} locale="en" labels={labels} aria-label="Phone" />);
+    render(
+      <PhoneInput value="" onChange={onChange} locale="en" labels={labels} aria-label="Phone" />,
+    );
     const input = screen.getByLabelText('Phone');
     await userEvent.type(input, '98765');
     expect(onChange).toHaveBeenLastCalledWith('');
@@ -62,13 +144,65 @@ describe('PhoneInput', () => {
   });
 
   it('formats the national number as you type for the chosen country', async () => {
-    render(<PhoneInput value="" onChange={() => {}} locale="en" labels={labels} aria-label="Phone" />);
+    render(
+      <PhoneInput value="" onChange={() => {}} locale="en" labels={labels} aria-label="Phone" />,
+    );
     await userEvent.type(screen.getByLabelText('Phone'), '9876543210');
     expect((screen.getByLabelText('Phone') as HTMLInputElement).value).toBe('98765 43210');
   });
 
+  it('follows an external value change instead of keeping stale digits', () => {
+    const { rerender } = render(
+      <PhoneInput
+        value="+919876543210"
+        onChange={() => {}}
+        locale="en"
+        labels={labels}
+        aria-label="Phone"
+      />,
+    );
+    const input = screen.getByLabelText('Phone') as HTMLInputElement;
+    expect(input.value).toBe('98765 43210');
+    rerender(
+      <PhoneInput
+        value="+971501234567"
+        onChange={() => {}}
+        locale="en"
+        labels={labels}
+        aria-label="Phone"
+      />,
+    );
+    expect(screen.getByRole('combobox', { name: 'Country code' })).toHaveTextContent('+971');
+    rerender(
+      <PhoneInput value="" onChange={() => {}} locale="en" labels={labels} aria-label="Phone" />,
+    );
+    expect(input.value).toBe('');
+  });
+
+  it('does not treat a shared calling code as the default country', () => {
+    render(
+      <PhoneInput
+        value="+12025550123"
+        onChange={() => {}}
+        locale="en"
+        labels={labels}
+        aria-label="Phone"
+      />,
+    );
+    expect(screen.getByRole('combobox', { name: 'Country code' })).toHaveTextContent('+1');
+    expect((screen.getByLabelText('Phone') as HTMLInputElement).value).toMatch(/202/);
+  });
+
   it('shows an existing E.164 value for its country', () => {
-    render(<PhoneInput value="+971501234567" onChange={() => {}} locale="en" labels={labels} aria-label="Phone" />);
+    render(
+      <PhoneInput
+        value="+971501234567"
+        onChange={() => {}}
+        locale="en"
+        labels={labels}
+        aria-label="Phone"
+      />,
+    );
     expect(screen.getByRole('combobox', { name: 'Country code' })).toHaveTextContent('+971');
   });
 });
@@ -78,7 +212,11 @@ describe('Combobox', () => {
     const onChange = vi.fn();
     render(
       <Combobox
-        options={[{ value: 'delhi', label: 'Delhi' }, { value: 'mumbai', label: 'Mumbai' }, { value: 'chennai', label: 'Chennai' }]}
+        options={[
+          { value: 'delhi', label: 'Delhi' },
+          { value: 'mumbai', label: 'Mumbai' },
+          { value: 'chennai', label: 'Chennai' },
+        ]}
         value={null}
         onChange={onChange}
         placeholder="Choose"
@@ -94,7 +232,16 @@ describe('Combobox', () => {
   });
 
   it('shows the empty message when nothing matches', async () => {
-    render(<Combobox options={[{ value: 'a', label: 'Alpha' }]} value={null} onChange={() => {}} placeholder="Choose" searchPlaceholder="Search" emptyLabel="Nothing" />);
+    render(
+      <Combobox
+        options={[{ value: 'a', label: 'Alpha' }]}
+        value={null}
+        onChange={() => {}}
+        placeholder="Choose"
+        searchPlaceholder="Search"
+        emptyLabel="Nothing"
+      />,
+    );
     await userEvent.click(screen.getByRole('combobox'));
     await userEvent.type(await screen.findByPlaceholderText('Search'), 'zzz');
     expect(screen.getByText('Nothing')).toBeInTheDocument();
@@ -102,17 +249,33 @@ describe('Combobox', () => {
 });
 
 describe('FormField wiring', () => {
-  const schema = z.object({ email: z.string().email('Enter a valid email'), consent: z.literal(true, { error: 'Consent is required' }) });
+  const schema = z.object({
+    email: z.string().email('Enter a valid email'),
+    consent: z.literal(true, { error: 'Consent is required' }),
+  });
   type Values = z.infer<typeof schema>;
 
   function Harness({ onSubmit }: { onSubmit: (v: Values) => void }) {
-    const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { email: '', consent: false as never } });
+    const form = useForm<Values>({
+      resolver: zodResolver(schema),
+      defaultValues: { email: '', consent: false as never },
+    });
     return (
       <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
-        <FormInput control={form.control} name="email" label="Email" description="We email quotes" required requiredLabel="required" />
+        <FormInput
+          control={form.control}
+          name="email"
+          label="Email"
+          description="We email quotes"
+          required
+          requiredLabel="required"
+        />
         <FormCheckbox control={form.control} name="consent" label="I consent" />
         <button type="submit">Submit</button>
-        <button type="button" onClick={() => form.setError('email', { message: 'Already registered' })}>
+        <button
+          type="button"
+          onClick={() => form.setError('email', { message: 'Already registered' })}
+        >
           Server error
         </button>
       </form>

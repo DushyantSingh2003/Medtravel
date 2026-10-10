@@ -41,10 +41,30 @@ describe('RTL-safe styling', () => {
   });
 
   it('actually catches physical utilities (guards the guard)', () => {
-    for (const bad of ['ml-2', 'sm:pr-4', '-mr-1', 'left-0', 'text-right', 'rounded-l-md', 'border-r', 'md:right-3']) {
+    for (const bad of [
+      'ml-2',
+      'sm:pr-4',
+      '-mr-1',
+      'left-0',
+      'text-right',
+      'rounded-l-md',
+      'border-r',
+      'md:right-3',
+    ]) {
       expect(bad.match(BANNED), bad).not.toBeNull();
     }
-    for (const good of ['ms-2', 'sm:pe-4', '-me-1', 'start-0', 'text-end', 'rounded-s-md', 'border-e', 'md:end-3', 'mt-2', 'px-3']) {
+    for (const good of [
+      'ms-2',
+      'sm:pe-4',
+      '-me-1',
+      'start-0',
+      'text-end',
+      'rounded-s-md',
+      'border-e',
+      'md:end-3',
+      'mt-2',
+      'px-3',
+    ]) {
       expect(good.match(BANNED), good).toBeNull();
     }
   });
@@ -82,7 +102,13 @@ describe('theme-safe colours', () => {
     for (const bad of ['bg-white', 'text-slate-900', 'dark:bg-gray-800', 'border-zinc-200']) {
       expect(bad.match(HARD_CODED_COLOUR), bad).not.toBeNull();
     }
-    for (const good of ['bg-background', 'text-muted-foreground', 'border-border', 'bg-primary/90', 'text-brand-800']) {
+    for (const good of [
+      'bg-background',
+      'text-muted-foreground',
+      'border-border',
+      'bg-primary/90',
+      'text-brand-800',
+    ]) {
       expect(good.match(HARD_CODED_COLOUR), good).toBeNull();
     }
   });

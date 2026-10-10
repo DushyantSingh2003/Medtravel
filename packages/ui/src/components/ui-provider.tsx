@@ -2,7 +2,7 @@
 
 import { Direction } from 'radix-ui';
 import type { ReactNode } from 'react';
-import { Toaster } from './toast';
+import { Toaster, type ToasterLabels } from './toast';
 import { TooltipProvider } from './tooltip';
 
 /**
@@ -10,12 +10,20 @@ import { TooltipProvider } from './tooltip';
  * and navigate by reading `dir` from here rather than the document, so it must match `<html dir>`.
  * Also mounts the toast area and the tooltip provider.
  */
-export function UiProvider({ dir, children }: { dir: 'ltr' | 'rtl'; children: ReactNode }) {
+export function UiProvider({
+  dir,
+  labels,
+  children,
+}: {
+  dir: 'ltr' | 'rtl';
+  labels: ToasterLabels;
+  children: ReactNode;
+}) {
   return (
     <Direction.Provider dir={dir}>
       <TooltipProvider delayDuration={200}>
         {children}
-        <Toaster dir={dir} />
+        <Toaster dir={dir} labels={labels} />
       </TooltipProvider>
     </Direction.Provider>
   );

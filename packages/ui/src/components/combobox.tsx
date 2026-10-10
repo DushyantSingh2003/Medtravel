@@ -2,7 +2,7 @@
 
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { Command } from 'cmdk';
-import { useState } from 'react';
+import { useState, type FocusEventHandler, type ReactNode, type Ref } from 'react';
 import { cn } from '../lib/cn';
 import { fieldClasses } from './input';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
@@ -12,6 +12,8 @@ export interface ComboboxOption {
   label: string;
   /** Extra text matched by the search box (for example an alternative spelling or a code). */
   keywords?: string[];
+  /** Decoration shown before the label (a flag, an icon). Hidden from screen readers. */
+  adornment?: ReactNode;
 }
 
 export interface ComboboxProps {
@@ -26,6 +28,11 @@ export interface ComboboxProps {
   'aria-invalid'?: boolean;
   'aria-describedby'?: string;
   'aria-label'?: string;
+  /** Reference to the trigger button, so a form can focus the first invalid field. */
+  ref?: Ref<HTMLButtonElement>;
+  onBlur?: FocusEventHandler<HTMLButtonElement>;
+  /** Let the user clear the choice by choosing it again. Off by default so a required field cannot be emptied by accident. */
+  clearable?: boolean;
   className?: string;
 }
 
@@ -38,6 +45,7 @@ export function Combobox({
   searchPlaceholder,
   emptyLabel,
   className,
+  clearable = false,
   ...rest
 }: ComboboxProps) {
   const [open, setOpen] = useState(false);
@@ -49,12 +57,25 @@ export function Combobox({
         <button
           type="button"
           role="combobox"
+          aria-haspopup="listbox"
           aria-expanded={open}
           data-slot="combobox"
-          className={cn(fieldClasses, 'flex h-10 items-center justify-between gap-2 text-start', !selected && 'text-muted-foreground', className)}
+          className={cn(
+            fieldClasses,
+            'flex h-10 items-center justify-between gap-2 text-start',
+            !selected && 'text-muted-foreground',
+            className,
+          )}
           {...rest}
         >
-          <span className="truncate">{selected?.label ?? placeholder}</span>
+          <span className="flex min-w-0 items-center gap-2">
+            {selected?.adornment ? (
+              <span aria-hidden="true" className="shrink-0">
+                {selected.adornment}
+              </span>
+            ) : null}
+            <span className="truncate">{selected?.label ?? placeholder}</span>
+          </span>
           <ChevronsUpDown className="size-4 shrink-0 opacity-60" aria-hidden="true" />
         </button>
       </PopoverTrigger>
@@ -65,19 +86,32 @@ export function Combobox({
             className="h-10 w-full border-b bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground"
           />
           <Command.List className="max-h-60 overflow-y-auto p-1">
-            <Command.Empty className="px-3 py-4 text-center text-sm text-muted-foreground">{emptyLabel}</Command.Empty>
+            <Command.Empty className="px-3 py-4 text-center text-sm text-muted-foreground">
+              {emptyLabel}
+            </Command.Empty>
             {options.map((option) => (
               <Command.Item
                 key={option.value}
                 value={option.label}
                 keywords={option.keywords}
                 onSelect={() => {
-                  onChange(option.value === value ? null : option.value);
+                  onChange(clearable && option.value === value ? null : option.value);
                   setOpen(false);
                 }}
                 className="flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm select-none data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground"
               >
-                <Check className={cn('size-4 shrink-0', option.value === value ? 'opacity-100' : 'opacity-0')} aria-hidden="true" />
+                <Check
+                  className={cn(
+                    'size-4 shrink-0',
+                    option.value === value ? 'opacity-100' : 'opacity-0',
+                  )}
+                  aria-hidden="true"
+                />
+                {option.adornment ? (
+                  <span aria-hidden="true" className="shrink-0">
+                    {option.adornment}
+                  </span>
+                ) : null}
                 <span className="truncate">{option.label}</span>
               </Command.Item>
             ))}

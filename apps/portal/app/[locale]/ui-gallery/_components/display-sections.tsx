@@ -70,7 +70,18 @@ export function DisplaySections() {
     <>
       <Section id="badge" title={t('sections.badge')} description={t('descriptions.badge')}>
         <div className="flex flex-wrap gap-2">
-          {(['default', 'secondary', 'outline', 'muted', 'success', 'warning', 'destructive', 'info'] as const).map((variant) => (
+          {(
+            [
+              'default',
+              'secondary',
+              'outline',
+              'muted',
+              'success',
+              'warning',
+              'destructive',
+              'info',
+            ] as const
+          ).map((variant) => (
             <Badge key={variant} variant={variant}>
               {t(`badge.${variant}`)}
             </Badge>
@@ -78,7 +89,11 @@ export function DisplaySections() {
         </div>
       </Section>
 
-      <Section id="status-badge" title={t('sections.statusBadge')} description={t('descriptions.statusBadge')}>
+      <Section
+        id="status-badge"
+        title={t('sections.statusBadge')}
+        description={t('descriptions.statusBadge')}
+      >
         <div className="flex flex-wrap gap-2">
           {[...CASE_STAGES, ...CASE_EXIT_STAGES].map((stage) => (
             <StatusBadge key={stage} status={stage} label={stages(stage)} />
@@ -165,10 +180,20 @@ export function DisplaySections() {
 
       <Section id="toast" title={t('sections.toast')} description={t('descriptions.toast')}>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => toast.success(t('toast.successTitle'), { description: t('toast.successBody') })}>
+          <Button
+            variant="outline"
+            onClick={() =>
+              toast.success(t('toast.successTitle'), { description: t('toast.successBody') })
+            }
+          >
             {t('toast.success')}
           </Button>
-          <Button variant="outline" onClick={() => toast.error(t('toast.errorTitle'), { description: t('toast.errorBody') })}>
+          <Button
+            variant="outline"
+            onClick={() =>
+              toast.error(t('toast.errorTitle'), { description: t('toast.errorBody') })
+            }
+          >
             {t('toast.error')}
           </Button>
         </div>
@@ -185,7 +210,11 @@ export function DisplaySections() {
         </Tooltip>
       </Section>
 
-      <Section id="dropdown-menu" title={t('sections.dropdownMenu')} description={t('descriptions.dropdownMenu')}>
+      <Section
+        id="dropdown-menu"
+        title={t('sections.dropdownMenu')}
+        description={t('descriptions.dropdownMenu')}
+      >
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon" aria-label={t('menu.trigger')}>
@@ -213,7 +242,11 @@ export function DisplaySections() {
         </div>
       </Section>
 
-      <Section id="skeleton" title={t('sections.skeleton')} description={t('descriptions.skeleton')}>
+      <Section
+        id="skeleton"
+        title={t('sections.skeleton')}
+        description={t('descriptions.skeleton')}
+      >
         <div className="flex max-w-sm items-center gap-3">
           <Skeleton className="size-12 rounded-full" />
           <div className="flex-1 space-y-2">
@@ -223,7 +256,11 @@ export function DisplaySections() {
         </div>
       </Section>
 
-      <Section id="empty-state" title={t('sections.emptyState')} description={t('descriptions.emptyState')}>
+      <Section
+        id="empty-state"
+        title={t('sections.emptyState')}
+        description={t('descriptions.emptyState')}
+      >
         <EmptyState
           title={t('empty.title')}
           description={t('empty.description')}
@@ -236,18 +273,35 @@ export function DisplaySections() {
         />
       </Section>
 
-      <Section id="error-state" title={t('sections.errorState')} description={t('descriptions.errorState')}>
-        <ErrorState title={t('error.title')} description={t('error.description')} retryLabel={t('error.retry')} onRetry={() => toast(t('error.retrying'))} />
+      <Section
+        id="error-state"
+        title={t('sections.errorState')}
+        description={t('descriptions.errorState')}
+      >
+        <ErrorState
+          title={t('error.title')}
+          description={t('error.description')}
+          retryLabel={t('error.retry')}
+          onRetry={() => toast(t('error.retrying'))}
+        />
       </Section>
 
-      <Section id="page-header" title={t('sections.pageHeader')} description={t('descriptions.pageHeader')}>
+      <Section
+        id="page-header"
+        title={t('sections.pageHeader')}
+        description={t('descriptions.pageHeader')}
+      >
         <PageHeader
           title={t('pageHeader.title')}
           description={t('pageHeader.description')}
           breadcrumbs={{
             label: t('breadcrumbs.label'),
             linkComponent: Link,
-            items: [{ label: t('breadcrumbs.home'), href: '/' }, { label: t('breadcrumbs.cases'), href: '/' }, { label: t('breadcrumbs.current') }],
+            items: [
+              { label: t('breadcrumbs.home'), href: '/' },
+              { label: t('breadcrumbs.cases'), href: '/' },
+              { label: t('breadcrumbs.current') },
+            ],
           }}
           actions={
             <>
@@ -258,15 +312,27 @@ export function DisplaySections() {
         />
       </Section>
 
-      <Section id="breadcrumbs" title={t('sections.breadcrumbs')} description={t('descriptions.breadcrumbs')}>
+      <Section
+        id="breadcrumbs"
+        title={t('sections.breadcrumbs')}
+        description={t('descriptions.breadcrumbs')}
+      >
         <Breadcrumbs
           label={t('breadcrumbs.label')}
           linkComponent={Link}
-          items={[{ label: t('breadcrumbs.home'), href: '/' }, { label: t('breadcrumbs.hospitals'), href: '/' }, { label: t('breadcrumbs.hospital') }]}
+          items={[
+            { label: t('breadcrumbs.home'), href: '/' },
+            { label: t('breadcrumbs.hospitals'), href: '/' },
+            { label: t('breadcrumbs.hospital') },
+          ]}
         />
       </Section>
 
-      <Section id="confirm-dialog" title={t('sections.confirmDialog')} description={t('descriptions.confirmDialog')}>
+      <Section
+        id="confirm-dialog"
+        title={t('sections.confirmDialog')}
+        description={t('descriptions.confirmDialog')}
+      >
         <div className="flex flex-wrap items-center gap-3">
           <Button variant="destructive" onClick={() => setConfirmOpen(true)}>
             {t('confirm.open')}

@@ -33,11 +33,10 @@ export const buttonVariants = cva(
 );
 
 export interface ButtonProps
-  extends ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+  extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
   /** Render the child element (for example a Link) with the button's styling. */
   asChild?: boolean;
-  /** Shows a spinner and blocks clicks. Pass `loadingLabel` so screen readers hear what is happening. */
+  /** Shows a spinner and blocks clicks. The button is marked `aria-busy`; keep its text so the name does not change. */
   loading?: boolean;
 }
 

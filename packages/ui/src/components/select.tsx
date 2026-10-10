@@ -8,11 +8,19 @@ export const Select = SelectPrimitive.Root;
 export const SelectGroup = SelectPrimitive.Group;
 export const SelectValue = SelectPrimitive.Value;
 
-export function SelectTrigger({ className, children, ...props }: ComponentProps<typeof SelectPrimitive.Trigger>) {
+export function SelectTrigger({
+  className,
+  children,
+  ...props
+}: ComponentProps<typeof SelectPrimitive.Trigger>) {
   return (
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
-      className={cn(fieldClasses, 'flex h-10 items-center justify-between gap-2 text-start data-[placeholder]:text-muted-foreground', className)}
+      className={cn(
+        fieldClasses,
+        'flex h-10 items-center justify-between gap-2 text-start data-[placeholder]:text-muted-foreground',
+        className,
+      )}
       {...props}
     >
       <span className="truncate">{children}</span>
@@ -22,7 +30,12 @@ export function SelectTrigger({ className, children, ...props }: ComponentProps<
     </SelectPrimitive.Trigger>
   );
 }
-export function SelectContent({ className, children, position = 'popper', ...props }: ComponentProps<typeof SelectPrimitive.Content>) {
+export function SelectContent({
+  className,
+  children,
+  position = 'popper',
+  ...props
+}: ComponentProps<typeof SelectPrimitive.Content>) {
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
@@ -39,7 +52,11 @@ export function SelectContent({ className, children, position = 'popper', ...pro
     </SelectPrimitive.Portal>
   );
 }
-export function SelectItem({ className, children, ...props }: ComponentProps<typeof SelectPrimitive.Item>) {
+export function SelectItem({
+  className,
+  children,
+  ...props
+}: ComponentProps<typeof SelectPrimitive.Item>) {
   return (
     <SelectPrimitive.Item
       className={cn(
@@ -59,5 +76,10 @@ export function SelectItem({ className, children, ...props }: ComponentProps<typ
   );
 }
 export function SelectLabel({ className, ...props }: ComponentProps<typeof SelectPrimitive.Label>) {
-  return <SelectPrimitive.Label className={cn('px-2 py-1.5 text-xs font-semibold text-muted-foreground', className)} {...props} />;
+  return (
+    <SelectPrimitive.Label
+      className={cn('px-2 py-1.5 text-xs font-semibold text-muted-foreground', className)}
+      {...props}
+    />
+  );
 }

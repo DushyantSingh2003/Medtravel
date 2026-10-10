@@ -1,8 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from './button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './dialog';
 
 export interface ConfirmDialogProps {
   open: boolean;
@@ -38,6 +45,11 @@ export function ConfirmDialog({
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState(false);
 
+  // A failure belongs to one attempt; reopening the dialog starts clean.
+  useEffect(() => {
+    if (!open) setFailed(false);
+  }, [open]);
+
   async function confirm() {
     setPending(true);
     setFailed(false);
@@ -68,7 +80,11 @@ export function ConfirmDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
             {cancelLabel}
           </Button>
-          <Button variant={destructive ? 'destructive' : 'primary'} onClick={confirm} loading={pending}>
+          <Button
+            variant={destructive ? 'destructive' : 'primary'}
+            onClick={confirm}
+            loading={pending}
+          >
             {confirmLabel}
           </Button>
         </DialogFooter>

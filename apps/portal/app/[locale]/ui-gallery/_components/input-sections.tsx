@@ -24,6 +24,7 @@ import type { Locale } from '@medtravel/contracts';
 import { Mail } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { datePickerLabels } from './date-labels';
 import { Section } from './section';
 
 export function InputSections({ locale }: { locale: Locale }) {
@@ -35,10 +36,12 @@ export function InputSections({ locale }: { locale: Locale }) {
   const [currency, setCurrency] = useState('USD');
   const [plan, setPlan] = useState('standard');
 
-  const cities = ['delhi', 'mumbai', 'chennai', 'bengaluru', 'hyderabad', 'kolkata'].map((value) => ({
-    value,
-    label: t(`cities.${value}`),
-  }));
+  const cities = ['delhi', 'mumbai', 'chennai', 'bengaluru', 'hyderabad', 'kolkata'].map(
+    (value) => ({
+      value,
+      label: t(`cities.${value}`),
+    }),
+  );
 
   return (
     <>
@@ -62,11 +65,19 @@ export function InputSections({ locale }: { locale: Locale }) {
         </div>
       </Section>
 
-      <Section id="form-controls" title={t('sections.formControls')} description={t('descriptions.formControls')}>
+      <Section
+        id="form-controls"
+        title={t('sections.formControls')}
+        description={t('descriptions.formControls')}
+      >
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="grid gap-1.5">
             <Label htmlFor="g-input">{t('formControls.name')}</Label>
-            <Input id="g-input" placeholder={t('formControls.namePlaceholder')} autoComplete="off" />
+            <Input
+              id="g-input"
+              placeholder={t('formControls.namePlaceholder')}
+              autoComplete="off"
+            />
           </div>
           <div className="grid gap-1.5">
             <Label htmlFor="g-email">{t('formControls.email')}</Label>
@@ -74,7 +85,12 @@ export function InputSections({ locale }: { locale: Locale }) {
           </div>
           <div className="grid gap-1.5">
             <Label htmlFor="g-invalid">{t('formControls.invalid')}</Label>
-            <Input id="g-invalid" aria-invalid="true" defaultValue="x" aria-describedby="g-invalid-msg" />
+            <Input
+              id="g-invalid"
+              aria-invalid="true"
+              defaultValue="x"
+              aria-describedby="g-invalid-msg"
+            />
             <p id="g-invalid-msg" className="text-xs font-medium text-destructive">
               {t('formControls.invalidMessage')}
             </p>
@@ -106,7 +122,11 @@ export function InputSections({ locale }: { locale: Locale }) {
         </div>
       </Section>
 
-      <Section id="combobox" title={t('sections.combobox')} description={t('descriptions.combobox')}>
+      <Section
+        id="combobox"
+        title={t('sections.combobox')}
+        description={t('descriptions.combobox')}
+      >
         <div className="max-w-xs">
           <Combobox
             options={cities}
@@ -120,19 +140,38 @@ export function InputSections({ locale }: { locale: Locale }) {
         </div>
       </Section>
 
-      <Section id="date-picker" title={t('sections.datePicker')} description={t('descriptions.datePicker')}>
+      <Section
+        id="date-picker"
+        title={t('sections.datePicker')}
+        description={t('descriptions.datePicker')}
+      >
         <div className="max-w-xs">
-          <DatePicker value={date} onChange={setDate} locale={locale} placeholder={t('datePicker.placeholder')} aria-label={t('datePicker.label')} />
+          <DatePicker
+            value={date}
+            onChange={setDate}
+            locale={locale}
+            placeholder={t('datePicker.placeholder')}
+            labels={datePickerLabels(t)}
+            aria-label={t('datePicker.label')}
+          />
         </div>
       </Section>
 
-      <Section id="phone-input" title={t('sections.phoneInput')} description={t('descriptions.phoneInput')}>
+      <Section
+        id="phone-input"
+        title={t('sections.phoneInput')}
+        description={t('descriptions.phoneInput')}
+      >
         <div className="max-w-md space-y-2">
           <PhoneInput
             value={phone}
             onChange={setPhone}
             locale={locale}
-            labels={{ country: t('phone.country'), searchCountry: t('phone.search'), noCountry: t('phone.none') }}
+            labels={{
+              country: t('phone.country'),
+              searchCountry: t('phone.search'),
+              noCountry: t('phone.none'),
+            }}
             aria-label={t('phone.number')}
           />
           <p className="text-sm text-muted-foreground" dir="ltr">
@@ -141,10 +180,20 @@ export function InputSections({ locale }: { locale: Locale }) {
         </div>
       </Section>
 
-      <Section id="currency-input" title={t('sections.currencyInput')} description={t('descriptions.currencyInput')}>
+      <Section
+        id="currency-input"
+        title={t('sections.currencyInput')}
+        description={t('descriptions.currencyInput')}
+      >
         <div className="max-w-md space-y-2">
           <div className="flex gap-2">
-            <Select value={currency} onValueChange={(value) => { setCurrency(value); setAmount(null); }}>
+            <Select
+              value={currency}
+              onValueChange={(value) => {
+                setCurrency(value);
+                setAmount(null);
+              }}
+            >
               <SelectTrigger className="w-28" aria-label={t('currency.currency')}>
                 <SelectValue />
               </SelectTrigger>
@@ -157,17 +206,28 @@ export function InputSections({ locale }: { locale: Locale }) {
               </SelectContent>
             </Select>
             <div className="flex-1">
-              <CurrencyInput value={amount} onChange={setAmount} currency={currency} locale={locale} aria-label={t('currency.amount')} />
+              <CurrencyInput
+                value={amount}
+                onChange={setAmount}
+                currency={currency}
+                locale={locale}
+                aria-label={t('currency.amount')}
+              />
             </div>
           </div>
           <p className="text-sm text-muted-foreground" dir="ltr">
-            {t('currency.stored')}: <output data-testid="currency-minor">{amount === null ? '—' : amount}</output>
+            {t('currency.stored')}:{' '}
+            <output data-testid="currency-minor">{amount === null ? '—' : amount}</output>
             {amount === null ? null : <span> ({formatMinorUnits(amount, currency, locale)})</span>}
           </p>
         </div>
       </Section>
 
-      <Section id="selection-controls" title={t('sections.selectionControls')} description={t('descriptions.selectionControls')}>
+      <Section
+        id="selection-controls"
+        title={t('sections.selectionControls')}
+        description={t('descriptions.selectionControls')}
+      >
         <div className="grid gap-6 sm:grid-cols-3">
           <div className="flex items-center gap-2">
             <Checkbox id="g-check" defaultChecked />

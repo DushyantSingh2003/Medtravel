@@ -30,6 +30,21 @@ describe('csvCell', () => {
     expect(csvCell('مستشفى أبولو')).toBe('مستشفى أبولو');
   });
 
+  it('leaves negative numbers as numbers but guards negative-looking text', () => {
+    expect(csvCell(-5)).toBe('-5');
+    expect(csvCell('-5')).toBe("'-5");
+  });
+
+  it('guards a formula hidden behind whitespace or control characters', () => {
+    expect(csvCell('  =1+1')).toBe("'  =1+1");
+    expect(csvCell('\u0001=1+1')).toBe("'\u0001=1+1");
+    expect(csvCell('\t=1+1')).toBe("'\t=1+1");
+  });
+
+  it('writes an invalid date as an empty cell instead of throwing', () => {
+    expect(csvCell(new Date('nope'))).toBe('');
+  });
+
   it('serialises dates as ISO strings', () => {
     expect(csvCell(new Date('2026-01-02T03:04:05.000Z'))).toBe('2026-01-02T03:04:05.000Z');
   });
@@ -37,6 +52,14 @@ describe('csvCell', () => {
 
 describe('toCsv', () => {
   it('joins rows with CRLF and puts the header first', () => {
-    expect(toCsv(['name', 'city'], [['A', 'Delhi'], ['B', 'Mumbai']])).toBe('name,city\r\nA,Delhi\r\nB,Mumbai');
+    expect(
+      toCsv(
+        ['name', 'city'],
+        [
+          ['A', 'Delhi'],
+          ['B', 'Mumbai'],
+        ],
+      ),
+    ).toBe('name,city\r\nA,Delhi\r\nB,Mumbai');
   });
 });

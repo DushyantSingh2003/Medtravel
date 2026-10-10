@@ -17,7 +17,12 @@ export interface BreadcrumbsProps {
   className?: string;
 }
 
-export function Breadcrumbs({ items, label, linkComponent: LinkComponent = 'a', className }: BreadcrumbsProps) {
+export function Breadcrumbs({
+  items,
+  label,
+  linkComponent: LinkComponent = 'a',
+  className,
+}: BreadcrumbsProps) {
   return (
     <nav aria-label={label} className={className}>
       <ol className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
@@ -27,11 +32,17 @@ export function Breadcrumbs({ items, label, linkComponent: LinkComponent = 'a', 
             <Fragment key={`${item.label}-${index}`}>
               <li className="inline-flex items-center">
                 {item.href && !last ? (
-                  <LinkComponent href={item.href} className={cn('rounded-sm hover:text-foreground hover:underline')}>
+                  <LinkComponent
+                    href={item.href}
+                    className={cn('rounded-sm hover:text-foreground hover:underline')}
+                  >
                     {item.label}
                   </LinkComponent>
                 ) : (
-                  <span aria-current={last ? 'page' : undefined} className={cn(last && 'font-medium text-foreground')}>
+                  <span
+                    aria-current={last ? 'page' : undefined}
+                    className={cn(last && 'font-medium text-foreground')}
+                  >
                     {item.label}
                   </span>
                 )}

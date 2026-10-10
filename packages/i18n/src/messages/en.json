@@ -4,7 +4,9 @@
     "loading": "Loading…",
     "error": "Something went wrong",
     "retry": "Try again",
-    "language": "Language"
+    "language": "Language",
+    "notifications": "Notifications",
+    "closeToast": "Close notification"
   },
   "home": {
     "title": "Treatment abroad, handled end to end",
@@ -157,6 +159,12 @@
       "kolkata": "Kolkata"
     },
     "datePicker": {
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "month": "Month",
+      "year": "Year",
+      "today": "today",
+      "selected": "selected",
       "label": "Arrival date",
       "placeholder": "Pick a date"
     },
@@ -283,7 +291,7 @@
       "columns": "Columns",
       "export": "Export CSV",
       "selectAll": "Select all rows",
-      "selectRow": "Select row",
+      "selectRow": "Select {name}",
       "previous": "Previous page",
       "next": "Next page",
       "rowsPerPage": "Rows per page",
@@ -346,12 +354,27 @@
       "progress": "Upload progress for {name}",
       "list": "Files",
       "rejected": {
+        "empty": "{name} is empty.",
         "tooLarge": "{name} is larger than 500 MB.",
         "wrongType": "{name} is not a PDF, image or DICOM file.",
         "tooMany": "{name} was not added: too many files.",
         "duplicate": "{name} was already added."
       },
+      "start": "Start upload",
       "uploadedCount": "{count, plural, one {# file uploaded} other {# files uploaded}}"
+    },
+    "chat": {
+      "sendFailed": "The message could not be sent. Try again.",
+      "log": "Messages",
+      "placeholder": "Write a message",
+      "send": "Send message",
+      "attach": "Attach a file",
+      "removeAttachment": "Remove attachment",
+      "empty": "No messages yet.",
+      "you": "You",
+      "m1": "Hello, your reports look complete. Can you confirm your travel dates?",
+      "m2": "Yes, I can arrive from the 14th.",
+      "m3": "Great. Here is your invitation letter."
     },
     "tracker": {
       "title": "Case progress",
@@ -370,18 +393,6 @@
       "visaBody": "Waiting for the medical invitation letter.",
       "travel": "Flights booked"
     },
-    "chat": {
-      "log": "Messages",
-      "placeholder": "Write a message",
-      "send": "Send message",
-      "attach": "Attach a file",
-      "removeAttachment": "Remove attachment",
-      "empty": "No messages yet.",
-      "you": "You",
-      "m1": "Hello, your reports look complete. Can you confirm your travel dates?",
-      "m2": "Yes, I can arrive from the 14th.",
-      "m3": "Great. Here is your invitation letter."
-    },
     "stats": {
       "newLeads": "New leads",
       "revenue": "Revenue",
@@ -396,6 +407,7 @@
       "board": "Case board",
       "instructions": "Press space to pick up a card, use the arrow keys to move it, and press space again to drop it.",
       "empty": "No cards",
+      "cardRole": "sortable card",
       "hint": "Tip: focus a card and press space.",
       "pickedUp": "Picked up {card}.",
       "movedTo": "{card} is over {column}, position {position}.",

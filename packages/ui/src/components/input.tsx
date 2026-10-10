@@ -9,8 +9,19 @@ export const fieldClasses = [
   'aria-invalid:border-destructive aria-invalid:focus-visible:outline-destructive',
 ];
 
-export function Input({ className, type = 'text', ...props }: InputHTMLAttributes<HTMLInputElement>) {
-  return <input data-slot="input" type={type} className={cn(fieldClasses, 'h-10', className)} {...props} />;
+export function Input({
+  className,
+  type = 'text',
+  ...props
+}: InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      data-slot="input"
+      type={type}
+      className={cn(fieldClasses, 'h-10', className)}
+      {...props}
+    />
+  );
 }
 
 export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {

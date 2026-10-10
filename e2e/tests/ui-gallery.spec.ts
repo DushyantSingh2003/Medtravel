@@ -306,6 +306,11 @@ test.describe('interactions (English, desktop)', () => {
     await openGallery(page, 'en');
     // Focus the control before the tooltip trigger, then press Tab like a real keyboard user.
     await section(page, 'toast').getByRole('button', { name: 'Show error' }).focus();
+    // Focusing scrolls the button into view, and the browser reports that scroll a frame later. Radix
+    // closes a tooltip on any scroll, so let it arrive before the keyboard user tabs to the trigger.
+    await page.evaluate(
+      () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+    );
     await page.keyboard.press('Tab');
     await expect(
       section(page, 'tooltip').getByRole('button', { name: 'More information' }),
@@ -418,7 +423,7 @@ test.describe('interactions (English, desktop)', () => {
   test('kanban card moves between columns with the keyboard and announces it', async ({ page }) => {
     await openGallery(page, 'en');
     const board = section(page, 'kanban-board');
-    const announcer = page.locator('#DndLiveRegion-0');
+    const announcer = page.locator('[id^="DndLiveRegion"]');
     const card = board.locator('[data-column="qualification"] [data-slot="kanban-card"]').first();
     await card.focus();
     await page.keyboard.press('Space');
@@ -542,6 +547,25 @@ test.describe('Arabic specifics', () => {
     expect(box!.x).toBeLessThan(4);
   });
 
+  test('Arabic calendar has Arabic navigation labels, month and year lists, and keeps a chosen day', async ({
+    page,
+  }) => {
+    await openGallery(page, 'ar');
+    const date = section(page, 'date-picker').getByRole('button', { name: 'تاريخ الوصول' });
+    await date.click();
+    await expect(page.getByRole('button', { name: 'الشهر التالي' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'الشهر السابق' })).toBeVisible();
+    await expect(page.getByRole('combobox', { name: 'الشهر' })).toBeVisible();
+    await expect(page.getByRole('combobox', { name: 'السنة' })).toBeVisible();
+    await expect(page.getByText('Go to the')).toHaveCount(0);
+    await calendarDay(page, 15).click();
+    const chosen = await date.innerText();
+    await date.click();
+    // Clicking the chosen day again must not clear a required date.
+    await calendarDay(page, 15).click();
+    await expect(date).toHaveText(chosen);
+  });
+
   test('Arabic data table shows Arabic pagination text and an Arabic CSV header', async ({
     page,
   }) => {
@@ -555,5 +579,32 @@ test.describe('Arabic specifics', () => {
     const fs = await import('node:fs/promises');
     const csv = (await fs.readFile(await file.path(), 'utf8')).slice(1);
     expect(csv.split('\r\n')[0]).toBe('رقم الحالة,المريض,الدولة,المرحلة,آخر تحديث');
+  });
+});
+
+test.describe('mock storage endpoint', () => {
+  test('escapes the object key in its XML answer and sends hardening headers', async ({
+    request,
+  }) => {
+    const response = await request.post('/api/ui-gallery/s3/a%26b%3Cscript%3Ex?uploads');
+    expect(response.status()).toBe(200);
+    expect(response.headers()['x-content-type-options']).toBe('nosniff');
+    expect(response.headers()['content-security-policy']).toBe('sandbox');
+    const body = await response.text();
+    expect(body).not.toContain('<script>');
+    expect(body).toContain('a&#38;b&#60;script&#62;x');
+  });
+
+  test('keeps a percent sign in a file name instead of decoding it twice', async ({ request }) => {
+    const response = await request.post('/api/ui-gallery/s3/100%25-report.pdf?uploads');
+    expect(response.status()).toBe(200);
+    expect(await response.text()).toContain('<Key>100%-report.pdf</Key>');
+  });
+
+  test('refuses requests the browser marks as cross-site', async ({ request }) => {
+    const cross = await request.post('/api/ui-gallery/s3/x?uploads', {
+      headers: { 'sec-fetch-site': 'cross-site' },
+    });
+    expect(cross.status()).toBe(403);
   });
 });

@@ -50,7 +50,10 @@ export interface StatusBadgeProps extends Omit<BadgeProps, 'variant' | 'children
 }
 
 export function StatusBadge({ status, label, ...props }: StatusBadgeProps) {
-  const tone = (TONES as Record<string, Tone>)[status] ?? (STAGE_TONES as Record<string, Tone>)[status] ?? 'muted';
+  const tone =
+    (TONES as Record<string, Tone>)[status] ??
+    (STAGE_TONES as Record<string, Tone>)[status] ??
+    'muted';
   return (
     <Badge variant={tone} data-status={status} {...props}>
       <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />

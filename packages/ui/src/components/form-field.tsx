@@ -62,24 +62,32 @@ export function FormField<TValues extends FieldValues, TName extends FieldPath<T
       render={({ field, fieldState }) => {
         const errorId = `${id}-error`;
         const hintId = `${id}-hint`;
-        const describedBy = [description ? hintId : null, fieldState.error ? errorId : null].filter(Boolean).join(' ');
+        const describedBy = [description ? hintId : null, fieldState.error ? errorId : null]
+          .filter(Boolean)
+          .join(' ');
         return (
           <div data-slot="form-field" className={cn('grid content-start gap-1.5', className)}>
-            {hideLabel ? null : <Label htmlFor={id}>
-              {label}
-              {required ? (
-                <>
-                  <span aria-hidden="true" className="ms-0.5 text-destructive">
-                    *
-                  </span>
-                  {requiredLabel ? <span className="sr-only"> ({requiredLabel})</span> : null}
-                </>
-              ) : null}
-            </Label>}
+            {hideLabel ? null : (
+              <Label htmlFor={id}>
+                {label}
+                {required ? (
+                  <>
+                    <span aria-hidden="true" className="ms-0.5 text-destructive">
+                      *
+                    </span>
+                    {requiredLabel ? <span className="sr-only"> ({requiredLabel})</span> : null}
+                  </>
+                ) : null}
+              </Label>
+            )}
             {children({
               field,
               fieldState,
-              control: { id, 'aria-invalid': Boolean(fieldState.error), 'aria-describedby': describedBy || undefined },
+              control: {
+                id,
+                'aria-invalid': Boolean(fieldState.error),
+                'aria-describedby': describedBy || undefined,
+              },
             })}
             {description ? (
               <p id={hintId} className="text-xs text-muted-foreground">

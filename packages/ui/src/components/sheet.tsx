@@ -31,12 +31,17 @@ const sheetVariants = cva(
 );
 
 export interface SheetContentProps
-  extends ComponentProps<typeof SheetPrimitive.Content>,
-    VariantProps<typeof sheetVariants> {
+  extends ComponentProps<typeof SheetPrimitive.Content>, VariantProps<typeof sheetVariants> {
   closeLabel: string;
 }
 
-export function SheetContent({ side, className, children, closeLabel, ...props }: SheetContentProps) {
+export function SheetContent({
+  side,
+  className,
+  children,
+  closeLabel,
+  ...props
+}: SheetContentProps) {
   return (
     <SheetPrimitive.Portal>
       <DialogOverlay />
@@ -61,5 +66,10 @@ export function SheetHeader({ className, ...props }: ComponentProps<'div'>) {
   return <div className={cn('flex flex-col gap-1.5 pe-6 text-start', className)} {...props} />;
 }
 export function SheetFooter({ className, ...props }: ComponentProps<'div'>) {
-  return <div className={cn('mt-auto flex flex-col-reverse gap-2 sm:flex-row sm:justify-end', className)} {...props} />;
+  return (
+    <div
+      className={cn('mt-auto flex flex-col gap-2 sm:flex-row sm:justify-end', className)}
+      {...props}
+    />
+  );
 }

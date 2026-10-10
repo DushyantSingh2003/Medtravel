@@ -1,9 +1,24 @@
 import type { ReactNode } from 'react';
 
 /** One component in the gallery: an anchor target with a heading, so tests and people can jump to it. */
-export function Section({ id, title, description, children }: { id: string; title: string; description?: string; children: ReactNode }) {
+export function Section({
+  id,
+  title,
+  description,
+  children,
+}: {
+  id: string;
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
   return (
-    <section id={`cmp-${id}`} data-component={id} aria-labelledby={`cmp-${id}-title`} className="scroll-mt-20 space-y-4 border-b pb-8">
+    <section
+      id={`cmp-${id}`}
+      data-component={id}
+      aria-labelledby={`cmp-${id}-title`}
+      className="scroll-mt-20 space-y-4 border-b pb-8"
+    >
       <div className="space-y-1">
         <h2 id={`cmp-${id}-title`} className="text-lg font-semibold">
           {title}

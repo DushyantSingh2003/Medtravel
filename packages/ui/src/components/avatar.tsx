@@ -12,12 +12,23 @@ export function Avatar({ className, ...props }: ComponentProps<typeof AvatarPrim
   );
 }
 export function AvatarImage({ className, ...props }: ComponentProps<typeof AvatarPrimitive.Image>) {
-  return <AvatarPrimitive.Image className={cn('aspect-square size-full object-cover', className)} {...props} />;
+  return (
+    <AvatarPrimitive.Image
+      className={cn('aspect-square size-full object-cover', className)}
+      {...props}
+    />
+  );
 }
-export function AvatarFallback({ className, ...props }: ComponentProps<typeof AvatarPrimitive.Fallback>) {
+export function AvatarFallback({
+  className,
+  ...props
+}: ComponentProps<typeof AvatarPrimitive.Fallback>) {
   return (
     <AvatarPrimitive.Fallback
-      className={cn('flex size-full items-center justify-center bg-muted text-sm font-medium', className)}
+      className={cn(
+        'flex size-full items-center justify-center bg-muted text-sm font-medium',
+        className,
+      )}
       {...props}
     />
   );

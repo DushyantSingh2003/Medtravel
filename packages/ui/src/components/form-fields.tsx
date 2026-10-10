@@ -5,7 +5,8 @@ import type { Control, FieldPath, FieldValues } from 'react-hook-form';
 import { Checkbox } from './checkbox';
 import { Combobox, type ComboboxProps } from './combobox';
 import { CurrencyInput } from './currency-input';
-import { DatePicker } from './date-picker';
+import { fromDateOnly, toDateOnly } from '../lib/date';
+import { DatePicker, type DatePickerLabels } from './date-picker';
 import { FormField } from './form-field';
 import { Input } from './input';
 import { Label } from './label';
@@ -40,7 +41,14 @@ export function FormInput<V extends FieldValues, N extends FieldPath<V>>({
   return (
     <FormField {...base}>
       {({ field, control }) => (
-        <Input {...control} {...field} value={field.value ?? ''} type={type} placeholder={placeholder} autoComplete={autoComplete} />
+        <Input
+          {...control}
+          {...field}
+          value={field.value ?? ''}
+          type={type}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+        />
       )}
     </FormField>
   );
@@ -53,7 +61,15 @@ export function FormTextarea<V extends FieldValues, N extends FieldPath<V>>({
 }: Base<V, N> & { placeholder?: string; rows?: number }) {
   return (
     <FormField {...base}>
-      {({ field, control }) => <Textarea {...control} {...field} value={field.value ?? ''} placeholder={placeholder} rows={rows} />}
+      {({ field, control }) => (
+        <Textarea
+          {...control}
+          {...field}
+          value={field.value ?? ''}
+          placeholder={placeholder}
+          rows={rows}
+        />
+      )}
     </FormField>
   );
 }
@@ -67,7 +83,7 @@ export function FormSelect<V extends FieldValues, N extends FieldPath<V>>({
     <FormField {...base}>
       {({ field, control }) => (
         <Select value={field.value ?? ''} onValueChange={field.onChange} name={field.name}>
-          <SelectTrigger {...control} onBlur={field.onBlur}>
+          <SelectTrigger {...control} ref={field.ref} onBlur={field.onBlur}>
             <SelectValue placeholder={placeholder} />
           </SelectTrigger>
           <SelectContent>
@@ -89,12 +105,15 @@ export function FormCombobox<V extends FieldValues, N extends FieldPath<V>>({
   searchPlaceholder,
   emptyLabel,
   ...base
-}: Base<V, N> & Pick<ComboboxProps, 'options' | 'placeholder' | 'searchPlaceholder' | 'emptyLabel'>) {
+}: Base<V, N> &
+  Pick<ComboboxProps, 'options' | 'placeholder' | 'searchPlaceholder' | 'emptyLabel'>) {
   return (
     <FormField {...base}>
       {({ field, control }) => (
         <Combobox
           {...control}
+          ref={field.ref}
+          onBlur={field.onBlur}
           options={options}
           value={field.value ?? null}
           onChange={field.onChange}
@@ -107,15 +126,26 @@ export function FormCombobox<V extends FieldValues, N extends FieldPath<V>>({
   );
 }
 
+/** The form value is a `YYYY-MM-DD` string (see `toDateOnly`), so it survives JSON and time zones. */
 export function FormDatePicker<V extends FieldValues, N extends FieldPath<V>>({
   locale,
   placeholder,
+  labels,
   ...base
-}: Base<V, N> & { locale: Locale; placeholder: string }) {
+}: Base<V, N> & { locale: Locale; placeholder: string; labels: DatePickerLabels }) {
   return (
     <FormField {...base}>
       {({ field, control }) => (
-        <DatePicker {...control} value={field.value ?? undefined} onChange={field.onChange} locale={locale} placeholder={placeholder} />
+        <DatePicker
+          {...control}
+          ref={field.ref}
+          onBlur={field.onBlur}
+          value={fromDateOnly(field.value)}
+          onChange={(date) => field.onChange(date ? toDateOnly(date) : '')}
+          locale={locale}
+          placeholder={placeholder}
+          labels={labels}
+        />
       )}
     </FormField>
   );
@@ -128,7 +158,17 @@ export function FormPhoneInput<V extends FieldValues, N extends FieldPath<V>>({
 }: Base<V, N> & { locale: Locale; labels: PhoneInputLabels }) {
   return (
     <FormField {...base}>
-      {({ field, control }) => <PhoneInput {...control} value={field.value ?? ''} onChange={field.onChange} locale={locale} labels={labels} />}
+      {({ field, control }) => (
+        <PhoneInput
+          {...control}
+          ref={field.ref}
+          onBlur={field.onBlur}
+          value={field.value ?? ''}
+          onChange={field.onChange}
+          locale={locale}
+          labels={labels}
+        />
+      )}
     </FormField>
   );
 }
@@ -141,7 +181,15 @@ export function FormCurrencyInput<V extends FieldValues, N extends FieldPath<V>>
   return (
     <FormField {...base}>
       {({ field, control }) => (
-        <CurrencyInput {...control} value={field.value ?? null} onChange={field.onChange} onBlur={field.onBlur} currency={currency} locale={locale} />
+        <CurrencyInput
+          {...control}
+          ref={field.ref}
+          value={field.value ?? null}
+          onChange={field.onChange}
+          onBlur={field.onBlur}
+          currency={currency}
+          locale={locale}
+        />
       )}
     </FormField>
   );
@@ -158,7 +206,13 @@ function InlineField<V extends FieldValues, N extends FieldPath<V>>({
         const Control = kind === 'checkbox' ? Checkbox : Switch;
         return (
           <div className="flex items-center gap-2">
-            <Control {...control} checked={Boolean(field.value)} onCheckedChange={(v) => field.onChange(v === true)} onBlur={field.onBlur} />
+            <Control
+              {...control}
+              ref={field.ref}
+              checked={Boolean(field.value)}
+              onCheckedChange={(v) => field.onChange(v === true)}
+              onBlur={field.onBlur}
+            />
             <Label htmlFor={control.id} className="font-normal">
               {base.label}
             </Label>
@@ -168,5 +222,9 @@ function InlineField<V extends FieldValues, N extends FieldPath<V>>({
     </FormField>
   );
 }
-export const FormCheckbox = <V extends FieldValues, N extends FieldPath<V>>(props: Base<V, N>) => <InlineField kind="checkbox" {...props} />;
-export const FormSwitch = <V extends FieldValues, N extends FieldPath<V>>(props: Base<V, N>) => <InlineField kind="switch" {...props} />;
+export const FormCheckbox = <V extends FieldValues, N extends FieldPath<V>>(props: Base<V, N>) => (
+  <InlineField kind="checkbox" {...props} />
+);
+export const FormSwitch = <V extends FieldValues, N extends FieldPath<V>>(props: Base<V, N>) => (
+  <InlineField kind="switch" {...props} />
+);
