@@ -4,7 +4,7 @@ Tick a task here when it is finished and `pnpm check` is green. The task queue t
 build loop is `loop/cloud-state.json`; this file is the human-readable view and also records
 what each task deferred.
 
-Tasks: 116 in the plan. Done: S-01 to S-04.
+Tasks: 116 in the plan. Done: S-01 to S-05.
 
 ### Phase 0 — Scaffold (week 1)
 
@@ -12,7 +12,7 @@ Tasks: 116 in the plan. Done: S-01 to S-04.
 - [x] **S-02** Local services with Docker
 - [x] **S-03** Claude Code configuration and progress tracker
 - [x] **S-04** CI pipeline and staging deploy — CI green on `develop` (run 2); deploy workflow not yet run (see deferred notes)
-- [ ] **S-05** Design system (packages/ui)
+- [x] **S-05** Design system (packages/ui)
 - [ ] **S-06** App shells and layouts
 
 ### Phase 1A — Foundation (weeks 2–4)
@@ -165,6 +165,20 @@ Tasks: 116 in the plan. Done: S-01 to S-04.
 - [ ] **G-08** Advanced analytics
 
 ## Notes and deferred work
+
+### Deferred from S-05
+
+- A native-speaker review of the Arabic (`packages/i18n/REVIEW.md`), especially `stages.*` and the brand name.
+- Confirm the brand colours and fonts (placeholders in the task; blue, amber, Inter + Noto Sans Arabic chosen).
+- A dark-mode toggle (the tokens and components are ready; the apps do not switch yet).
+- Real S3 signing for `FileUploader` comes from the file service (F-06); the gallery uses a mock endpoint.
+  Resuming an upload after a page reload is not included (needs the API to track upload ids).
+- `/ui-gallery` is opt-in via `ENABLE_UI_GALLERY=true`; add the line to an existing `apps/portal/.env`.
+- DataTable column filters: callers put them in the `toolbar` slot and refetch; no built-in filter UI.
+- Not exercised with a real screen reader; automated accessibility checks (axe) pass.
+- TanStack Table 9 and react-day-picker 10 exist; the 8.x and 9.x lines are used.
+- The CI job that builds and runs browser tests was renamed "Build all apps and browser tests"; update
+  branch protection if it was already set.
 
 ### Deferred from S-04
 

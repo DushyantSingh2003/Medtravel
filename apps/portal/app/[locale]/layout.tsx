@@ -1,15 +1,15 @@
 import { NextIntlClientProvider } from 'next-intl';
-import { setRequestLocale } from 'next-intl/server';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { UiProvider } from '@medtravel/ui';
 import { LOCALES, directionOf, isLocale } from '@medtravel/i18n';
 import '../globals.css';
 
 export const metadata: Metadata = {
   title: 'MedTravel portal',
-  description:
-    'Patient, operations, hospital, agent and admin portals.',
+  description: 'Patient, operations, hospital, agent and admin portals.',
 };
 
 /** Pre-render both locales at build time rather than on first request. */
@@ -29,11 +29,19 @@ export default async function LocaleLayout({
 
   // Lets the static renderer know which locale this render is for.
   setRequestLocale(locale);
+  const t = await getTranslations({ locale, namespace: 'common' });
 
   return (
     <html lang={locale} dir={directionOf(locale)}>
-      <body className="bg-white text-slate-900 antialiased">
-        <NextIntlClientProvider>{children}</NextIntlClientProvider>
+      <body className="bg-background text-foreground antialiased">
+        <NextIntlClientProvider>
+          <UiProvider
+            dir={directionOf(locale)}
+            labels={{ notifications: t('notifications'), closeToast: t('closeToast') }}
+          >
+            {children}
+          </UiProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

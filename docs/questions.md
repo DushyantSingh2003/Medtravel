@@ -19,3 +19,12 @@ Appended by build tasks. Format: `- [<TASK-ID>] <question> — assumed: <what wa
 - [S-04] ECS needs a way to pick up new images before Terraform exists (L-05) — assumed: a mutable `:staging` tag plus `update-service --force-new-deployment`, with a commit-tagged image pushed for rollbacks.
 - [S-04] The AWS resources and GitHub variables do not exist yet — assumed: the deploy workflow stays dormant until `AWS_ROLE_ARN` is set; names default to `medtravel-staging` / `medtravel-<app>` and can be overridden.
 - [S-04] `dump.rdb` (a Redis snapshot holding only a test key from verification) was committed in S-01 by `git add -A` — assumed: remove it and ignore `*.rdb`; it stays in history but contains no secrets.
+- [S-05] The task's brand tokens are placeholders (`<colour>`, `<font>`) — assumed: primary clinical blue (continuing S-01), secondary warm amber, Inter for Latin and Noto Sans Arabic for Arabic (IBM Plex Sans Arabic not bundled). One file (`theme.css`) to change.
+- [S-05] "Set up shadcn/ui inside packages/ui" — assumed: the shadcn conventions (Radix + class-variance-authority + `cn`, components in place) without its CLI, which needs a registry download; no `components.json`.
+- [S-05] TanStack Table 9 and react-day-picker 10 are the registry latest — assumed: use the 8.x and 9.x lines, whose APIs are known, and upgrade deliberately.
+- [S-05] Arabic number formatting — assumed: Latin digits for dates, money and phone numbers, because they are compared against invoices and passports; one line (`intlLocale`) to change.
+- [S-05] Case stages are needed by StatusBadge/StageTracker before F-10 — assumed: identifiers only in `packages/contracts/src/case-stages.ts`; F-10 adds transitions, owners and durations.
+- [S-05] The gallery needs a storage endpoint to demo uploads — assumed: a mock S3 multipart endpoint in the portal, off in production unless `ENABLE_UI_GALLERY=true`.
+- [S-05] Components carry no default text — assumed: every visible string is a prop supplied by the app through next-intl.
+- [S-05] Dark mode — assumed: tokens and components are dark-ready and tested, but no toggle ships yet.
+- [S-05] The S-01 Arabic brand name mixed scripts ("ميدتravel") — assumed: "ميد ترافل"; flagged in `packages/i18n/REVIEW.md`.

@@ -1,42 +1,204 @@
 /*
- * Shared Tailwind 4 theme for every MedTravel front end.
+ * MedTravel design tokens, shared by every front end (apps/web, apps/portal).
  *
- * Tailwind 4 has no JavaScript config file: design tokens are declared here with @theme and
- * both Next apps import this file from their own globals.css.
+ * Tailwind 4 has no JavaScript config: tokens are CSS variables declared here and exposed to
+ * utilities through @theme. Components use the SEMANTIC tokens (primary, muted, destructive...)
+ * so dark mode is a matter of redefining the variables under `.dark`, never of touching a component.
+ * Light theme is the default; the dark values are defined and ready but not yet switchable in the UI.
+ *
+ * Brand: primary = clinical blue, secondary = warm amber (calls to action and highlights).
+ * Fonts: Inter (Latin) and Noto Sans Arabic (Arabic), self-hosted through Fontsource so builds
+ * never depend on a font CDN.
  */
 @import 'tailwindcss';
+@import '@fontsource-variable/inter';
+@import '@fontsource/noto-sans-arabic/400.css';
+@import '@fontsource/noto-sans-arabic/500.css';
+@import '@fontsource/noto-sans-arabic/600.css';
+@import '@fontsource/noto-sans-arabic/700.css';
+@import 'react-day-picker/style.css';
 
-@theme {
-  /* Brand — calm medical blue with a warm accent for calls to action. */
-  --color-brand-50: #eef6ff;
-  --color-brand-100: #d9ebff;
-  --color-brand-200: #bcdcff;
-  --color-brand-300: #8ec6ff;
-  --color-brand-400: #59a6ff;
-  --color-brand-500: #2f83f7;
-  --color-brand-600: #1b63d9;
-  --color-brand-700: #184fae;
-  --color-brand-800: #1a448b;
-  --color-brand-900: #1b3b72;
+/* Tailwind does not scan packages that live in node_modules or are gitignored (dist), so the
+   component sources are registered explicitly. */
+@source "./";
 
-  --color-accent-400: #ffb454;
-  --color-accent-500: #f59324;
-  --color-accent-600: #d97708;
+@custom-variant dark (&:where(.dark, .dark *));
 
-  /* Status colours used by case stages and SLA timers. */
-  --color-success-500: #16a34a;
-  --color-warning-500: #d97706;
-  --color-danger-500: #dc2626;
+:root {
+  --radius: 0.625rem;
 
-  --font-sans: var(--font-app-sans), ui-sans-serif, system-ui, sans-serif;
+  /* Brand scale */
+  --brand-50: #eef6ff;
+  --brand-100: #d9ebff;
+  --brand-200: #bcdcff;
+  --brand-300: #8ec6ff;
+  --brand-400: #59a6ff;
+  --brand-500: #2f83f7;
+  --brand-600: #1b63d9;
+  --brand-700: #184fae;
+  --brand-800: #1a448b;
+  --brand-900: #1b3b72;
+  --amber-400: #ffb454;
+  --amber-500: #f59324;
+  --amber-600: #d97708;
 
-  --radius-card: 0.75rem;
+  /* Semantic tokens — light */
+  --background: #ffffff;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: var(--brand-600);
+  --primary-foreground: #ffffff;
+  --secondary: var(--amber-500);
+  --secondary-foreground: #1f1300;
+  --muted: #f1f5f9;
+  --muted-foreground: #475569;
+  --accent: var(--brand-50);
+  --accent-foreground: var(--brand-800);
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --success: #15803d;
+  --success-foreground: #ffffff;
+  --warning: #b45309;
+  --warning-foreground: #ffffff;
+  --info: var(--brand-700);
+  /* Text on the 15% tinted badge backgrounds needs a darker shade than the solid colour (WCAG AA). */
+  --success-text: #166534;
+  --warning-text: #92400e;
+  --destructive-text: #b91c1c;
+  --info-text: var(--brand-800);
+  --border: #e2e8f0;
+  --input: #cbd5e1;
+  --ring: var(--brand-500);
 }
 
-/*
- * Arabic reads right-to-left. Components use logical properties (ps-*, pe-*, ms-*, me-*)
- * so the same markup works in both directions; this only flips the document default.
- */
-[dir='rtl'] {
-  text-align: start;
+.dark {
+  --background: #0b1220;
+  --foreground: #e2e8f0;
+  --card: #111a2e;
+  --card-foreground: #e2e8f0;
+  --popover: #111a2e;
+  --popover-foreground: #e2e8f0;
+  --primary: var(--brand-400);
+  --primary-foreground: #06142e;
+  --secondary: var(--amber-400);
+  --secondary-foreground: #1f1300;
+  --muted: #1a2438;
+  --muted-foreground: #94a3b8;
+  --accent: #172554;
+  --accent-foreground: var(--brand-200);
+  --destructive: #f87171;
+  --destructive-foreground: #1c0505;
+  --success: #4ade80;
+  --success-foreground: #052e16;
+  --warning: #fbbf24;
+  --warning-foreground: #1c1203;
+  --info: var(--brand-300);
+  --success-text: #86efac;
+  --warning-text: #fcd34d;
+  --destructive-text: #fca5a5;
+  --info-text: var(--brand-200);
+  --border: #1e293b;
+  --input: #334155;
+  --ring: var(--brand-400);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-success-text: var(--success-text);
+  --color-warning-text: var(--warning-text);
+  --color-destructive-text: var(--destructive-text);
+  --color-info-text: var(--info-text);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Inter first; the browser falls through to Noto Sans Arabic for Arabic glyphs, so the same
+     stack serves both directions. */
+  --font-sans: 'Inter Variable', 'Noto Sans Arabic', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Calendar colours follow the design tokens. */
+.rdp-root {
+  --rdp-accent-color: var(--primary);
+  --rdp-accent-background-color: var(--accent);
+  --rdp-day-height: 2.25rem;
+  --rdp-day-width: 2.25rem;
+  --rdp-day_button-height: 2.25rem;
+  --rdp-day_button-width: 2.25rem;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html {
+    font-family: var(--font-sans);
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+  }
+  /* Visible keyboard focus everywhere, without a ring on mouse clicks. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  /* Respect reduced-motion preferences. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+  /* Numbers, codes and email addresses stay left-to-right inside right-to-left text. */
+  [dir='rtl'] input[type='email'],
+  [dir='rtl'] input[type='tel'],
+  [dir='rtl'] input[type='url'],
+  [dir='rtl'] input[inputmode='numeric'],
+  [dir='rtl'] input[inputmode='decimal'] {
+    direction: ltr;
+    text-align: end;
+  }
 }

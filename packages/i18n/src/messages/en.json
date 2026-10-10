@@ -4,7 +4,9 @@
     "loading": "Loading…",
     "error": "Something went wrong",
     "retry": "Try again",
-    "language": "Language"
+    "language": "Language",
+    "notifications": "Notifications",
+    "closeToast": "Close notification"
   },
   "home": {
     "title": "Treatment abroad, handled end to end",
@@ -14,5 +16,403 @@
   "portal": {
     "title": "MedTravel portal",
     "signIn": "Sign in"
+  },
+  "stages": {
+    "enquiry": "Enquiry",
+    "qualification": "Qualification",
+    "medical_review": "Medical review",
+    "hospital_opinions": "Hospital opinions",
+    "quote_decision": "Quote and decision",
+    "booking_deposit": "Booking and deposit",
+    "visa": "Visa",
+    "travel_planning": "Travel planning",
+    "arrival": "Arrival",
+    "treatment": "Treatment",
+    "discharge_return": "Discharge and return",
+    "follow_up": "Follow-up",
+    "lost": "Lost",
+    "on_hold": "On hold",
+    "cancelled": "Cancelled"
+  },
+  "gallery": {
+    "common": {
+      "cancel": "Cancel",
+      "close": "Close",
+      "required": "required"
+    },
+    "title": "UI gallery",
+    "subtitle": "Every shared component, in English and Arabic.",
+    "language": "Language",
+    "sections": {
+      "button": "Button",
+      "formControls": "Input, Textarea and Label",
+      "select": "Select",
+      "combobox": "Combobox",
+      "datePicker": "Date picker",
+      "phoneInput": "Phone input",
+      "currencyInput": "Currency input",
+      "selectionControls": "Checkbox, Radio and Switch",
+      "badge": "Badge",
+      "statusBadge": "Status badge (case stages)",
+      "card": "Card",
+      "tabs": "Tabs",
+      "dialog": "Dialog",
+      "sheet": "Sheet",
+      "drawer": "Drawer",
+      "toast": "Toast",
+      "tooltip": "Tooltip",
+      "dropdownMenu": "Dropdown menu",
+      "avatar": "Avatar",
+      "skeleton": "Skeleton",
+      "emptyState": "Empty state",
+      "errorState": "Error state",
+      "pageHeader": "Page header",
+      "breadcrumbs": "Breadcrumbs",
+      "confirmDialog": "Confirm dialog",
+      "dataTable": "Data table",
+      "formFields": "Form fields (React Hook Form)",
+      "fileUploader": "File uploader",
+      "stageTracker": "Stage tracker",
+      "timeline": "Timeline",
+      "chatPanel": "Chat panel",
+      "statCard": "KPI stat card",
+      "kanbanBoard": "Kanban board"
+    },
+    "descriptions": {
+      "button": "Variants, sizes, loading and disabled states.",
+      "formControls": "Plain text fields with invalid and disabled states.",
+      "select": "Pick one value from a short list.",
+      "combobox": "Type to filter a long list. Arrow keys move, Enter chooses.",
+      "datePicker": "A calendar that follows the language and direction.",
+      "phoneInput": "Country code and number; the value is always in international (E.164) format.",
+      "currencyInput": "Stores whole minor units (cents, paise, fils), never decimals.",
+      "selectionControls": "Checkbox, radio group and switch.",
+      "badge": "Small labels for counts and tags.",
+      "statusBadge": "Every case stage and exit stage, coloured by group.",
+      "card": "A container with header, content and footer.",
+      "tabs": "Switch between related views. Arrow keys move between tabs.",
+      "dialog": "A modal window that traps focus until closed.",
+      "sheet": "A side panel that opens on the reading-end edge.",
+      "drawer": "A bottom drawer you can drag down to dismiss, made for phones.",
+      "toast": "Short messages that appear and fade away.",
+      "tooltip": "A hint shown on hover and on keyboard focus.",
+      "dropdownMenu": "A menu of actions for one item.",
+      "avatar": "Initials are shown when there is no photo.",
+      "skeleton": "Placeholders shown while content loads.",
+      "emptyState": "Shown when a list has nothing to display yet.",
+      "errorState": "Shown when loading failed, with a retry action.",
+      "pageHeader": "Title, description, breadcrumbs and actions. Actions wrap below the title on phones.",
+      "breadcrumbs": "Where you are in the app. The separator flips in right-to-left.",
+      "confirmDialog": "Asks before an irreversible action and shows progress while it runs.",
+      "dataTable": "Server-side search, sorting and paging, column visibility, row selection and CSV export. The second table renders only the rows in view.",
+      "formFields": "Fields connected to React Hook Form and Zod, with labels, hints and errors wired for screen readers.",
+      "fileUploader": "Multipart upload to S3 with progress and retry, up to 500 MB per file. This demo uploads to a mock endpoint; try \"flaky.pdf\" to see a retry.",
+      "stageTracker": "The twelve case stages. Vertical on phones, horizontal from tablet width.",
+      "timeline": "A history of events, in order.",
+      "chatPanel": "Message list and composer. Enter sends, Shift+Enter adds a line.",
+      "statCard": "Key numbers with a trend. Loading shows a placeholder.",
+      "kanbanBoard": "Drag cards between columns with a mouse, a finger or the keyboard."
+    },
+    "button": {
+      "primary": "Primary",
+      "secondary": "Secondary",
+      "outline": "Outline",
+      "ghost": "Ghost",
+      "destructive": "Delete",
+      "link": "Link",
+      "loading": "Saving",
+      "disabled": "Disabled",
+      "small": "Small",
+      "withIcon": "Send email"
+    },
+    "formControls": {
+      "name": "Full name",
+      "namePlaceholder": "As on the passport",
+      "email": "Email",
+      "invalid": "Invalid field",
+      "invalidMessage": "Enter at least two characters.",
+      "disabled": "Disabled field",
+      "disabledValue": "Cannot be edited",
+      "notes": "Notes",
+      "notesPlaceholder": "Anything the coordinator should know"
+    },
+    "select": {
+      "label": "Language",
+      "placeholder": "Choose a language",
+      "english": "English",
+      "arabic": "Arabic",
+      "french": "French",
+      "russian": "Russian"
+    },
+    "combobox": {
+      "label": "City",
+      "placeholder": "Choose a city",
+      "search": "Search cities",
+      "empty": "No city found."
+    },
+    "cities": {
+      "delhi": "Delhi",
+      "mumbai": "Mumbai",
+      "chennai": "Chennai",
+      "bengaluru": "Bengaluru",
+      "hyderabad": "Hyderabad",
+      "kolkata": "Kolkata"
+    },
+    "datePicker": {
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "month": "Month",
+      "year": "Year",
+      "today": "today",
+      "selected": "selected",
+      "label": "Arrival date",
+      "placeholder": "Pick a date"
+    },
+    "phone": {
+      "country": "Country code",
+      "search": "Search countries",
+      "none": "No country found.",
+      "number": "Phone number",
+      "value": "Value"
+    },
+    "currency": {
+      "currency": "Currency",
+      "amount": "Amount",
+      "stored": "Stored minor units"
+    },
+    "selection": {
+      "checkbox": "I agree to the terms",
+      "radioGroup": "Package",
+      "switch": "Send me updates",
+      "plans": {
+        "basic": "Basic",
+        "standard": "Standard",
+        "premium": "Premium"
+      }
+    },
+    "badge": {
+      "default": "Default",
+      "secondary": "Secondary",
+      "outline": "Outline",
+      "muted": "Muted",
+      "success": "Success",
+      "warning": "Warning",
+      "destructive": "Error",
+      "info": "Info"
+    },
+    "card": {
+      "title": "Treatment plan",
+      "description": "Prepared by the hospital desk",
+      "body": "Estimated stay of seven days with two follow-up consultations.",
+      "primary": "Accept",
+      "secondary": "Details"
+    },
+    "tabs": {
+      "label": "Case sections",
+      "overview": "Overview",
+      "documents": "Documents",
+      "payments": "Payments",
+      "overviewBody": "Summary of the case and the next action.",
+      "documentsBody": "Reports, scans and the invitation letter.",
+      "paymentsBody": "Deposits, invoices and refunds."
+    },
+    "dialog": {
+      "open": "Open dialog",
+      "title": "Share your reports",
+      "description": "Your coordinator will review them within two hours.",
+      "action": "Continue"
+    },
+    "sheet": {
+      "open": "Open side panel",
+      "title": "Filters",
+      "description": "Narrow the list of cases.",
+      "action": "Apply filters"
+    },
+    "drawer": {
+      "open": "Open drawer",
+      "title": "Quick actions",
+      "description": "Drag the handle down to close."
+    },
+    "toast": {
+      "success": "Show success",
+      "error": "Show error",
+      "successTitle": "Saved",
+      "successBody": "Your changes were saved.",
+      "errorTitle": "Could not save",
+      "errorBody": "Check your connection and try again."
+    },
+    "tooltip": {
+      "trigger": "More information",
+      "content": "Shown on hover and keyboard focus."
+    },
+    "menu": {
+      "trigger": "Case actions",
+      "label": "Case",
+      "assign": "Assign to me",
+      "addNote": "Add note",
+      "delete": "Delete case"
+    },
+    "empty": {
+      "title": "No cases yet",
+      "description": "New enquiries will appear here.",
+      "action": "Add case"
+    },
+    "error": {
+      "title": "Something went wrong",
+      "description": "We could not load the cases.",
+      "retry": "Try again",
+      "retrying": "Trying again…"
+    },
+    "pageHeader": {
+      "title": "Cases",
+      "description": "Everyone currently in the pipeline.",
+      "primary": "New case",
+      "secondary": "Export"
+    },
+    "breadcrumbs": {
+      "label": "Breadcrumb",
+      "home": "Home",
+      "cases": "Cases",
+      "current": "CASE-2026-000101",
+      "hospitals": "Hospitals",
+      "hospital": "Apollo Hospital"
+    },
+    "confirm": {
+      "open": "Cancel case…",
+      "title": "Cancel this case?",
+      "description": "The patient is notified and any deposit is refunded. This cannot be undone.",
+      "failed": "Could not cancel the case. Try again.",
+      "confirm": "Cancel case",
+      "count": "{count, plural, one {# case cancelled} other {# cases cancelled}}"
+    },
+    "table": {
+      "caption": "Cases",
+      "search": "Search cases",
+      "columns": "Columns",
+      "export": "Export CSV",
+      "selectAll": "Select all rows",
+      "selectRow": "Select {name}",
+      "previous": "Previous page",
+      "next": "Next page",
+      "rowsPerPage": "Rows per page",
+      "pageOf": "Page {page} of {pages}",
+      "total": "{count, plural, one {# result} other {# results}}",
+      "selected": "{count, plural, one {# selected} other {# selected}}",
+      "loading": "Loading cases",
+      "emptyTitle": "No matching cases",
+      "emptyDescription": "Try a different search.",
+      "errorTitle": "Could not load cases",
+      "caseNo": "Case no.",
+      "patient": "Patient",
+      "country": "Country",
+      "stage": "Stage",
+      "updated": "Updated",
+      "virtualTitle": "Virtualised table",
+      "virtualHint": "{count} rows, only the visible ones are in the page.",
+      "virtualCaption": "Cases, virtualised"
+    },
+    "form": {
+      "name": "Full name",
+      "email": "Email",
+      "emailHint": "We send quotes here.",
+      "phone": "Phone",
+      "city": "Preferred city",
+      "language": "Language",
+      "arrival": "Planned arrival",
+      "budget": "Budget",
+      "budgetHint": "In US dollars.",
+      "notes": "Notes",
+      "consent": "I consent to my reports being shared with hospitals",
+      "urgent": "This is urgent",
+      "submit": "Submit",
+      "simulateServerError": "Simulate a server error",
+      "serverError": "This email is already registered.",
+      "saved": "Form is valid and was submitted.",
+      "errors": {
+        "name": "Enter your full name.",
+        "email": "Enter a valid email address.",
+        "phone": "Enter a valid phone number.",
+        "city": "Choose a city.",
+        "language": "Choose a language.",
+        "arrival": "Pick an arrival date.",
+        "budget": "Enter a budget of at least 1.00.",
+        "notes": "Keep notes under 200 characters.",
+        "consent": "You must consent to continue."
+      }
+    },
+    "uploader": {
+      "dropTitle": "Drop medical reports here",
+      "dropHint": "or browse files",
+      "restrictions": "PDF, images or DICOM, up to 500 MB each",
+      "remove": "Remove",
+      "retry": "Retry",
+      "cancelAll": "Cancel all",
+      "uploading": "Uploading",
+      "done": "Uploaded",
+      "failed": "Failed",
+      "queued": "Waiting",
+      "progress": "Upload progress for {name}",
+      "list": "Files",
+      "rejected": {
+        "empty": "{name} is empty.",
+        "tooLarge": "{name} is larger than 500 MB.",
+        "wrongType": "{name} is not a PDF, image or DICOM file.",
+        "tooMany": "{name} was not added: too many files.",
+        "duplicate": "{name} was already added."
+      },
+      "start": "Start upload",
+      "uploadedCount": "{count, plural, one {# file uploaded} other {# files uploaded}}"
+    },
+    "chat": {
+      "sendFailed": "The message could not be sent. Try again.",
+      "log": "Messages",
+      "placeholder": "Write a message",
+      "send": "Send message",
+      "attach": "Attach a file",
+      "removeAttachment": "Remove attachment",
+      "empty": "No messages yet.",
+      "you": "You",
+      "m1": "Hello, your reports look complete. Can you confirm your travel dates?",
+      "m2": "Yes, I can arrive from the 14th.",
+      "m3": "Great. Here is your invitation letter."
+    },
+    "tracker": {
+      "title": "Case progress",
+      "choose": "Current stage",
+      "done": "completed",
+      "current": "current stage",
+      "upcoming": "upcoming"
+    },
+    "timeline": {
+      "label": "Case history",
+      "created": "Enquiry received",
+      "documents": "Reports uploaded",
+      "documentsBody": "Three documents added by the patient.",
+      "quote": "Quote accepted",
+      "visa": "Visa in process",
+      "visaBody": "Waiting for the medical invitation letter.",
+      "travel": "Flights booked"
+    },
+    "stats": {
+      "newLeads": "New leads",
+      "revenue": "Revenue",
+      "responseTime": "Response time",
+      "loading": "Loading",
+      "up12": "up 12 percent versus last week",
+      "down3": "down 3 percent versus last week",
+      "faster": "2 minutes faster than last week",
+      "minutes": "{count} min"
+    },
+    "kanban": {
+      "board": "Case board",
+      "instructions": "Press space to pick up a card, use the arrow keys to move it, and press space again to drop it.",
+      "empty": "No cards",
+      "cardRole": "sortable card",
+      "hint": "Tip: focus a card and press space.",
+      "pickedUp": "Picked up {card}.",
+      "movedTo": "{card} is over {column}, position {position}.",
+      "dropped": "{card} dropped in {column}, position {position}.",
+      "cancelled": "Move of {card} cancelled."
+    }
   }
 }

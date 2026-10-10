@@ -1,3 +1,3 @@
-import base from '@medtravel/config/eslint/base';
+import react from '@medtravel/config/eslint/react';
 
-export default base;
+export default react;

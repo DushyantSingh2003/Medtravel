@@ -1,5 +1,10 @@
 {
   "extends": "@medtravel/config/tsconfig/base.json",
-  "compilerOptions": { "noEmit": true, "types": ["node"] },
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"],
+    // Callbacks passed to page.evaluate run in the browser, so they use DOM types.
+    "lib": ["ES2023", "DOM"]
+  },
   "include": ["tests/**/*.ts", "playwright.config.ts"]
 }

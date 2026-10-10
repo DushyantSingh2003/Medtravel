@@ -12,14 +12,19 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.9.1",
     "@medtravel/api-client": "workspace:*",
     "@medtravel/contracts": "workspace:*",
     "@medtravel/i18n": "workspace:*",
     "@medtravel/ui": "workspace:*",
+    "@tanstack/react-table": "^8.21.3",
+    "lucide-react": "^1.54.0",
     "next": "16.4.0",
     "next-intl": "^4.14.9",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "react-hook-form": "^7.89.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@medtravel/config": "workspace:*",
