@@ -168,6 +168,8 @@ Tasks: 116 in the plan. Done: S-01 to S-05.
 
 ### Deferred from S-05
 
+- **Verified on GitHub:** `ci.yml` run 5 on `develop` (commit cb46848) passed all 7 jobs: lint/typecheck/unit tests,
+  API e2e, build + Playwright (website smoke and gallery), and the four image builds and boots.
 - A native-speaker review of the Arabic (`packages/i18n/REVIEW.md`), especially `stages.*` and the brand name.
 - Confirm the brand colours and fonts (placeholders in the task; blue, amber, Inter + Noto Sans Arabic chosen).
 - A dark-mode toggle (the tokens and components are ready; the apps do not switch yet).
