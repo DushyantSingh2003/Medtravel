@@ -42,6 +42,7 @@ Seed logins: see docs/dev-users.md (one user per role, password Dev@12345, 2FA d
 
 ## Frontend rules
 - Use packages/ui components (PageHeader, DataTable, FormField*, FileUploader, StageTracker, EmptyState, ConfirmDialog). Add new shared components there, not in apps.
+  Read packages/ui/README.md first. Components hold no text (pass translated strings in), use semantic colour tokens (never bg-white/text-slate-*), and are checked in `/ui-gallery` — add new ones there with en and ar.
 - RTL-safe Tailwind only: ms-/me-/ps-/pe-/start-/end-, never ml-/mr-/pl-/pr-/left-/right-.
 - All visible text via next-intl keys. Add en and ar for every key (mark machine-drafted ar in packages/i18n/REVIEW.md).
 - Data only through generated api-client hooks. Every screen has loading skeleton, error state and empty state.

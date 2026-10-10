@@ -32,7 +32,7 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} dir={directionOf(locale)}>
-      <body className="bg-white text-slate-900 antialiased">
+      <body className="bg-background text-foreground antialiased">
         <NextIntlClientProvider>{children}</NextIntlClientProvider>
       </body>
     </html>

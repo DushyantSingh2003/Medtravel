@@ -93,7 +93,7 @@ jobs:
       - run: pnpm --filter @medtravel/api test:e2e
 
   build:
-    name: Build all apps and smoke test
+    name: Build all apps and browser tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -121,11 +121,13 @@ jobs:
 
       # `pnpm check` has passed while an app failed to start before, so boot the built apps and
       # hit them instead of trusting the build alone.
-      - name: Start API and website
+      - name: Start API, website and portal
         run: |
           (cd apps/api && PORT=3001 NODE_ENV=production node dist/main.js > "$RUNNER_TEMP/api.log" 2>&1 &)
           (cd apps/web && npx next start --port 3000 > "$RUNNER_TEMP/web.log" 2>&1 &)
-          for url in http://localhost:3001/health http://localhost:3000/en; do
+          # The component gallery and its mock S3 endpoint are off in production unless enabled.
+          (cd apps/portal && ENABLE_UI_GALLERY=true npx next start --port 3002 > "$RUNNER_TEMP/portal.log" 2>&1 &)
+          for url in http://localhost:3001/health http://localhost:3000/en http://localhost:3002/en/ui-gallery; do
             for i in $(seq 1 30); do
               curl -fsS -o /dev/null "$url" && break
               [ "$i" = 30 ] && { echo "::error::$url did not come up"; cat "$RUNNER_TEMP"/*.log; exit 1; }
@@ -134,10 +136,11 @@ jobs:
           done
           curl -fsS http://localhost:3001/docs -o /dev/null
       - run: pnpm --filter @medtravel/e2e exec playwright install --with-deps chromium
-      - name: Playwright smoke test
+      - name: Playwright tests (website smoke and component gallery)
         run: pnpm e2e
         env:
           WEB_BASE_URL: http://localhost:3000
+          PORTAL_BASE_URL: http://localhost:3002
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v4

@@ -125,7 +125,7 @@ Matrix jobs appear as separate checks and must each be added:
 
 - `Lint, typecheck, unit tests`
 - `API e2e (Postgres + Redis)`
-- `Build all apps and smoke test`
+- `Build all apps and browser tests`
 - `Docker image (api)`, `Docker image (worker)`, `Docker image (web)`, `Docker image (portal)`
 
 As a second line of defence the deploy boots each image (`scripts/smoke-image.sh`) before pushing it.

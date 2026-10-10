@@ -13,7 +13,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center gap-6 px-6 py-16">
       <h1 className="text-4xl font-semibold text-brand-800">{t('title')}</h1>
-      <p className="text-lg text-slate-600">{t('subtitle')}</p>
+      <p className="text-lg text-muted-foreground">{t('subtitle')}</p>
       <div>
         <Button size="lg">{t('cta')}</Button>
       </div>

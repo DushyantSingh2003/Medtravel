@@ -3,6 +3,7 @@ import { setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { UiProvider } from '@medtravel/ui';
 import { LOCALES, directionOf, isLocale } from '@medtravel/i18n';
 import '../globals.css';
 
@@ -32,8 +33,10 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} dir={directionOf(locale)}>
-      <body className="bg-white text-slate-900 antialiased">
-        <NextIntlClientProvider>{children}</NextIntlClientProvider>
+      <body className="bg-background text-foreground antialiased">
+        <NextIntlClientProvider>
+          <UiProvider dir={directionOf(locale)}>{children}</UiProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );
