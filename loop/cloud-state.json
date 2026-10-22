@@ -41,10 +41,12 @@
       "note": "Design system in packages/ui with /ui-gallery (en/ar); independent review findings fixed; pnpm check, build and 42 browser tests green"
     },
     "S-06": {
-      "status": "in-progress",
+      "status": "done",
       "attempts": 1,
       "claimedAt": "2026-10-22T08:30:41.680Z",
-      "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e"
+      "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e",
+      "finishedAt": "2026-10-22T09:18:36.217Z",
+      "note": "App shells: portal shell with 79 placeholder screens, stub login, public site header/footer, 404/error/loading, SEO; 164 browser tests green"
     }
   },
   "approvals": [],
@@ -59,6 +61,7 @@
     "2026-10-09T08:10:47.612Z finish S-04 done",
     "2026-10-10T04:50:37.782Z claim S-05 attempt 1",
     "2026-10-10T05:52:51.795Z finish S-05 done",
-    "2026-10-22T08:30:41.687Z claim S-06 attempt 1"
+    "2026-10-22T08:30:41.687Z claim S-06 attempt 1",
+    "2026-10-22T09:18:36.217Z finish S-06 done"
   ]
 }
