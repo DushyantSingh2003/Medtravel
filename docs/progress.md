@@ -187,8 +187,8 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01, F-02.
 
 ### Deferred from F-01
 
-- **Not yet verified on GitHub:** the new database tests run in the API e2e job (`pnpm --filter @medtravel/db test:e2e`
-  against the Postgres service container); the first result is recorded here once it has run.
+- **Verified on GitHub:** `ci.yml` run 11 on `develop` (commit 5ba538a) passed, including the database tests in the
+  API e2e job (`pnpm --filter @medtravel/db test:e2e` against the Postgres service container).
 - Money columns are `BigInt` (ADR 002). Prisma returns them as `bigint`; the API layer (F-02 onward) must
   serialise them as strings.
 - `AuditEvent` is append-only through triggers a table owner could drop: in production the application role must
