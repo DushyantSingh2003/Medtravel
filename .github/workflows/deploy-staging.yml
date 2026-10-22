@@ -80,6 +80,8 @@ jobs:
           build-args: |
             APP=${{ matrix.app }}
             ${{ contains(fromJSON('["web","portal"]'), matrix.app) && format('NEXT_PUBLIC_API_URL={0}', vars.STAGING_API_URL) || '' }}
+            ${{ matrix.app == 'web' && format('NEXT_PUBLIC_SITE_URL={0}', vars.STAGING_SITE_URL) || '' }}
+            ${{ matrix.app == 'web' && format('NEXT_PUBLIC_WHATSAPP_NUMBER={0}', vars.STAGING_WHATSAPP_NUMBER) || '' }}
           load: true
           push: false
           tags: medtravel-${{ matrix.app }}:deploy
@@ -98,6 +100,8 @@ jobs:
           build-args: |
             APP=${{ matrix.app }}
             ${{ contains(fromJSON('["web","portal"]'), matrix.app) && format('NEXT_PUBLIC_API_URL={0}', vars.STAGING_API_URL) || '' }}
+            ${{ matrix.app == 'web' && format('NEXT_PUBLIC_SITE_URL={0}', vars.STAGING_SITE_URL) || '' }}
+            ${{ matrix.app == 'web' && format('NEXT_PUBLIC_WHATSAPP_NUMBER={0}', vars.STAGING_WHATSAPP_NUMBER) || '' }}
           push: true
           provenance: false
           tags: |

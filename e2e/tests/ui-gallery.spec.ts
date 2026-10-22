@@ -42,6 +42,14 @@ const SECTIONS = [
   'chat-panel',
   'stat-card',
   'kanban-board',
+  'app-shell',
+  'switcher',
+  'user-menu',
+  'notifications-menu',
+  'brand-mark',
+  'site-header',
+  'site-footer',
+  'whatsapp-button',
 ];
 
 const LOCALES = ['en', 'ar'] as const;
@@ -80,7 +88,7 @@ for (const locale of LOCALES) {
         await expect(page.locator('[data-component]')).toHaveCount(SECTIONS.length);
         for (const id of SECTIONS) {
           await expect(section(page, id), id).toBeAttached();
-          await expect(section(page, id).getByRole('heading', { level: 2 }), id).toBeVisible();
+          await expect(section(page, id).locator(`#cmp-${id}-title`), id).toBeVisible();
         }
         // No English left behind in the Arabic gallery's headings.
         if (locale === 'ar') {

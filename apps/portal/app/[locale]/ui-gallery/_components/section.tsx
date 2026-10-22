@@ -64,4 +64,12 @@ export const GALLERY_SECTIONS = [
   'chat-panel',
   'stat-card',
   'kanban-board',
+  'app-shell',
+  'switcher',
+  'user-menu',
+  'notifications-menu',
+  'brand-mark',
+  'site-header',
+  'site-footer',
+  'whatsapp-button',
 ] as const;

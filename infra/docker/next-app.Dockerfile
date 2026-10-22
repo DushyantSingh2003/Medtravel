@@ -30,8 +30,13 @@ RUN pnpm fetch
 FROM deps AS build
 ARG APP
 ARG NEXT_PUBLIC_API_URL=http://localhost:3001
+# Public website only (the portal ignores them): canonical URL for SEO, and the WhatsApp number.
+ARG NEXT_PUBLIC_SITE_URL=
+ARG NEXT_PUBLIC_WHATSAPP_NUMBER=
 RUN test -n "$APP" || (echo "build-arg APP is required (web or portal)" >&2; exit 1)
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \
+    NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL} \
+    NEXT_PUBLIC_WHATSAPP_NUMBER=${NEXT_PUBLIC_WHATSAPP_NUMBER} \
     NEXT_OUTPUT=standalone
 COPY . .
 RUN pnpm install --offline --frozen-lockfile

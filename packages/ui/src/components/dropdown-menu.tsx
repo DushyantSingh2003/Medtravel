@@ -7,6 +7,7 @@ export const DropdownMenu = MenuPrimitive.Root;
 export const DropdownMenuTrigger = MenuPrimitive.Trigger;
 export const DropdownMenuGroup = MenuPrimitive.Group;
 export const DropdownMenuSub = MenuPrimitive.Sub;
+export const DropdownMenuRadioGroup = MenuPrimitive.RadioGroup;
 
 const itemBase =
   'relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none ' +
@@ -61,6 +62,22 @@ export function DropdownMenuCheckboxItem({
       </span>
       {children}
     </MenuPrimitive.CheckboxItem>
+  );
+}
+export function DropdownMenuRadioItem({
+  className,
+  children,
+  ...props
+}: ComponentProps<typeof MenuPrimitive.RadioItem>) {
+  return (
+    <MenuPrimitive.RadioItem className={cn(itemBase, 'ps-8', className)} {...props}>
+      <span className="absolute start-2 flex size-4 items-center justify-center">
+        <MenuPrimitive.ItemIndicator>
+          <Check aria-hidden="true" />
+        </MenuPrimitive.ItemIndicator>
+      </span>
+      {children}
+    </MenuPrimitive.RadioItem>
   );
 }
 export function DropdownMenuSubTrigger({

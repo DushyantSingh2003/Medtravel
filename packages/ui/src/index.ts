@@ -77,6 +77,8 @@ export {
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from './components/dropdown-menu';
 export { EmptyState, ErrorState } from './components/empty-state';
@@ -145,3 +147,18 @@ export { Toaster, toast } from './components/toast';
 export type { ToasterLabels } from './components/toast';
 export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './components/tooltip';
 export { UiProvider } from './components/ui-provider';
+export { AppShell } from './components/app-shell';
+export type { AppShellLabels, AppShellProps, NavItem, NavSection } from './components/app-shell';
+export { BrandMark } from './components/brand-mark';
+export { NotificationsMenu } from './components/notifications-menu';
+export type { NotificationItem, NotificationsMenuProps } from './components/notifications-menu';
+export { SiteFooter } from './components/site-footer';
+export type { FooterColumn, FooterLink, SiteFooterProps } from './components/site-footer';
+export { SiteHeader } from './components/site-header';
+export type { SiteHeaderLabels, SiteHeaderProps, SiteNavItem } from './components/site-header';
+export { Switcher } from './components/switcher';
+export type { SwitcherOption, SwitcherProps } from './components/switcher';
+export { UserMenu } from './components/user-menu';
+export type { UserMenuItem, UserMenuProps } from './components/user-menu';
+export { WhatsAppButton } from './components/whatsapp-button';
+export type { WhatsAppButtonProps } from './components/whatsapp-button';

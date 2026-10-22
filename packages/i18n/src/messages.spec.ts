@@ -8,7 +8,9 @@ type Tree = { [key: string]: string | Tree };
 function flatten(tree: Tree, prefix = ''): Record<string, string> {
   return Object.entries(tree).reduce<Record<string, string>>((out, [key, value]) => {
     const path = prefix ? `${prefix}.${key}` : key;
-    return typeof value === 'string' ? { ...out, [path]: value } : { ...out, ...flatten(value, path) };
+    return typeof value === 'string'
+      ? { ...out, [path]: value }
+      : { ...out, ...flatten(value, path) };
   }, {});
 }
 
@@ -17,7 +19,10 @@ const ar_ = flatten(ar as Tree);
 
 /** `{name}` and `{count, plural, ...}` argument names used by a message. */
 const placeholders = (text: string): string[] =>
-  [...text.matchAll(/\{(\w+)(?:,|\})/g)].map((m) => m[1] ?? '').filter((name) => name && !['zero', 'one', 'two', 'few', 'many', 'other'].includes(name)).sort();
+  [...text.matchAll(/\{(\w+)(?:,|\})/g)]
+    .map((m) => m[1] ?? '')
+    .filter((name) => name && !['zero', 'one', 'two', 'few', 'many', 'other'].includes(name))
+    .sort();
 
 describe('message catalogues', () => {
   it('have exactly the same keys in English and Arabic', () => {
@@ -47,7 +52,9 @@ describe('message catalogues', () => {
 
   it('write Arabic text in Arabic, not by copying the English', () => {
     const identicalOk = /^(CASE-|{count}|{name}|\d)/; // ids and bare placeholders
-    const untranslated = Object.keys(en_).filter((key) => ar_[key] === en_[key] && !identicalOk.test(en_[key] ?? ''));
+    const untranslated = Object.keys(en_).filter(
+      (key) => ar_[key] === en_[key] && !identicalOk.test(en_[key] ?? ''),
+    );
     expect(untranslated).toEqual([]);
   });
 
@@ -56,7 +63,23 @@ describe('message catalogues', () => {
   });
 
   it('has all twelve stages and the three exit stages', () => {
-    for (const stage of ['enquiry', 'qualification', 'medical_review', 'hospital_opinions', 'quote_decision', 'booking_deposit', 'visa', 'travel_planning', 'arrival', 'treatment', 'discharge_return', 'follow_up', 'lost', 'on_hold', 'cancelled']) {
+    for (const stage of [
+      'enquiry',
+      'qualification',
+      'medical_review',
+      'hospital_opinions',
+      'quote_decision',
+      'booking_deposit',
+      'visa',
+      'travel_planning',
+      'arrival',
+      'treatment',
+      'discharge_return',
+      'follow_up',
+      'lost',
+      'on_hold',
+      'cancelled',
+    ]) {
       expect(en_[`stages.${stage}`], stage).toBeTruthy();
       expect(ar_[`stages.${stage}`], stage).toBeTruthy();
     }

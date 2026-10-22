@@ -76,7 +76,15 @@
       "timeline": "Timeline",
       "chatPanel": "Chat panel",
       "statCard": "KPI stat card",
-      "kanbanBoard": "Kanban board"
+      "kanbanBoard": "Kanban board",
+      "appShell": "App shell",
+      "switcher": "Switcher",
+      "userMenu": "User menu",
+      "notificationsMenu": "Notifications menu",
+      "brandMark": "Brand mark",
+      "siteHeader": "Site header",
+      "siteFooter": "Site footer",
+      "whatsappButton": "WhatsApp button"
     },
     "descriptions": {
       "button": "Variants, sizes, loading and disabled states.",
@@ -111,7 +119,15 @@
       "timeline": "A history of events, in order.",
       "chatPanel": "Message list and composer. Enter sends, Shift+Enter adds a line.",
       "statCard": "Key numbers with a trend. Loading shows a placeholder.",
-      "kanbanBoard": "Drag cards between columns with a mouse, a finger or the keyboard."
+      "kanbanBoard": "Drag cards between columns with a mouse, a finger or the keyboard.",
+      "appShell": "The signed-in frame: a collapsible sidebar, a top bar and the page. On a phone the menu opens as a panel.",
+      "switcher": "A compact menu for choosing one value, such as the language or the currency.",
+      "userMenu": "The account button in the top bar, with the name, the role and actions such as signing out.",
+      "notificationsMenu": "The bell with an unread count, and a panel listing the latest notifications.",
+      "brandMark": "The logo, at any size. It is decorative: the name sits next to it as text.",
+      "siteHeader": "The public website header: logo, menu, language switcher and a call to action. On a phone the menu opens as a panel.",
+      "siteFooter": "Link columns, legal links and the copyright line.",
+      "whatsappButton": "The chat button. On the website it floats in the corner of the screen."
     },
     "button": {
       "primary": "Primary",
@@ -413,6 +429,391 @@
       "movedTo": "{card} is over {column}, position {position}.",
       "dropped": "{card} dropped in {column}, position {position}.",
       "cancelled": "Move of {card} cancelled."
+    },
+    "shellDemo": {
+      "navigation": "Demo app navigation",
+      "section": "Workspace",
+      "dashboard": "Dashboard",
+      "cases": "Cases",
+      "messages": "Messages",
+      "body": "Choose an item in the sidebar. Collapse it with the button at the bottom.",
+      "notification1": "New lead assigned",
+      "notification1Body": "Asha Verma from Oman",
+      "notification1Time": "5 minutes ago",
+      "notification2": "Quote accepted",
+      "notification2Time": "Yesterday",
+      "unread": "{count, plural, one {# unread} other {# unread}}",
+      "emptyBell": "Notifications (none)",
+      "profile": "Profile",
+      "picked": "You chose: {item}",
+      "nothingPicked": "Nothing chosen yet.",
+      "siteNavigation": "Demo site navigation",
+      "footerNavigation": "Demo footer links",
+      "legalNavigation": "Demo legal links"
+    }
+  },
+  "navSections": {
+    "patient": {
+      "journey": "Your journey",
+      "money": "Money and travel",
+      "support": "Support"
+    },
+    "ops": {
+      "sales": "Sales",
+      "cases": "Cases",
+      "comms": "Communication",
+      "field": "Field and logistics",
+      "setup": "Setup"
+    },
+    "hospital": {
+      "cases": "Cases",
+      "catalogue": "Hospital",
+      "insights": "Money and performance"
+    },
+    "agent": {
+      "referrals": "Referrals",
+      "earnings": "Earnings",
+      "grow": "Grow"
+    },
+    "admin": {
+      "admin": "Administration",
+      "finance": "Finance",
+      "logistics": "Logistics masters"
+    }
+  },
+  "nav": {
+    "patient": {
+      "dashboard": "My case",
+      "records": "Medical records",
+      "quotes": "Opinions and quotes",
+      "consult": "Video consult",
+      "follow-up": "Follow-up",
+      "payments": "Payments",
+      "expenses": "Expense tracker",
+      "visa": "Visa centre",
+      "itinerary": "Itinerary",
+      "stay": "Stay and add-ons",
+      "messages": "Messages",
+      "feedback": "Feedback",
+      "referrals": "Refer a friend",
+      "emergency": "Emergency"
+    },
+    "ops": {
+      "overview": "Overview",
+      "leads": "Lead inbox",
+      "assignment": "Auto-assignment",
+      "pipeline": "Case pipeline",
+      "cases": "Cases",
+      "medical-summary": "Medical summary",
+      "hospital-requests": "Send to hospitals",
+      "quotes": "Quote builder",
+      "visa": "Visa tracker",
+      "tasks": "Tasks and reminders",
+      "messages": "Unified messaging",
+      "calls": "Call logging",
+      "templates": "Templates",
+      "logistics": "Logistics board",
+      "ground": "Ground app",
+      "updates": "In-treatment updates",
+      "incidents": "Incident log",
+      "lost-reasons": "Lost reasons"
+    },
+    "hospital": {
+      "overview": "Overview",
+      "requests": "Case requests",
+      "opinions": "Opinion and estimate",
+      "invitations": "Visa invitations",
+      "admissions": "Admission updates",
+      "doctor": "Doctor view",
+      "teleconsult": "Teleconsult",
+      "onboarding": "Onboarding",
+      "packages": "Package catalogue",
+      "branches": "Branches",
+      "statements": "Referral statements",
+      "performance": "Performance",
+      "api": "API access"
+    },
+    "agent": {
+      "overview": "Overview",
+      "registration": "Registration",
+      "refer": "Refer a patient",
+      "referrals": "My referrals",
+      "commission": "Commission",
+      "payouts": "Payouts",
+      "marketing": "Marketing kit",
+      "sub-agents": "Sub-agents",
+      "leaderboard": "Tiers and leaderboard",
+      "training": "Training"
+    },
+    "admin": {
+      "overview": "Overview",
+      "users": "Users and roles",
+      "master-data": "Master data",
+      "hospital-approvals": "Hospital and doctor approval",
+      "agent-approvals": "Agent approval",
+      "cms": "Content",
+      "pricing": "Pricing rules",
+      "templates": "Templates",
+      "audit-log": "Audit log",
+      "reports": "Reports",
+      "invoicing": "Invoicing",
+      "payments": "Payment collection",
+      "refunds": "Refunds",
+      "referral-fees": "Hospital referral fees",
+      "commissions": "Agent commissions",
+      "deposits": "Hospital deposits",
+      "vendor-payables": "Vendor payables",
+      "accounting-export": "Accounting export",
+      "profit": "Profit per case",
+      "stays": "Stays",
+      "transport": "Transport",
+      "interpreters": "Interpreters",
+      "welcome-kit": "Welcome kit",
+      "flights": "Flight bookings"
+    }
+  },
+  "pages": {
+    "patient": {
+      "dashboard": "Your current stage on the progress tracker, your next action and your coordinator.",
+      "records": "Upload and download reports, scans and prescriptions, and share them with chosen hospitals only.",
+      "quotes": "Compare each hospital's plan, doctor, stay, cost breakdown and inclusions, and accept a quote.",
+      "consult": "Book a slot with the doctor, pay the fee and join the call from here.",
+      "follow-up": "Teleconsult schedule, medicine reminders and your recovery checklist.",
+      "payments": "Pay deposits, packages and add-ons, and download receipts and invoices.",
+      "expenses": "Your running hospital bill against the estimate, deposits and the balance due.",
+      "visa": "Checklist for your nationality, passport and photo upload, invitation letter and visa status.",
+      "itinerary": "Flights, pickup time, driver and car, your stay address on a map, and your appointments.",
+      "stay": "Choose a room type, extra nights, interpreter hours, sightseeing and halal food.",
+      "messages": "Chat with your coordinator, mirrored to WhatsApp, with optional translation.",
+      "feedback": "Rate the hospital, doctor, coordinator and stay, and ask to share a public review.",
+      "referrals": "Your referral code and the rewards you have earned.",
+      "emergency": "One tap to call the 24x7 operations line with your location shared."
+    },
+    "ops": {
+      "overview": "Your day at a glance: leads, tasks and cases that need attention.",
+      "leads": "Every lead from the website, WhatsApp, calls, agents and email, with source and duplicate detection.",
+      "assignment": "Round-robin or rule-based assignment by language, country and speciality, with SLA timers.",
+      "pipeline": "Kanban and list views by stage, filtered by country, treatment, hospital, owner and agent.",
+      "cases": "Open a case to see the patient, documents, notes, timeline, messages, quotes, payments, logistics and tasks.",
+      "medical-summary": "The reviewer form: diagnosis, key findings, recommended specialities and urgency.",
+      "hospital-requests": "Pick hospitals and doctors, attach the summary and reports, and track responses and due times.",
+      "quotes": "Combine hospital estimates with our package, apply currency and margin rules, and issue a branded quote.",
+      "visa": "Per traveller: documents received, invitation letter, application ID, status and decision date.",
+      "tasks": "Tasks per case and per user, created automatically when a case changes stage.",
+      "messages": "WhatsApp, email, SMS and in-app chat inside the case, with templates in each language.",
+      "calls": "Click-to-call through cloud telephony, with recordings attached to the case.",
+      "templates": "Quote, welcome pack, visa checklist and pre-travel checklist per country and language.",
+      "logistics": "Daily view of arrivals, departures, pickups, stays and interpreter bookings by city.",
+      "ground": "Today's jobs, pickup done with a photo, daily patient update and expenses.",
+      "updates": "Daily status notes for the family and alerts when the bill is over the estimate by more than 10%.",
+      "incidents": "Record complaints, medical complications and lost documents, with escalation to a manager.",
+      "lost-reasons": "The mandatory reasons for marking a case lost, which feed the reports."
+    },
+    "hospital": {
+      "overview": "New requests, countdowns and admissions at a glance.",
+      "requests": "New opinion requests with the case summary and reports, a due-time countdown, and accept or decline.",
+      "opinions": "Treatment plan, assigned doctor, stay, package price, inclusions and exclusions, and validity date.",
+      "invitations": "Upload the invitation letter from the government visa portal and mark it issued.",
+      "admissions": "Admitted, surgery date, ICU or ward, expected discharge, final bill and discharge summary.",
+      "doctor": "Read the case, write an opinion and set teleconsult slots.",
+      "teleconsult": "Calendar slots, video calls and consult notes saved to the patient record.",
+      "onboarding": "Hospital profile, accreditations with expiry, departments, doctors, rooms and tariffs, bank details and agreement.",
+      "packages": "Fixed-price packages per procedure and room category, used by the cost estimator and quote builder.",
+      "branches": "Group hospitals manage every branch from one login.",
+      "statements": "Monthly list of referred patients, bills and the referral fee due, with a dispute flag.",
+      "performance": "Response time, conversion rate and patient ratings.",
+      "api": "For large groups: push and pull cases through an API instead of using the portal."
+    },
+    "agent": {
+      "overview": "Your referrals, earnings and pending payouts at a glance.",
+      "registration": "Apply with ID and business proof, wait for KYC review and e-sign the agreement.",
+      "refer": "A quick form with report upload, or share your personal referral link or QR code.",
+      "referrals": "Referred cases and their stage, with no medical details beyond what the patient allows.",
+      "commission": "The commission rule per hospital and treatment; earned, approved, paid and pending amounts.",
+      "payouts": "Request a payout by international wire or local transfer, and see your payout history.",
+      "marketing": "Brochures, price sheets, videos and social posts in your language with your referral link.",
+      "sub-agents": "An agency adds its own staff as sub-users.",
+      "leaderboard": "Silver, Gold and Platinum tiers with higher commission by volume.",
+      "training": "Short lessons on visa rules, treatments and ethics, and the code of conduct to accept."
+    },
+    "admin": {
+      "overview": "Key figures and items waiting for approval.",
+      "users": "Create staff users, assign roles and cities, deactivate, and force two-factor sign-in.",
+      "master-data": "Countries, languages, currencies, treatments, specialities, cities, document types and lost reasons.",
+      "hospital-approvals": "Review onboarding, verify accreditation, and publish or unpublish profiles.",
+      "agent-approvals": "KYC review, commission plan assignment and suspension.",
+      "cms": "Edit treatment, hospital, doctor, city and blog pages with translations, SEO fields and a publish workflow.",
+      "pricing": "Service package prices, margins and currency conversion rates updated daily.",
+      "templates": "Email, WhatsApp, SMS and PDF templates in every language.",
+      "audit-log": "Who viewed or changed any patient record, with time and IP address.",
+      "reports": "Success metrics with export to Excel.",
+      "invoicing": "GST-compliant invoices for service fees, and credit notes.",
+      "payments": "Card, international wire and UPI, payment links, partial payments and multi-currency with INR settlement.",
+      "refunds": "Request, approve and process refunds with a reason and a refund-policy check.",
+      "referral-fees": "Calculated from the final bill and agreement percentage, invoiced to the hospital, with ageing.",
+      "commissions": "Calculated when the hospital fee is received, with an approval step, payout batch file and TDS.",
+      "deposits": "Deposits paid through us on behalf of the hospital, tracked as a pass-through liability.",
+      "vendor-payables": "Stays, drivers, interpreters and SIM vendors.",
+      "accounting-export": "Sync to Tally or Zoho Books.",
+      "profit": "Revenue minus cost, per case, country, hospital and agent.",
+      "stays": "Guest houses, hotels and apartments with distance to each hospital, room types, rates and availability.",
+      "transport": "Vendors, drivers, vehicles including wheelchair and ambulance, city rates and job assignment.",
+      "interpreters": "Languages, city, rates, availability, assignment and hours log.",
+      "welcome-kit": "SIM cards, currency and kit items in stock per city.",
+      "flights": "Bookings made through the travel partner, with PNR and times, creating the pickup job automatically."
+    }
+  },
+  "shell": {
+    "skipToContent": "Skip to main content",
+    "navigation": "Main navigation",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar",
+    "search": "Search",
+    "searchPlaceholder": "Search cases, people, documents",
+    "searchUnavailable": "Search is not available yet.",
+    "notifications": "Notifications",
+    "notificationsEmpty": "You have no notifications.",
+    "language": "Language",
+    "userMenu": "Account menu",
+    "signedInAs": "Signed in as",
+    "signOut": "Sign out",
+    "home": "Home",
+    "unread": "{count, plural, one {# unread} other {# unread}}"
+  },
+  "roles": {
+    "patient": "Patient",
+    "attendant": "Attendant",
+    "agent": "Agent",
+    "case_manager": "Case manager",
+    "ground_coordinator": "Ground coordinator",
+    "interpreter": "Interpreter",
+    "medical_reviewer": "Medical reviewer",
+    "hospital_desk": "Hospital international desk",
+    "doctor": "Doctor",
+    "finance": "Finance",
+    "super_admin": "Super admin"
+  },
+  "portals": {
+    "patient": "Patient portal",
+    "ops": "Coordinator portal",
+    "hospital": "Hospital portal",
+    "agent": "Agent portal",
+    "admin": "Admin portal"
+  },
+  "priority": {
+    "P0": "Planned for launch",
+    "P1": "Planned for phase 2",
+    "P2": "Planned for phase 3"
+  },
+  "placeholder": {
+    "title": "This screen is not built yet",
+    "body": "The page, its navigation and access control are in place. The content arrives with its own task.",
+    "caseId": "Case {id}",
+    "openSampleCase": "Open a sample case",
+    "backToCases": "Back to cases"
+  },
+  "login": {
+    "title": "Sign in",
+    "stubIntro": "Real sign-in arrives with the authentication task. Until then, choose a role to look around.",
+    "stubWarning": "Development only. This page is switched off on deployed environments.",
+    "continueAs": "Continue as {role}",
+    "unavailable": "Sign-in is not available yet.",
+    "rolesLabel": "Roles"
+  },
+  "errors": {
+    "title": "Something went wrong",
+    "body": "We could not show this page. Try again, and if it keeps happening, tell us the reference below.",
+    "reference": "Reference: {digest}",
+    "retry": "Try again",
+    "home": "Go to the home page",
+    "notFoundTitle": "Page not found",
+    "notFoundBody": "The page you are looking for does not exist or has moved.",
+    "loading": "Loading"
+  },
+  "site": {
+    "skipToContent": "Skip to main content",
+    "mainNavigation": "Main navigation",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "language": "Language",
+    "currency": "Currency",
+    "getQuote": "Get a free quote",
+    "signIn": "Sign in",
+    "whatsapp": "Chat with us on WhatsApp",
+    "tagline": "Treatment in India, arranged from first enquiry to the journey home.",
+    "footerNavigation": "Footer",
+    "legalNavigation": "Legal",
+    "copyright": "© {year} MedTravel. All rights reserved.",
+    "comingSoon": "This page is coming soon",
+    "comingSoonBody": "We are still building it. In the meantime, talk to us and we will help you directly.",
+    "columns": {
+      "patients": "For patients",
+      "company": "Company"
+    },
+    "description": "Treatment in India with accredited hospitals: share your reports, get an expert opinion and a clear quote, and travel with everything arranged.",
+    "pages": {
+      "treatments": {
+        "title": "Treatments",
+        "description": "Browse procedures, who needs them, and what they cost in India."
+      },
+      "hospitals": {
+        "title": "Hospitals",
+        "description": "Accredited partner hospitals, their specialities and international desks."
+      },
+      "doctors": {
+        "title": "Doctors",
+        "description": "Specialists, their experience, languages and procedures."
+      },
+      "destinations": {
+        "title": "Destinations",
+        "description": "Cities to be treated in: hospitals, stays, weather and how to reach them."
+      },
+      "cost-calculator": {
+        "title": "Cost calculator",
+        "description": "Estimate a price range by treatment, city and room category."
+      },
+      "about": {
+        "title": "About us",
+        "description": "Who we are and how we work with hospitals and patients."
+      },
+      "quote": {
+        "title": "Get a free quote",
+        "description": "Tell us about your condition and share your reports."
+      },
+      "partner": {
+        "title": "Become a partner",
+        "description": "For hospitals and referral agents who want to work with us."
+      },
+      "blog": {
+        "title": "Blog and guides",
+        "description": "Visa guides, cost guides and patient stories."
+      },
+      "contact": {
+        "title": "Contact us",
+        "description": "Call, email or message us on WhatsApp."
+      },
+      "privacy": {
+        "title": "Privacy policy",
+        "description": "How we collect, use and protect your personal and medical information."
+      },
+      "terms": {
+        "title": "Terms of use",
+        "description": "The terms that apply when you use our website and services."
+      },
+      "refund-policy": {
+        "title": "Refund policy",
+        "description": "When and how payments can be refunded."
+      },
+      "medical-disclaimer": {
+        "title": "Medical disclaimer",
+        "description": "What our information is, and is not, medical advice."
+      },
+      "grievance": {
+        "title": "Grievance officer",
+        "description": "How to raise a complaint and who handles it."
+      }
     }
   }
 }

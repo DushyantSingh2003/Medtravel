@@ -9,7 +9,10 @@ reviewed, move it to "Reviewed" with the reviewer's name and the date.
 | Namespace | Added by | What to check |
 | --- | --- | --- |
 | `stages.*` | S-05 | The 12 case stages and 3 exit stages. These appear to patients, so the wording matters most. Check "التأهيل" (qualification), "الخروج والعودة" (discharge and return), and the exit stages "مفقودة" / "معلّقة" / "ملغاة". |
-| `gallery.*` | S-05 | The component gallery (`/ui-gallery`): a development page, not patient-facing. Lowest risk. |
+| `nav.*`, `navSections.*`, `pages.*` | S-06 | The 79 portal screen names and one-line descriptions (patient, coordinator, hospital, agent, admin portals). Terms to confirm: "مسار الحالات" (case pipeline), "منشئ عروض الأسعار" (quote builder), "رسوم إحالة المستشفيات" (hospital referral fees), "مستوى الخدمة" (SLA), "ضريبة الاستقطاع" (TDS). |
+| `site.*` | S-06 | The public website's menus, footer, legal page names and the "coming soon" text. Legal page titles (privacy, terms, refund, medical disclaimer, grievance officer) should be checked by someone who knows the usual Arabic legal wording. |
+| `shell.*`, `roles.*`, `portals.*`, `priority.*`, `placeholder.*`, `login.*`, `errors.*` | S-06 | Portal chrome, the eleven role names, the "planned for" labels, the stub login and the error and 404 pages. `errors.*` is shown to everyone, so read it first. |
+| `gallery.*` | S-05, S-06 | The component gallery (`/ui-gallery`): a development page, not patient-facing. Lowest risk. |
 | `common.appName`, `portal.title` | S-01, fixed in S-05 | The brand name is written "ميد ترافل". The S-01 draft mixed scripts ("ميدتravel"). Confirm how the brand should be written in Arabic. |
 
 ## Things worth a native speaker's eye

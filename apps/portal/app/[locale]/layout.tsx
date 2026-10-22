@@ -7,10 +7,20 @@ import { UiProvider } from '@medtravel/ui';
 import { LOCALES, directionOf, isLocale } from '@medtravel/i18n';
 import '../globals.css';
 
-export const metadata: Metadata = {
-  title: 'MedTravel portal',
-  description: 'Patient, operations, hospital, agent and admin portals.',
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  if (!isLocale(locale)) return {};
+  const t = await getTranslations({ locale, namespace: 'common' });
+  return {
+    title: { default: t('appName'), template: `%s | ${t('appName')}` },
+    applicationName: t('appName'),
+    robots: { index: false, follow: false },
+  };
+}
 
 /** Pre-render both locales at build time rather than on first request. */
 export function generateStaticParams() {

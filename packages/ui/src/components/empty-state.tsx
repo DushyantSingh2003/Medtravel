@@ -10,11 +10,11 @@ export interface EmptyStateProps {
   /** Usually a Button; rendered below the text. */
   action?: ReactNode;
   /** Heading level of the title (default 3). `null` renders a bold paragraph, for use inside a table cell. */
-  headingLevel?: 2 | 3 | 4 | 5 | 6 | null;
+  headingLevel?: 1 | 2 | 3 | 4 | 5 | 6 | null;
   className?: string;
 }
 
-function Title({ level, children }: { level: 2 | 3 | 4 | 5 | 6 | null; children: ReactNode }) {
+function Title({ level, children }: { level: 1 | 2 | 3 | 4 | 5 | 6 | null; children: ReactNode }) {
   const className = 'text-base font-semibold';
   if (level === null) return <p className={className}>{children}</p>;
   const Tag = `h${level}` as const;
@@ -62,7 +62,7 @@ export interface ErrorStateProps {
   retryLabel?: string;
   onRetry?: () => void;
   /** Heading level of the title (default 3). `null` renders a bold paragraph. */
-  headingLevel?: 2 | 3 | 4 | 5 | 6 | null;
+  headingLevel?: 1 | 2 | 3 | 4 | 5 | 6 | null;
   className?: string;
 }
 
