@@ -16,22 +16,35 @@ const urlString = (message: string) =>
  * variable fails the process immediately with a readable message instead of surfacing as an
  * undefined deep inside a request.
  */
-export const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  PORT: z.coerce.number().int().min(1).max(65_535).default(3001),
-  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
-  DATABASE_URL: urlString('DATABASE_URL must be a PostgreSQL connection string'),
-  REDIS_URL: urlString('REDIS_URL must be a Redis connection string'),
-  CORS_ORIGINS: z
-    .string()
-    .default('http://localhost:3000')
-    .transform((value) =>
-      value
-        .split(',')
-        .map((origin) => origin.trim())
-        .filter(Boolean),
-    ),
-});
+export const envSchema = z
+  .object({
+    NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    PORT: z.coerce.number().int().min(1).max(65_535).default(3001),
+    LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+    DATABASE_URL: urlString('DATABASE_URL must be a PostgreSQL connection string'),
+    REDIS_URL: urlString('REDIS_URL must be a Redis connection string'),
+    CORS_ORIGINS: z
+      .string()
+      .default('http://localhost:3000')
+      .transform((value) =>
+        value
+          .split(',')
+          .map((origin) => origin.trim())
+          .filter(Boolean),
+      ),
+    /**
+     * Development sign-in until F-03: the role is read from the `x-stub-role` header or the portal's stub cookie.
+     * Anyone can claim any role, so it is off unless exactly "true", and the API refuses to boot with it on in production.
+     */
+    ENABLE_STUB_AUTH: z
+      .string()
+      .optional()
+      .transform((value) => value === 'true'),
+  })
+  .refine((env) => !(env.ENABLE_STUB_AUTH && env.NODE_ENV === 'production'), {
+    path: ['ENABLE_STUB_AUTH'],
+    message: 'The stub sign-in must never be enabled in production',
+  });
 
 export type Env = z.infer<typeof envSchema>;
 

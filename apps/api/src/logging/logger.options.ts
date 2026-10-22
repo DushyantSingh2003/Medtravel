@@ -41,9 +41,7 @@ export function loggerOptions(env: Env): Params {
     pinoHttp: {
       level: env.LOG_LEVEL,
       redact: { paths: REDACTED_PATHS, censor: '[redacted]' },
-      ...(pretty
-        ? { transport: { target: 'pino-pretty', options: { singleLine: true } } }
-        : {}),
+      ...(pretty ? { transport: { target: 'pino-pretty', options: { singleLine: true } } } : {}),
     },
   };
 }

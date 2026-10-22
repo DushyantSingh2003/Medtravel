@@ -37,4 +37,20 @@ describe('loadEnv', () => {
       /DATABASE_URL/,
     );
   });
+
+  it('keeps the stub sign-in off unless it is exactly "true"', () => {
+    expect(loadEnv(valid as NodeJS.ProcessEnv).ENABLE_STUB_AUTH).toBe(false);
+    expect(loadEnv({ ...valid, ENABLE_STUB_AUTH: '1' } as NodeJS.ProcessEnv).ENABLE_STUB_AUTH).toBe(
+      false,
+    );
+    expect(
+      loadEnv({ ...valid, ENABLE_STUB_AUTH: 'true' } as NodeJS.ProcessEnv).ENABLE_STUB_AUTH,
+    ).toBe(true);
+  });
+
+  it('refuses to boot with the stub sign-in in production', () => {
+    expect(() =>
+      loadEnv({ ...valid, NODE_ENV: 'production', ENABLE_STUB_AUTH: 'true' } as NodeJS.ProcessEnv),
+    ).toThrow(/stub sign-in/);
+  });
 });

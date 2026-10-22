@@ -78,9 +78,16 @@ describe('schema.prisma enums', () => {
       const base = key.slice(0, -'Schema'.length);
       // Enums that are not stored in the database as enums (portals, display currencies, locale).
       if (
-        ['portal', 'displayCurrency', 'caseExitStage', 'caseStage', 'caseStatus', 'role'].includes(
-          base,
-        )
+        [
+          'portal',
+          'displayCurrency',
+          'caseExitStage',
+          'caseStage',
+          'caseStatus',
+          'role',
+          'masterResource',
+          'translationLocale',
+        ].includes(base)
       )
         continue;
       expect(known.has(base), `contracts enum ${base} is missing from schema.prisma`).toBe(true);
@@ -190,7 +197,9 @@ describe('schema.prisma conventions', () => {
       if (money.length === 0) continue;
       const currency = fields.find(
         (f) =>
-          f.type.replace('?', '') === 'String' && /currency$/i.test(f.name) && !f.name.startsWith('fx'),
+          f.type.replace('?', '') === 'String' &&
+          /currency$/i.test(f.name) &&
+          !f.name.startsWith('fx'),
       );
       if (model.name === 'InvoiceLine') continue; // priced in its invoice's currency
       expect(currency, `${model.name} has money but no currency`).toBeDefined();
