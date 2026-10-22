@@ -88,7 +88,7 @@ export class SessionCookies {
   clear(reply: FastifyReply): void {
     reply.header('set-cookie', [
       serializeCookie(ACCESS_COOKIE, '', this.options(0, true)),
-      serializeCookie(REFRESH_COOKIE, '', this.options(0, true, '/auth')),
+      serializeCookie(REFRESH_COOKIE, '', this.options(0, true)),
       serializeCookie(CSRF_COOKIE, '', this.options(0, false)),
     ]);
   }

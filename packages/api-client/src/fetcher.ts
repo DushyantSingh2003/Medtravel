@@ -35,13 +35,58 @@ async function readBody(response: Response): Promise<unknown> {
   }
 }
 
+const UNSAFE = (method: string | undefined): boolean =>
+  !['GET', 'HEAD', 'OPTIONS'].includes((method ?? 'GET').toUpperCase());
+
+/** The CSRF token the API put in a readable cookie; the API wants it back in a header on every change. */
+function csrfToken(): string | undefined {
+  if (typeof document === 'undefined') return undefined;
+  return /(?:^|;\s*)mt_csrf=([^;]*)/.exec(document.cookie)?.[1];
+}
+
+/** Sign-in steps answer 401 for "wrong password or code", which is not a reason to try refreshing. */
+const NO_REFRESH = ['/auth/refresh', '/auth/login', '/auth/2fa/challenge'];
+
+let refreshing: Promise<boolean> | null = null;
+
+/** Swaps the refresh cookie for new tokens. Callers that hit 401 at the same moment share one attempt. */
+function refreshSession(): Promise<boolean> {
+  refreshing ??= fetch(new URL('/auth/refresh', baseUrl()), {
+    method: 'POST',
+    credentials: 'include',
+  })
+    .then((response) => response.ok)
+    .catch(() => false)
+    .finally(() => {
+      refreshing = null;
+    });
+  return refreshing;
+}
+
 /**
- * Single place every generated call goes through (orval's `mutator`), so cookies, errors and the base URL are
- * handled once. Sessions are httpOnly cookies, hence `credentials: 'include'`. Non-2xx answers throw an
- * `ApiError` carrying the status and the body, which is where forms read the field errors from.
+ * Single place every generated call goes through (orval's `mutator`), so cookies, the CSRF header, token refresh, errors
+ * and the base URL are handled once. Sessions are httpOnly cookies, hence `credentials: 'include'`. An expired access token
+ * (401) is refreshed once and the call repeated. Non-2xx answers throw an `ApiError` carrying the status and the body,
+ * which is where forms read the field errors from.
  */
-export async function apiFetcher<T extends ApiResponse>(url: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(new URL(url, baseUrl()), { ...init, credentials: 'include' });
+export async function apiFetcher<T extends ApiResponse>(
+  url: string,
+  init: RequestInit = {},
+): Promise<T> {
+  const send = () => {
+    const token = UNSAFE(init.method) ? csrfToken() : undefined;
+    const headers = new Headers(init.headers);
+    if (token) headers.set('x-csrf-token', token);
+    return fetch(new URL(url, baseUrl()), { ...init, headers, credentials: 'include' });
+  };
+  let response = await send();
+  if (
+    response.status === 401 &&
+    !NO_REFRESH.some((path) => url.startsWith(path)) &&
+    (await refreshSession())
+  ) {
+    response = await send();
+  }
   const data = await readBody(response);
   if (!response.ok) throw new ApiError(response.status, data);
   return { data, status: response.status, headers: response.headers } as T;

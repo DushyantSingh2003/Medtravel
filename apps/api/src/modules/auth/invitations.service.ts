@@ -19,12 +19,7 @@ import { PRISMA } from '../../database/database.module.js';
 import { randomToken, sha256Hex } from './crypto/tokens.js';
 import { Mailer } from './mail/mailer.js';
 import { PasswordService } from './password.service.js';
-import {
-  ACCOUNT_SELECT,
-  SignInService,
-  type Account,
-  type SignInOutcome,
-} from './sign-in.service.js';
+import { SignInService, type Account, type SignInOutcome } from './sign-in.service.js';
 
 const HOUR_MS = 3_600_000;
 const MAGIC_SESSION_HOURS = 8;

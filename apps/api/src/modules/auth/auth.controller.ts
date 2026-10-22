@@ -107,9 +107,10 @@ export class AuthController {
     );
   }
 
+  // Not throttled by address: the portal's server calls it for every user, and the refresh token itself (256 bits) is the
+  // protection against guessing.
   @Post('refresh')
   @Public()
-  @Throttle({ limit: 60, windowSeconds: 60 })
   @HttpCode(200)
   @ApiOperation({
     operationId: 'refreshSession',

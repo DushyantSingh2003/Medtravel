@@ -452,6 +452,9 @@ importers:
       '@medtravel/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@node-rs/argon2':
+        specifier: ^2.2.2
+        version: 2.2.2
       dotenv:
         specifier: ^18.0.6
         version: 18.0.6

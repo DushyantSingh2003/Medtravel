@@ -78,7 +78,7 @@ describe('password sign-in', () => {
     );
     expect(flags['mt_at']).toMatch(/HttpOnly/);
     expect(flags['mt_at']).toMatch(/SameSite=Lax/);
-    expect(flags['mt_rt']).toMatch(/Path=\/auth/);
+    expect(flags['mt_rt']).toMatch(/Path=\/;/);
     expect(flags['mt_rt']).toMatch(/HttpOnly/);
     expect(flags['mt_csrf']).not.toMatch(/HttpOnly/);
 
