@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { Combobox } from './combobox';
 import { CurrencyInput } from './currency-input';
-import { FormCheckbox, FormInput } from './form-fields';
+import { FormCheckbox, FormInput, FormTextarea } from './form-fields';
 import { PhoneInput } from './phone-input';
 
 describe('CurrencyInput', () => {
@@ -245,6 +245,26 @@ describe('Combobox', () => {
     await userEvent.click(screen.getByRole('combobox'));
     await userEvent.type(await screen.findByPlaceholderText('Search'), 'zzz');
     expect(screen.getByText('Nothing')).toBeInTheDocument();
+  });
+});
+
+describe('text direction of form fields', () => {
+  function Harness() {
+    const form = useForm<{ name: string; summary: string }>({
+      defaultValues: { name: '', summary: '' },
+    });
+    return (
+      <form>
+        <FormInput control={form.control} name="name" label="Arabic name" dir="rtl" />
+        <FormTextarea control={form.control} name="summary" label="Arabic summary" dir="rtl" />
+      </form>
+    );
+  }
+
+  it('sets dir on the input and the textarea, so Arabic is typed right to left in an English form', () => {
+    render(<Harness />);
+    expect(screen.getByLabelText('Arabic name')).toHaveAttribute('dir', 'rtl');
+    expect(screen.getByLabelText('Arabic summary')).toHaveAttribute('dir', 'rtl');
   });
 });
 

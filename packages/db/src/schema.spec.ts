@@ -87,6 +87,8 @@ describe('schema.prisma enums', () => {
           'role',
           'masterResource',
           'translationLocale',
+          'permissionAction',
+          'permissionSubject',
         ].includes(base)
       )
         continue;

@@ -2,7 +2,7 @@ import { HttpException, HttpStatus } from '@nestjs/common';
 import { ZodValidationException } from 'nestjs-zod';
 import type { z } from 'zod';
 import type { MasterDefinition, MasterListQuery, MasterRow } from '@medtravel/contracts';
-import type { Db } from '../database/database.module.js';
+import type { Db } from '../../database/database.module.js';
 
 export interface MasterPage {
   rows: MasterRow[];

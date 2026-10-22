@@ -198,14 +198,17 @@ export const masterRowSchema = z.object({
   deletedAt: z.iso.datetime().nullable(),
   createdAt: z.iso.datetime().nullable(),
   updatedAt: z.iso.datetime().nullable(),
-  translations: z.record(z.string(), z.object({ name: z.string(), summary: z.string().nullish() })),
-  dialCode: z.string().nullish(),
-  region: z.string().nullish(),
+  translations: z.record(
+    z.string(),
+    z.object({ name: z.string(), summary: z.string().max(2000).optional().nullable() }),
+  ),
+  dialCode: z.string().max(8).optional().nullable(),
+  region: z.string().max(60).optional().nullable(),
   rtl: z.boolean().optional(),
   minorUnits: z.number().int().optional(),
-  symbol: z.string().nullish(),
-  summary: z.string().nullish(),
-  typicalStayDays: z.number().int().nullish(),
+  symbol: z.string().max(8).optional().nullable(),
+  summary: z.string().max(2000).optional().nullable(),
+  typicalStayDays: z.number().int().optional().nullable(),
   specialityId: z.string().optional(),
   speciality: z.object({ id: z.string(), name: z.string() }).optional(),
   countryCode: z.string().optional(),
@@ -243,7 +246,7 @@ export const MASTER_DEFINITIONS = {
     keyKind: 'code',
     softDelete: false,
     translatedFields: [],
-    sortFields: ['name', 'code', 'createdAt'],
+    sortFields: ['name', 'code', 'createdAt', 'updatedAt'],
     fields: [
       { name: 'code', type: 'text', createOnly: true },
       { name: 'name', type: 'text' },
@@ -281,7 +284,7 @@ export const MASTER_DEFINITIONS = {
     keyKind: 'uuid',
     softDelete: true,
     translatedFields: [],
-    sortFields: ['name', 'slug', 'createdAt'],
+    sortFields: ['name', 'slug', 'createdAt', 'updatedAt'],
     fields: [
       { name: 'slug', type: 'text' },
       { name: 'name', type: 'text' },
@@ -292,7 +295,7 @@ export const MASTER_DEFINITIONS = {
     keyKind: 'uuid',
     softDelete: true,
     translatedFields: ['summary'],
-    sortFields: ['name', 'slug', 'createdAt', 'typicalStayDays'],
+    sortFields: ['name', 'slug', 'createdAt', 'updatedAt', 'typicalStayDays'],
     fields: [
       { name: 'slug', type: 'text' },
       { name: 'name', type: 'text' },
@@ -306,7 +309,7 @@ export const MASTER_DEFINITIONS = {
     keyKind: 'uuid',
     softDelete: true,
     translatedFields: [],
-    sortFields: ['name', 'slug', 'createdAt'],
+    sortFields: ['name', 'slug', 'createdAt', 'updatedAt'],
     fields: [
       { name: 'slug', type: 'text' },
       { name: 'name', type: 'text' },
@@ -318,7 +321,7 @@ export const MASTER_DEFINITIONS = {
     keyKind: 'uuid',
     softDelete: true,
     translatedFields: [],
-    sortFields: ['name', 'code', 'kind', 'createdAt'],
+    sortFields: ['name', 'code', 'kind', 'createdAt', 'updatedAt'],
     fields: [
       { name: 'code', type: 'text', createOnly: true },
       { name: 'name', type: 'text' },
@@ -330,10 +333,14 @@ export const MASTER_DEFINITIONS = {
     keyKind: 'uuid',
     softDelete: true,
     translatedFields: [],
-    sortFields: ['name', 'code', 'createdAt'],
+    sortFields: ['name', 'code', 'createdAt', 'updatedAt'],
     fields: [
       { name: 'code', type: 'text', createOnly: true },
       { name: 'name', type: 'text' },
     ],
   },
 } as const satisfies Record<MasterResource, MasterDefinition>;
+
+/** Whether a table's Arabic (or any other) translation also has the named field, e.g. `summary` on treatments. */
+export const hasTranslatedField = (resource: MasterResource, field: string): boolean =>
+  (MASTER_DEFINITIONS[resource].translatedFields as readonly string[]).includes(field);

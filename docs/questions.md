@@ -43,3 +43,14 @@ Appended by build tasks. Format: `- [<TASK-ID>] <question> — assumed: <what wa
 - [F-01] How hospitals get at patient documents — assumed: through `DocumentShare` rows (per document and hospital, revocable, tied to a `Consent`), never a flag on the document.
 - [F-01] Generated versus trigger-maintained search columns — assumed: triggers, because Prisma tries to drop the default of a generated column in every later migration.
 - [F-01] Seed scope — assumed: master data with Arabic names now; users, hospitals and cases in F-11.
+
+- [F-02] Where the stub sign-in lives for the API — assumed: `ENABLE_STUB_AUTH=true` with a role in the `x-stub-role` header or the portal's `mt_stub_session` cookie, refused at boot when `NODE_ENV=production`; F-03 replaces it.
+- [F-02] Who may change master data — assumed: any signed-in role may read, only `super_admin` may create, change, delete or restore (finance in the admin portal sees a read-only list); F-04 owns the real matrix.
+- [F-02] URL of the screen — the task says `/admin/masters`, the S-06 placeholder was `/admin/master-data`; renamed the nav key to `masters`.
+- [F-02] Countries, languages and currencies — assumed: deactivated, never deleted (no `deletedAt`, referenced by almost everything); the delete endpoint answers 409.
+- [F-02] "All countries" — assumed: every ISO 3166-1 country libphonenumber knows (245), with CLDR names in English and Arabic and a region only for the markets the PRD names.
+- [F-02] 10 languages — assumed: en, ar, ru, fr, uz, sw, am, bn, fa, hi (the source markets in PRD 1); only en and ar are active because only they are translated.
+- [F-02] Lost reasons — assumed: the five of PRD section 3 (price, chose another country, no response, visa refused, medically unfit) plus chose another provider, treated at home and other.
+- [F-02] Currencies — the task's 11 exactly (the F-01 seed's Kuwaiti dinar and yen are gone); minor units follow ISO 4217 (OMR and IQD have 3).
+- [F-02] Where Arabic goes — assumed: only Arabic is translatable at MVP (`translations.ar`), English lives on the row; adding a language later means widening `translationLocaleSchema`.
+

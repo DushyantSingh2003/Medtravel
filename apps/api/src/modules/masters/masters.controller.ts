@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiCookieAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Can } from '../auth/decorators.js';
-import { Ctx, type RequestContext } from '../common/request-context.js';
+import { Can } from '../../auth/decorators.js';
+import { Ctx, type RequestContext } from '../../common/request-context.js';
 import {
   KeyParamsDto,
   MasterListQueryDto,
@@ -20,7 +20,10 @@ export class MastersController {
 
   @Get()
   @Can('read', 'MasterData')
-  @ApiOperation({ summary: 'List master data, with search, filters, sorting and cursor paging' })
+  @ApiOperation({
+    operationId: 'listMasters',
+    summary: 'List master data, with search, filters, sorting and cursor paging',
+  })
   @ApiOkResponse({ type: MasterPageDto })
   list(@Param() { resource }: ResourceParamsDto, @Query() query: MasterListQueryDto) {
     return this.masters.list(resource, query);
@@ -28,7 +31,7 @@ export class MastersController {
 
   @Get(':id')
   @Can('read', 'MasterData')
-  @ApiOperation({ summary: 'Get one master record' })
+  @ApiOperation({ operationId: 'getMaster', summary: 'Get one master record' })
   @ApiOkResponse({ type: MasterRowDto })
   get(@Param() { resource, id }: KeyParamsDto) {
     return this.masters.get(resource, id);
@@ -36,7 +39,7 @@ export class MastersController {
 
   @Post()
   @Can('create', 'MasterData')
-  @ApiOperation({ summary: 'Create a master record' })
+  @ApiOperation({ operationId: 'createMaster', summary: 'Create a master record' })
   @ApiOkResponse({ type: MasterRowDto })
   create(
     @Param() { resource }: ResourceParamsDto,
@@ -48,7 +51,10 @@ export class MastersController {
 
   @Patch(':id')
   @Can('update', 'MasterData')
-  @ApiOperation({ summary: 'Change a master record; send only the fields to change' })
+  @ApiOperation({
+    operationId: 'updateMaster',
+    summary: 'Change a master record; send only the fields to change',
+  })
   @ApiOkResponse({ type: MasterRowDto })
   update(
     @Param() { resource, id }: KeyParamsDto,
@@ -62,6 +68,7 @@ export class MastersController {
   @HttpCode(200)
   @Can('delete', 'MasterData')
   @ApiOperation({
+    operationId: 'deleteMaster',
     summary: 'Soft-delete a master record (409 for tables that can only be deactivated)',
   })
   @ApiOkResponse({ type: MasterRowDto })
@@ -72,7 +79,10 @@ export class MastersController {
   @Post(':id/restore')
   @HttpCode(200)
   @Can('update', 'MasterData')
-  @ApiOperation({ summary: 'Bring a soft-deleted master record back' })
+  @ApiOperation({
+    operationId: 'restoreMaster',
+    summary: 'Bring a soft-deleted master record back',
+  })
   @ApiOkResponse({ type: MasterRowDto })
   restore(@Param() { resource, id }: KeyParamsDto, @Ctx() context: RequestContext) {
     return this.masters.restore(resource, id, context);

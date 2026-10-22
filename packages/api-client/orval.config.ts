@@ -18,7 +18,7 @@ export default defineConfig({
       prettier: true,
       override: {
         mutator: { path: './src/fetcher.ts', name: 'apiFetcher' },
-        query: { useQuery: true, signal: true },
+        query: { signal: true },
       },
     },
   },

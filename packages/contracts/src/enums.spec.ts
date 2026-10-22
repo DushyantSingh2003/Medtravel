@@ -10,7 +10,15 @@ describe('database enums', () => {
   it('are non-empty, unique and written in lower snake case', () => {
     expect(enumArrays.length).toBeGreaterThan(40);
     for (const [name, values] of enumArrays) {
-      if (['LOCALES', 'RTL_LOCALES', 'DISPLAY_CURRENCIES', 'MASTER_RESOURCES'].includes(name))
+      if (
+        [
+          'LOCALES',
+          'RTL_LOCALES',
+          'DISPLAY_CURRENCIES',
+          'MASTER_RESOURCES',
+          'PERMISSION_SUBJECTS',
+        ].includes(name)
+      )
         continue;
       expect(values.length, name).toBeGreaterThan(0);
       expect(new Set(values).size, `${name} has duplicates`).toBe(values.length);

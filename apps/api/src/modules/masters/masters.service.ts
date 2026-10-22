@@ -7,10 +7,11 @@ import {
 } from '@nestjs/common';
 import type { Prisma, PrismaClient } from '@medtravel/db';
 import type { CursorPage, MasterListQuery, MasterResource, MasterRow } from '@medtravel/contracts';
-import { AuditService } from '../audit/audit.service.js';
-import type { RequestContext } from '../common/request-context.js';
-import { PRISMA } from '../database/database.module.js';
-import { OutboxService } from '../outbox/outbox.service.js';
+import { AuditService } from '../../audit/audit.service.js';
+import { decodeCursor } from '../../common/cursor.js';
+import type { RequestContext } from '../../common/request-context.js';
+import { PRISMA } from '../../database/database.module.js';
+import { OutboxService } from '../../outbox/outbox.service.js';
 import { MASTER_ADAPTERS, MASTER_ENTITY_TYPES } from './adapters/index.js';
 import { fieldError, type MasterAdapter } from './master-adapter.js';
 
@@ -38,7 +39,12 @@ export class MastersService {
   ) {}
 
   async list(resource: MasterResource, query: MasterListQuery): Promise<CursorPage<MasterRow>> {
-    const { rows, nextCursor, total } = await MASTER_ADAPTERS[resource].list(this.prisma, query);
+    const adapter = MASTER_ADAPTERS[resource];
+    // A cursor is a key of this table; one that is not is a forged or stale cursor, not a server error.
+    if (query.cursor && !this.isKey(adapter, decodeCursor(query.cursor))) {
+      throw fieldError(HttpStatus.BAD_REQUEST, 'cursor', 'Invalid cursor');
+    }
+    const { rows, nextCursor, total } = await adapter.list(this.prisma, query);
     return { items: rows, nextCursor, total };
   }
 
@@ -134,9 +140,12 @@ export class MastersService {
     });
   }
 
+  private isKey(adapter: MasterAdapter, key: string): boolean {
+    return adapter.definition.keyKind === 'uuid' ? UUID.test(key) : CODE.test(key);
+  }
+
   private validKey(adapter: MasterAdapter, key: string): string {
-    const valid = adapter.definition.keyKind === 'uuid' ? UUID.test(key) : CODE.test(key);
-    if (!valid) throw new NotFoundException('Not found');
+    if (!this.isKey(adapter, key)) throw new NotFoundException('Not found');
     return key;
   }
 

@@ -5,8 +5,8 @@ import {
   MASTER_DEFINITIONS,
   MASTER_UPDATE_SCHEMAS,
 } from '@medtravel/contracts';
-import { readPage } from '../../common/cursor.js';
-import type { Db } from '../../database/database.module.js';
+import { readPage } from '../../../common/cursor.js';
+import type { Db } from '../../../database/database.module.js';
 import {
   contains,
   defineMaster,
@@ -17,51 +17,40 @@ import {
   translationRows,
 } from '../master-adapter.js';
 
-const definition = MASTER_DEFINITIONS.treatments;
+const definition = MASTER_DEFINITIONS.cities;
 const include = {
-  speciality: { select: { id: true, name: true } },
-  translations: { select: { locale: true, name: true, summary: true } },
-} satisfies Prisma.TreatmentInclude;
-type Treatment = Prisma.TreatmentGetPayload<{ include: typeof include }>;
+  translations: { select: { locale: true, name: true } },
+} satisfies Prisma.CityInclude;
+type City = Prisma.CityGetPayload<{ include: typeof include }>;
 
-const toRow = (t: Treatment) => ({
-  id: t.id,
-  slug: t.slug,
-  name: t.name,
-  summary: t.summary,
-  typicalStayDays: t.typicalStayDays,
-  specialityId: t.specialityId,
-  speciality: t.speciality,
-  active: t.active,
-  deletedAt: iso(t.deletedAt),
-  createdAt: iso(t.createdAt),
-  updatedAt: iso(t.updatedAt),
-  translations: translationMap(t.translations),
+const toRow = (c: City) => ({
+  id: c.id,
+  slug: c.slug,
+  name: c.name,
+  countryCode: c.countryCode,
+  active: c.active,
+  deletedAt: iso(c.deletedAt),
+  createdAt: iso(c.createdAt),
+  updatedAt: iso(c.updatedAt),
+  translations: translationMap(c.translations),
 });
 
-async function assertSpeciality(db: Db, id: string): Promise<void> {
-  const speciality = await db.speciality.findFirst({
-    where: { id, deletedAt: null },
-    select: { id: true },
-  });
-  if (!speciality)
-    throw fieldError(
-      HttpStatus.UNPROCESSABLE_ENTITY,
-      'specialityId',
-      'This speciality does not exist',
-    );
+async function assertCountry(db: Db, code: string): Promise<void> {
+  const country = await db.country.findUnique({ where: { code }, select: { code: true } });
+  if (!country)
+    throw fieldError(HttpStatus.UNPROCESSABLE_ENTITY, 'countryCode', 'This country does not exist');
 }
 
-export const treatmentAdapter = defineMaster({
+export const cityAdapter = defineMaster({
   definition,
-  createSchema: MASTER_CREATE_SCHEMAS.treatments,
-  updateSchema: MASTER_UPDATE_SCHEMAS.treatments,
+  createSchema: MASTER_CREATE_SCHEMAS.cities,
+  updateSchema: MASTER_UPDATE_SCHEMAS.cities,
 
   async list(db, query) {
-    const where: Prisma.TreatmentWhereInput = {
+    const where: Prisma.CityWhereInput = {
       deletedAt: query.deleted ? { not: null } : null,
       ...(query.active === undefined ? {} : { active: query.active }),
-      ...(query.specialityId ? { specialityId: query.specialityId } : {}),
+      ...(query.countryCode ? { countryCode: query.countryCode } : {}),
       ...(query.q
         ? {
             OR: [
@@ -72,33 +61,33 @@ export const treatmentAdapter = defineMaster({
           }
         : {}),
     };
-    const page = await readPage<Treatment>({
+    const page = await readPage<City>({
       limit: query.limit,
       cursor: query.cursor,
-      keyOf: (t) => t.id,
+      keyOf: (c) => c.id,
       find: ({ take, skip, cursorKey }) =>
-        db.treatment.findMany({
+        db.city.findMany({
           where,
           include,
           orderBy: orderByOf(query.sort, definition.sortFields, 'id'),
           take,
           ...(cursorKey ? { skip, cursor: { id: cursorKey } } : {}),
         }),
-      count: () => db.treatment.count({ where }),
+      count: () => db.city.count({ where }),
     });
     return { ...page, rows: page.rows.map(toRow) };
   },
 
   async get(db, key) {
-    const treatment = await db.treatment.findUnique({ where: { id: key }, include });
-    return treatment && toRow(treatment);
+    const city = await db.city.findUnique({ where: { id: key }, include });
+    return city && toRow(city);
   },
 
   async create(db, data) {
-    await assertSpeciality(db, data.specialityId);
+    await assertCountry(db, data.countryCode);
     const { translations, ...fields } = data;
     return toRow(
-      await db.treatment.create({
+      await db.city.create({
         data: { ...fields, translations: { create: translationRows(translations) } },
         include,
       }),
@@ -106,10 +95,10 @@ export const treatmentAdapter = defineMaster({
   },
 
   async update(db, key, data) {
-    if (data.specialityId) await assertSpeciality(db, data.specialityId);
+    if (data.countryCode) await assertCountry(db, data.countryCode);
     const { translations, ...fields } = data;
     return toRow(
-      await db.treatment.update({
+      await db.city.update({
         where: { id: key },
         data: {
           ...fields,
@@ -124,7 +113,7 @@ export const treatmentAdapter = defineMaster({
 
   async setDeleted(db, key, deleted) {
     return toRow(
-      await db.treatment.update({
+      await db.city.update({
         where: { id: key },
         data: { deletedAt: deleted ? new Date() : null, active: !deleted },
         include,

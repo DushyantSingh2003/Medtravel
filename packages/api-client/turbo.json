@@ -1,0 +1,10 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": { "dependsOn": ["^build", "@medtravel/api#openapi:export"], "outputs": ["dist/**", "generated/**"] },
+    "lint": { "dependsOn": ["^build", "build"] },
+    "typecheck": { "dependsOn": ["^build", "build"] },
+    "test": { "dependsOn": ["^build", "build"] }
+  }
+}

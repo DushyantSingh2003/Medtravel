@@ -9,7 +9,7 @@ import { AuditModule } from './audit/audit.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { HealthModule } from './health/health.module.js';
-import { MastersModule } from './masters/masters.module.js';
+import { MastersModule } from './modules/masters/masters.module.js';
 
 @Module({
   imports: [

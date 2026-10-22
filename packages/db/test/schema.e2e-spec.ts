@@ -980,7 +980,14 @@ describe('seed', () => {
         expect((await seeded.country.findUniqueOrThrow({ where: { code: 'OM' } })).name).toBe(
           'Sultanate of Oman',
         );
-        expect(await seeded.currency.findUniqueOrThrow({ where: { code: 'KWD' } })).toMatchObject({
+        await seeded.currency.update({ where: { code: 'EUR' }, data: { symbol: 'EUR!' } });
+        seed();
+        expect((await seeded.currency.findUniqueOrThrow({ where: { code: 'EUR' } })).symbol).toBe(
+          'EUR!',
+        );
+        expect(await seeded.treatment.count()).toBe(60);
+        expect(await seeded.country.count()).toBeGreaterThanOrEqual(240);
+        expect(await seeded.currency.findUniqueOrThrow({ where: { code: 'OMR' } })).toMatchObject({
           minorUnits: 3,
         });
       } finally {

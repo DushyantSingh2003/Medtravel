@@ -379,6 +379,10 @@ describe('cursor pagination', () => {
     );
     expect((await t.call(admin, 'GET', '/masters/treatments?limit=0')).status).toBe(400);
     expect((await t.call(admin, 'GET', '/masters/treatments?limit=101')).status).toBe(400);
+    // Well-formed base64 that is not a key of the table.
+    const notAKey = Buffer.from('drop table', 'utf8').toString('base64url');
+    expect((await t.call(admin, 'GET', `/masters/treatments?cursor=${notAKey}`)).status).toBe(400);
+    expect((await t.call(admin, 'GET', `/masters/countries?cursor=${notAKey}`)).status).toBe(400);
     const badSort = await t.call(admin, 'GET', '/masters/treatments?sort=passwordHash');
     expect(badSort.status).toBe(400);
     expect(errorFields(badSort.body)).toEqual(['sort']);

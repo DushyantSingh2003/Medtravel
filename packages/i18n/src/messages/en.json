@@ -548,7 +548,7 @@
     "admin": {
       "overview": "Overview",
       "users": "Users and roles",
-      "master-data": "Master data",
+      "masters": "Master data",
       "hospital-approvals": "Hospital and doctor approval",
       "agent-approvals": "Agent approval",
       "cms": "Content",
@@ -639,7 +639,7 @@
     "admin": {
       "overview": "Key figures and items waiting for approval.",
       "users": "Create staff users, assign roles and cities, deactivate, and force two-factor sign-in.",
-      "master-data": "Countries, languages, currencies, treatments, specialities, cities, document types and lost reasons.",
+      "masters": "Countries, languages, currencies, treatments, specialities, cities, document types and lost reasons.",
       "hospital-approvals": "Review onboarding, verify accreditation, and publish or unpublish profiles.",
       "agent-approvals": "KYC review, commission plan assignment and suspension.",
       "cms": "Edit treatment, hospital, doctor, city and blog pages with translations, SEO fields and a publish workflow.",
@@ -813,6 +813,201 @@
         "title": "Grievance officer",
         "description": "How to raise a complaint and who handles it."
       }
+    }
+  },
+  "masters": {
+    "title": "Master data",
+    "description": "The lists every portal and the website draw on. A change shows up everywhere straight away.",
+    "open": "Open",
+    "resources": {
+      "countries": {
+        "title": "Countries",
+        "description": "Where patients and attendants come from, with ISO and dialling codes.",
+        "singular": "country"
+      },
+      "languages": {
+        "title": "Languages",
+        "description": "The languages the platform can be shown in.",
+        "singular": "language"
+      },
+      "currencies": {
+        "title": "Currencies",
+        "description": "The currencies quotes, invoices and payments can use.",
+        "singular": "currency"
+      },
+      "specialities": {
+        "title": "Specialities",
+        "description": "Medical specialities that group treatments and doctors.",
+        "singular": "speciality"
+      },
+      "treatments": {
+        "title": "Treatments",
+        "description": "The procedures patients ask for, shown on the website and in quotes.",
+        "singular": "treatment"
+      },
+      "cities": {
+        "title": "Cities",
+        "description": "Cities with hospitals, stays and coordinators.",
+        "singular": "city"
+      },
+      "document-types": {
+        "title": "Document types",
+        "description": "The kinds of files patients and hospitals upload.",
+        "singular": "document type"
+      },
+      "lost-reasons": {
+        "title": "Lost reasons",
+        "description": "Why a case was lost, used by the reports.",
+        "singular": "lost reason"
+      }
+    },
+    "columns": {
+      "name": "Name",
+      "code": "Code",
+      "slug": "Slug",
+      "dialCode": "Dialling code",
+      "region": "Region",
+      "rtl": "Writing direction",
+      "minorUnits": "Decimals",
+      "symbol": "Symbol",
+      "speciality": "Speciality",
+      "country": "Country",
+      "kind": "Kind",
+      "status": "Status",
+      "updated": "Updated",
+      "arabic": "Arabic name",
+      "stay": "Typical stay"
+    },
+    "direction": {
+      "rtl": "Right to left",
+      "ltr": "Left to right"
+    },
+    "stayDays": "{count, plural, one {# day} other {# days}}",
+    "fields": {
+      "name": "Name (English)",
+      "code": "Code",
+      "slug": "Slug",
+      "dialCode": "Dialling code",
+      "region": "Region",
+      "rtl": "Written right to left",
+      "minorUnits": "Decimal places",
+      "symbol": "Symbol",
+      "specialityId": "Speciality",
+      "countryCode": "Country",
+      "kind": "Kind of file",
+      "summary": "Summary (English)",
+      "typicalStayDays": "Typical stay in days",
+      "active": "Active"
+    },
+    "hints": {
+      "code": "Cannot be changed after it is created.",
+      "slug": "Lowercase letters, digits and hyphens. Used in web addresses.",
+      "dialCode": "A plus sign and the digits, for example +91.",
+      "minorUnits": "How many digits follow the decimal point in prices: 2 for dollars, 3 for Omani rials.",
+      "active": "Inactive items stay on existing cases but are not offered for new ones."
+    },
+    "placeholders": {
+      "select": "Choose",
+      "search": "Search"
+    },
+    "arabic": {
+      "heading": "Arabic",
+      "hint": "Shown to people who use the site in Arabic. Leave it empty to show the English text.",
+      "name": "Name in Arabic",
+      "summary": "Summary in Arabic"
+    },
+    "filters": {
+      "status": "Status",
+      "all": "All",
+      "active": "Active",
+      "inactive": "Inactive",
+      "showDeleted": "Show deleted",
+      "speciality": "Speciality",
+      "allSpecialities": "All specialities",
+      "country": "Country",
+      "allCountries": "All countries",
+      "kind": "Kind",
+      "allKinds": "All kinds"
+    },
+    "state": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "deleted": "Deleted"
+    },
+    "kinds": {
+      "report": "Report",
+      "scan": "Scan",
+      "prescription": "Prescription",
+      "passport": "Passport",
+      "visa": "Visa",
+      "invoice": "Invoice",
+      "bill": "Hospital bill",
+      "discharge": "Discharge summary",
+      "invitation_letter": "Invitation letter",
+      "photo": "Photo",
+      "pickup_photo": "Pickup photo",
+      "kyc": "Identity (KYC)",
+      "agreement": "Agreement",
+      "other": "Other"
+    },
+    "actions": {
+      "add": "Add {thing}",
+      "edit": "Edit",
+      "delete": "Delete",
+      "restore": "Restore",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "create": "Add",
+      "save": "Save changes",
+      "cancel": "Cancel",
+      "close": "Close",
+      "menu": "Actions for {name}",
+      "readOnly": "You can look at this list but not change it.",
+      "retry": "Try again"
+    },
+    "dialog": {
+      "createTitle": "New {thing}",
+      "createDescription": "Fill in the English name and, if you can, the Arabic one.",
+      "editTitle": "Edit {thing}",
+      "editDescription": "Only the fields you change are saved."
+    },
+    "confirm": {
+      "deleteTitle": "Delete {name}?",
+      "deleteBody": "It disappears from lists and menus, but stays on the cases that already use it. You can restore it later.",
+      "deleteConfirm": "Delete",
+      "error": "Could not delete it. Try again."
+    },
+    "toast": {
+      "created": "{name} was added",
+      "updated": "{name} was saved",
+      "deleted": "{name} was deleted",
+      "restored": "{name} was restored",
+      "failed": "That did not work. Try again."
+    },
+    "form": {
+      "fixErrors": "Fix the highlighted fields and try again.",
+      "saveFailed": "Could not save. Check your connection and try again.",
+      "forbidden": "You are not allowed to change master data.",
+      "required": "required"
+    },
+    "table": {
+      "caption": "{name}",
+      "search": "Search by name or code, in English or Arabic",
+      "columns": "Columns",
+      "export": "Export CSV",
+      "selectAll": "Select all rows",
+      "selectRow": "Select {name}",
+      "previous": "Previous page",
+      "next": "Next page",
+      "rowsPerPage": "Rows per page",
+      "pageOf": "Page {page} of {pages}",
+      "total": "{count, plural, one {# result} other {# results}}",
+      "selected": "{count, plural, one {# selected} other {# selected}}",
+      "loading": "Loading the list",
+      "emptyTitle": "Nothing here yet",
+      "emptyDescription": "Nothing matches. Clear the search or the filters, or add a new one.",
+      "errorTitle": "Could not load the list",
+      "errorDescription": "Check your connection, then try again."
     }
   }
 }

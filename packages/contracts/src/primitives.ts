@@ -36,7 +36,7 @@ export type CursorQuery = z.infer<typeof cursorQuerySchema>;
 export const cursorPageSchema = <T extends z.ZodTypeAny>(item: T) =>
   z.object({
     items: z.array(item),
-    nextCursor: z.string().nullable(),
+    nextCursor: z.string().max(512).nullable(),
     total: z.number().int().min(0),
   });
 export type CursorPage<T> = { items: T[]; nextCursor: string | null; total: number };

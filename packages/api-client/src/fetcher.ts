@@ -17,39 +17,32 @@ export class ApiError extends Error {
   }
 }
 
-export interface FetcherOptions {
-  url: string;
-  method: string;
-  params?: Record<string, string | number | boolean | undefined>;
-  data?: unknown;
-  signal?: AbortSignal;
-  headers?: Record<string, string>;
+/** What every generated call resolves to: the parsed body next to the status and headers. */
+export interface ApiResponse {
+  data: unknown;
+  status: number;
+  headers: Headers;
+}
+
+/** The body of a response, parsed as JSON; anything else (an HTML error page from a proxy) is kept as text. */
+async function readBody(response: Response): Promise<unknown> {
+  const text = await response.text();
+  if (!text) return undefined;
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return text;
+  }
 }
 
 /**
- * Single place every generated hook goes through, so cookies, errors and the base URL are
- * handled once. Sessions are httpOnly cookies, hence `credentials: 'include'`.
+ * Single place every generated call goes through (orval's `mutator`), so cookies, errors and the base URL are
+ * handled once. Sessions are httpOnly cookies, hence `credentials: 'include'`. Non-2xx answers throw an
+ * `ApiError` carrying the status and the body, which is where forms read the field errors from.
  */
-export async function apiFetcher<T>(options: FetcherOptions): Promise<T> {
-  const url = new URL(options.url, baseUrl());
-  for (const [key, value] of Object.entries(options.params ?? {})) {
-    if (value !== undefined) url.searchParams.set(key, String(value));
-  }
-
-  const response = await fetch(url, {
-    method: options.method.toUpperCase(),
-    credentials: 'include',
-    headers: {
-      ...(options.data === undefined ? {} : { 'content-type': 'application/json' }),
-      ...options.headers,
-    },
-    ...(options.data === undefined ? {} : { body: JSON.stringify(options.data) }),
-    ...(options.signal ? { signal: options.signal } : {}),
-  });
-
-  const text = await response.text();
-  const body: unknown = text ? JSON.parse(text) : undefined;
-
-  if (!response.ok) throw new ApiError(response.status, body);
-  return body as T;
+export async function apiFetcher<T extends ApiResponse>(url: string, init: RequestInit = {}): Promise<T> {
+  const response = await fetch(new URL(url, baseUrl()), { ...init, credentials: 'include' });
+  const data = await readBody(response);
+  if (!response.ok) throw new ApiError(response.status, data);
+  return { data, status: response.status, headers: response.headers } as T;
 }

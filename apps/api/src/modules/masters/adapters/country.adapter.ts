@@ -4,7 +4,7 @@ import {
   MASTER_DEFINITIONS,
   MASTER_UPDATE_SCHEMAS,
 } from '@medtravel/contracts';
-import { readPage } from '../../common/cursor.js';
+import { readPage } from '../../../common/cursor.js';
 import {
   contains,
   defineMaster,
