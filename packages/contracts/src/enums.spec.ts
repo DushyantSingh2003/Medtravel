@@ -20,6 +20,6 @@ describe('database enums', () => {
   it('parse their own values and reject anything else', () => {
     expect(contracts.paymentStatusSchema.parse('succeeded')).toBe('succeeded');
     expect(contracts.paymentStatusSchema.safeParse('paid').success).toBe(false);
-    expect(contracts.documentVisibilitySchema.options).toEqual(['private', 'shared', 'internal']);
+    expect(contracts.documentVisibilitySchema.options).toEqual(['private', 'internal']);
   });
 });

@@ -1,8 +1,13 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import * as contracts from '@medtravel/contracts';
 import { describe, expect, it } from 'vitest';
 
 const schema = readFileSync(new URL('../prisma/schema.prisma', import.meta.url), 'utf8');
+const migrationDir = new URL('../prisma/migrations/', import.meta.url);
+const migrationSql = readdirSync(migrationDir, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => readFileSync(new URL(`${entry.name}/migration.sql`, migrationDir), 'utf8'))
+  .join('\n');
 
 interface ParsedModel {
   name: string;
@@ -87,6 +92,10 @@ describe('schema.prisma conventions', () => {
   it('covers every entity of PRD section 11 and the task list', () => {
     const names = new Set(models.map((m) => m.name));
     for (const expected of [
+      'Admission',
+      'CaseIntake',
+      'CaseNote',
+      'ProcessedWebhook',
       'User',
       'Session',
       'Patient',
@@ -157,14 +166,15 @@ describe('schema.prisma conventions', () => {
   });
 
   it('never stores money or counts as a float, and keeps amounts as Int minor units', () => {
-    const decimals = new Set(['fxRate', 'rate', 'distanceKm']);
+    const decimals = new Set(['fxRate', 'rate', 'distanceKm', 'latitude', 'longitude']);
     for (const model of models) {
       for (const field of fieldsOf(model)) {
         expect(field.type.startsWith('Float'), `${model.name}.${field.name} is a float`).toBe(
           false,
         );
         if (field.name.endsWith('Minor')) {
-          expect(field.type, `${model.name}.${field.name}`).toMatch(/^Int\??$/);
+          // 64-bit: a 32-bit column overflows on ordinary prices in UZS, IQD and NGN.
+          expect(field.type, `${model.name}.${field.name}`).toMatch(/^BigInt\??$/);
         }
         if (field.type.startsWith('Decimal')) {
           expect(decimals.has(field.name), `${model.name}.${field.name} is a Decimal`).toBe(true);
@@ -173,17 +183,27 @@ describe('schema.prisma conventions', () => {
     }
   });
 
-  it('pairs every money column with a currency column on the same model', () => {
+  it('pairs every money column with a currency, and checks it in the database where the currency is optional', () => {
     for (const model of models) {
-      const names = fieldsOf(model).map((f) => f.name);
-      const moneyFields = names.filter((n) => n.endsWith('Minor') && n !== 'amountInrMinor');
-      if (moneyFields.length === 0) continue;
-      const hasCurrency = names.some((n) => /currency$/i.test(n));
-      // Invoice lines and quote lines carry their own currency; CommissionRule and others have none.
-      expect(
-        hasCurrency || model.name === 'InvoiceLine',
-        `${model.name} has money but no currency`,
-      ).toBe(true);
+      const fields = fieldsOf(model);
+      const money = fields.filter((f) => f.name.endsWith('Minor') && f.name !== 'amountInrMinor');
+      if (money.length === 0) continue;
+      const currency = fields.find(
+        (f) =>
+          f.type.replace('?', '') === 'String' && /currency$/i.test(f.name) && !f.name.startsWith('fx'),
+      );
+      if (model.name === 'InvoiceLine') continue; // priced in its invoice's currency
+      expect(currency, `${model.name} has money but no currency`).toBeDefined();
+      if (money.some((f) => f.line.includes('?')) && currency!.line.includes('?')) {
+        // Amount and currency are both optional: a CHECK must forbid an amount without a currency.
+        expect(
+          migrationSql.includes(`ALTER TABLE "${model.name}" ADD CONSTRAINT`) &&
+            new RegExp(
+              `ALTER TABLE "${model.name}" ADD CONSTRAINT "${model.name}_\\w*currency_check"`,
+            ).test(migrationSql),
+          `${model.name}: optional money needs a currency CHECK`,
+        ).toBe(true);
+      }
     }
   });
 
@@ -227,6 +247,7 @@ describe('schema.prisma conventions', () => {
       'AuditEvent',
       'OutboxEvent',
       'NumberSequence',
+      'ProcessedWebhook',
       'DoctorTranslation',
       'HospitalTranslation',
       'PackageTranslation',
@@ -251,6 +272,43 @@ describe('schema.prisma conventions', () => {
     for (const name of ['Hospital', 'Doctor', 'Treatment', 'Patient']) {
       const model = models.find((m) => m.name === name)!;
       expect(model.lines, name).toContain('@@index([searchVector], type: Gin)');
+    }
+  });
+});
+
+describe('migration SQL', () => {
+  it('is a single migration for F-01 and ends with the rules Prisma cannot express', () => {
+    expect(migrationSql).toContain('CREATE EXTENSION IF NOT EXISTS pg_trgm');
+    expect(migrationSql).toContain('CREATE TRIGGER "AuditEvent_append_only"');
+    expect(migrationSql).toContain('CREATE TRIGGER "DocumentShare_consent_check"');
+    expect(migrationSql).toContain('CREATE TRIGGER "Consent_withdrawn_revoke_shares"');
+  });
+
+  it('has a search trigger for each search column, and a refresh trigger for each translation that feeds one', () => {
+    for (const name of ['Treatment', 'Patient', 'Hospital', 'Doctor']) {
+      expect(migrationSql, name).toContain(`CREATE TRIGGER "${name}_search_vector"`);
+    }
+    for (const name of ['TreatmentTranslation', 'HospitalTranslation', 'DoctorTranslation']) {
+      expect(migrationSql, name).toContain(`CREATE TRIGGER "${name}_refresh_search"`);
+    }
+  });
+
+  it('keeps the checks the data-model doc promises', () => {
+    for (const rule of [
+      'Currency_minor_units_check',
+      'FxRate_rate_check',
+      'Hospital_agreement_check',
+      'Feedback_ratings_check',
+      'Document_size_check',
+      'Document_owner_check',
+      'VisaApplication_one_traveller_check',
+      'Payment_owner_check',
+      'Invoice_owner_check',
+      'OpinionRequest_consent_check',
+      'Conversation_party_check',
+      'User_email_lowercase_check',
+    ]) {
+      expect(migrationSql, rule).toContain(rule);
     }
   });
 });

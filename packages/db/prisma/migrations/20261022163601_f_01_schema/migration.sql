@@ -1,15 +1,23 @@
 -- Extensions. pg_trgm powers fuzzy search and duplicate detection, unaccent makes search ignore
--- diacritics. Both are "trusted" extensions in PostgreSQL 13+, so the database owner can create them.
--- (infra/postgres/init creates them for local development too; IF NOT EXISTS makes both safe.)
+-- diacritics. Both are "trusted" extensions in PostgreSQL 13+, so the database owner can create them
+-- without being a superuser (a test migrates as a plain owner to prove it). If the extensions were
+-- created in another schema (some managed databases use "extensions"), create them in "public" first.
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE EXTENSION IF NOT EXISTS unaccent;
 
--- unaccent() is not IMMUTABLE, so it cannot be used in a generated column or an index directly.
--- This wrapper pins the dictionary and is declared immutable, the standard workaround.
+-- Search normalisation: unaccent() is not IMMUTABLE, so it cannot be used in a trigger-built vector or an
+-- index directly. This wrapper pins the dictionary and is declared immutable (the standard workaround),
+-- then does what unaccent does not for Arabic: removes the short-vowel marks (tashkeel, U+064B-U+065F and
+-- U+0670) and the tatweel (U+0640), and folds the alef-with-hamza forms into a plain alef, so
+-- "أَحْمَد" and "احمد" find each other.
 CREATE OR REPLACE FUNCTION f_unaccent(text)
   RETURNS text
   LANGUAGE sql IMMUTABLE PARALLEL SAFE STRICT
-  AS $$ SELECT public.unaccent('public.unaccent', $1) $$;
+  AS $$
+    SELECT translate(
+      regexp_replace(public.unaccent('public.unaccent', $1), '[ً-ٰٟـ]', '', 'g'),
+      'أإآٱ', 'اااا')
+  $$;
 
 -- CreateEnum
 CREATE TYPE "Role" AS ENUM ('patient', 'attendant', 'agent', 'case_manager', 'ground_coordinator', 'interpreter', 'medical_reviewer', 'hospital_desk', 'doctor', 'finance', 'super_admin');
@@ -33,10 +41,10 @@ CREATE TYPE "Urgency" AS ENUM ('routine', 'soon', 'urgent', 'emergency');
 CREATE TYPE "CaseSource" AS ENUM ('website', 'whatsapp', 'phone', 'email', 'agent', 'referral', 'walk_in', 'other');
 
 -- CreateEnum
-CREATE TYPE "DocumentKind" AS ENUM ('report', 'scan', 'prescription', 'passport', 'visa', 'invoice', 'discharge', 'invitation_letter', 'photo', 'agreement', 'other');
+CREATE TYPE "DocumentKind" AS ENUM ('report', 'scan', 'prescription', 'passport', 'visa', 'invoice', 'bill', 'discharge', 'invitation_letter', 'photo', 'pickup_photo', 'kyc', 'agreement', 'other');
 
 -- CreateEnum
-CREATE TYPE "DocumentVisibility" AS ENUM ('private', 'shared', 'internal');
+CREATE TYPE "DocumentVisibility" AS ENUM ('private', 'internal');
 
 -- CreateEnum
 CREATE TYPE "ScanStatus" AS ENUM ('pending', 'clean', 'infected', 'failed');
@@ -60,13 +68,13 @@ CREATE TYPE "QuoteStatus" AS ENUM ('draft', 'sent', 'viewed', 'accepted', 'rejec
 CREATE TYPE "QuoteLineKind" AS ENUM ('hospital', 'stay', 'transfer', 'interpreter', 'service_fee', 'add_on', 'discount', 'other');
 
 -- CreateEnum
-CREATE TYPE "PaymentType" AS ENUM ('deposit', 'service', 'pass_through', 'add_on');
+CREATE TYPE "PaymentType" AS ENUM ('deposit', 'service', 'pass_through', 'add_on', 'referral_fee');
 
 -- CreateEnum
 CREATE TYPE "PaymentMethod" AS ENUM ('card', 'bank_wire', 'upi', 'payment_link', 'cash', 'other');
 
 -- CreateEnum
-CREATE TYPE "PaymentStatus" AS ENUM ('pending', 'authorized', 'succeeded', 'failed', 'cancelled', 'partially_refunded', 'refunded');
+CREATE TYPE "PaymentStatus" AS ENUM ('pending', 'authorized', 'succeeded', 'failed', 'cancelled', 'partially_refunded', 'refunded', 'chargeback');
 
 -- CreateEnum
 CREATE TYPE "InvoiceKind" AS ENUM ('service_fee', 'referral_fee');
@@ -90,7 +98,7 @@ CREATE TYPE "VisaStatus" AS ENUM ('not_started', 'documents_pending', 'invitatio
 CREATE TYPE "BookingType" AS ENUM ('flight', 'stay', 'transfer', 'interpreter', 'sim', 'other');
 
 -- CreateEnum
-CREATE TYPE "BookingStatus" AS ENUM ('requested', 'confirmed', 'in_progress', 'completed', 'cancelled');
+CREATE TYPE "BookingStatus" AS ENUM ('requested', 'confirmed', 'en_route', 'picked_up', 'in_progress', 'completed', 'cancelled');
 
 -- CreateEnum
 CREATE TYPE "VendorKind" AS ENUM ('stay', 'transport', 'interpreter', 'sim', 'travel', 'other');
@@ -126,7 +134,7 @@ CREATE TYPE "TaskPriority" AS ENUM ('low', 'normal', 'high', 'urgent');
 CREATE TYPE "MessageChannel" AS ENUM ('in_app', 'whatsapp', 'email', 'sms');
 
 -- CreateEnum
-CREATE TYPE "MessageDirection" AS ENUM ('inbound', 'outbound', 'internal');
+CREATE TYPE "MessageDirection" AS ENUM ('inbound', 'outbound');
 
 -- CreateEnum
 CREATE TYPE "ConversationKind" AS ENUM ('patient', 'hospital', 'agent', 'internal');
@@ -145,6 +153,9 @@ CREATE TYPE "IncidentSeverity" AS ENUM ('low', 'medium', 'high', 'critical');
 
 -- CreateEnum
 CREATE TYPE "IncidentStatus" AS ENUM ('open', 'escalated', 'resolved', 'closed');
+
+-- CreateEnum
+CREATE TYPE "AdmissionStatus" AS ENUM ('planned', 'admitted', 'discharged', 'cancelled');
 
 -- CreateEnum
 CREATE TYPE "OutboxStatus" AS ENUM ('pending', 'processing', 'processed', 'failed');
@@ -382,6 +393,7 @@ CREATE TABLE "Session" (
 -- CreateTable
 CREATE TABLE "StaffProfile" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "isManager" BOOLEAN NOT NULL DEFAULT false,
     "title" TEXT,
     "languages" TEXT[],
     "assignable" BOOLEAN NOT NULL DEFAULT true,
@@ -389,6 +401,7 @@ CREATE TABLE "StaffProfile" (
     "lastAssignedAt" TIMESTAMPTZ(3),
     "userId" UUID NOT NULL,
     "cityId" UUID,
+    "managerId" UUID,
     "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMPTZ(3) NOT NULL,
     "deletedAt" TIMESTAMPTZ(3),
@@ -421,6 +434,7 @@ CREATE TABLE "Patient" (
     "email" TEXT,
     "address" TEXT,
     "preferredLanguage" VARCHAR(8) NOT NULL DEFAULT 'en',
+    "anonymizedAt" TIMESTAMPTZ(3),
     "emergencyContactName" TEXT,
     "emergencyContactPhone" VARCHAR(20),
     "emergencyContactRelation" TEXT,
@@ -440,6 +454,8 @@ CREATE TABLE "Attendant" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "fullName" TEXT NOT NULL,
     "relation" TEXT,
+    "email" TEXT,
+    "anonymizedAt" TIMESTAMPTZ(3),
     "passportNumber" VARCHAR(32),
     "passportExpiry" DATE,
     "dateOfBirth" DATE,
@@ -493,13 +509,14 @@ CREATE TABLE "Case" (
     "caseNo" TEXT NOT NULL,
     "stage" "CaseStage" NOT NULL DEFAULT 'enquiry',
     "status" "CaseStatus" NOT NULL DEFAULT 'new',
-    "conditionSummary" TEXT,
     "urgency" "Urgency" NOT NULL DEFAULT 'routine',
-    "budgetMinor" INTEGER,
+    "budgetMinor" BIGINT,
     "source" "CaseSource" NOT NULL DEFAULT 'website',
     "campaign" TEXT,
     "preferredLanguage" VARCHAR(8),
     "stageEnteredAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "plannedArrivalAt" TIMESTAMPTZ(3),
+    "plannedDepartureAt" TIMESTAMPTZ(3),
     "firstResponseDueAt" TIMESTAMPTZ(3),
     "firstRespondedAt" TIMESTAMPTZ(3),
     "slaDueAt" TIMESTAMPTZ(3),
@@ -585,13 +602,78 @@ CREATE TABLE "DocumentShare" (
     "revokedAt" TIMESTAMPTZ(3),
     "documentId" UUID NOT NULL,
     "hospitalId" UUID NOT NULL,
-    "consentId" UUID,
+    "consentId" UUID NOT NULL,
     "sharedById" UUID,
     "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMPTZ(3) NOT NULL,
     "deletedAt" TIMESTAMPTZ(3),
 
     CONSTRAINT "DocumentShare_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "CaseIntake" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "condition" TEXT NOT NULL,
+    "history" TEXT,
+    "medications" TEXT,
+    "caseId" UUID NOT NULL,
+    "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMPTZ(3) NOT NULL,
+    "deletedAt" TIMESTAMPTZ(3),
+
+    CONSTRAINT "CaseIntake_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "CaseNote" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "body" TEXT NOT NULL,
+    "pinned" BOOLEAN NOT NULL DEFAULT false,
+    "caseId" UUID NOT NULL,
+    "authorId" UUID,
+    "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMPTZ(3) NOT NULL,
+    "deletedAt" TIMESTAMPTZ(3),
+
+    CONSTRAINT "CaseNote_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Admission" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "status" "AdmissionStatus" NOT NULL DEFAULT 'planned',
+    "admittedAt" TIMESTAMPTZ(3),
+    "procedureAt" TIMESTAMPTZ(3),
+    "ward" TEXT,
+    "expectedDischargeAt" TIMESTAMPTZ(3),
+    "dischargedAt" TIMESTAMPTZ(3),
+    "fitToFlyAt" TIMESTAMPTZ(3),
+    "estimateMinor" BIGINT,
+    "runningBillMinor" BIGINT,
+    "finalBillMinor" BIGINT,
+    "notes" TEXT,
+    "caseId" UUID NOT NULL,
+    "hospitalId" UUID NOT NULL,
+    "doctorId" UUID,
+    "dischargeSummaryId" UUID,
+    "currency" CHAR(3),
+    "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMPTZ(3) NOT NULL,
+    "deletedAt" TIMESTAMPTZ(3),
+
+    CONSTRAINT "Admission_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ProcessedWebhook" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "provider" TEXT NOT NULL,
+    "eventId" TEXT NOT NULL,
+    "payload" JSONB,
+    "receivedAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ProcessedWebhook_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -612,6 +694,8 @@ CREATE TABLE "Hospital" (
     "bankDetails" JSONB,
     "bedCount" INTEGER,
     "establishedYear" INTEGER,
+    "latitude" DECIMAL(9,6),
+    "longitude" DECIMAL(9,6),
     "publishedAt" TIMESTAMPTZ(3),
     "searchVector" tsvector,
     "cityId" UUID NOT NULL,
@@ -684,11 +768,12 @@ CREATE TABLE "Department" (
 -- CreateTable
 CREATE TABLE "Doctor" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "slug" TEXT,
     "fullName" TEXT NOT NULL,
     "qualifications" TEXT,
     "experienceYears" INTEGER,
     "languages" TEXT[],
-    "consultFeeMinor" INTEGER,
+    "consultFeeMinor" BIGINT,
     "bio" TEXT,
     "published" BOOLEAN NOT NULL DEFAULT false,
     "searchVector" tsvector,
@@ -735,7 +820,7 @@ CREATE TABLE "Package" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "name" TEXT NOT NULL,
     "roomCategory" TEXT,
-    "priceMinor" INTEGER NOT NULL,
+    "priceMinor" BIGINT NOT NULL,
     "stayDays" INTEGER,
     "inclusions" TEXT[],
     "exclusions" TEXT[],
@@ -778,6 +863,7 @@ CREATE TABLE "OpinionRequest" (
     "hospitalId" UUID NOT NULL,
     "doctorId" UUID,
     "summaryId" UUID,
+    "consentId" UUID,
     "sentById" UUID,
     "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMPTZ(3) NOT NULL,
@@ -789,10 +875,12 @@ CREATE TABLE "OpinionRequest" (
 -- CreateTable
 CREATE TABLE "Opinion" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "version" INTEGER NOT NULL DEFAULT 1,
+    "current" BOOLEAN NOT NULL DEFAULT true,
     "treatmentPlan" TEXT NOT NULL,
     "stayDaysHospital" INTEGER,
     "stayDaysOutside" INTEGER,
-    "estimateMinor" INTEGER NOT NULL,
+    "estimateMinor" BIGINT NOT NULL,
     "inclusions" TEXT[],
     "exclusions" TEXT[],
     "validUntil" DATE,
@@ -813,7 +901,7 @@ CREATE TABLE "Quote" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "quoteNo" TEXT NOT NULL,
     "status" "QuoteStatus" NOT NULL DEFAULT 'draft',
-    "totalMinor" INTEGER NOT NULL,
+    "totalMinor" BIGINT NOT NULL,
     "version" INTEGER NOT NULL DEFAULT 1,
     "fxRate" DECIMAL(18,8),
     "fxRateAt" TIMESTAMPTZ(3),
@@ -843,9 +931,9 @@ CREATE TABLE "QuoteLine" (
     "kind" "QuoteLineKind" NOT NULL,
     "description" TEXT NOT NULL,
     "quantity" INTEGER NOT NULL DEFAULT 1,
-    "unitPriceMinor" INTEGER NOT NULL,
-    "amountMinor" INTEGER NOT NULL,
-    "costMinor" INTEGER,
+    "unitPriceMinor" BIGINT NOT NULL,
+    "amountMinor" BIGINT NOT NULL,
+    "costMinor" BIGINT,
     "sortOrder" INTEGER NOT NULL DEFAULT 0,
     "quoteId" UUID NOT NULL,
     "currency" CHAR(3) NOT NULL,
@@ -859,11 +947,15 @@ CREATE TABLE "QuoteLine" (
 CREATE TABLE "Invoice" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "invoiceNo" TEXT NOT NULL,
+    "supplierGstin" VARCHAR(15),
+    "exportOfServices" BOOLEAN NOT NULL DEFAULT false,
+    "disputedAt" TIMESTAMPTZ(3),
+    "disputeNote" TEXT,
     "kind" "InvoiceKind" NOT NULL,
     "status" "InvoiceStatus" NOT NULL DEFAULT 'draft',
-    "subtotalMinor" INTEGER NOT NULL,
-    "taxMinor" INTEGER NOT NULL DEFAULT 0,
-    "totalMinor" INTEGER NOT NULL,
+    "subtotalMinor" BIGINT NOT NULL,
+    "taxMinor" BIGINT NOT NULL DEFAULT 0,
+    "totalMinor" BIGINT NOT NULL,
     "gstin" VARCHAR(15),
     "placeOfSupply" TEXT,
     "billToName" TEXT NOT NULL,
@@ -885,14 +977,19 @@ CREATE TABLE "Invoice" (
 -- CreateTable
 CREATE TABLE "InvoiceLine" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "sacCode" VARCHAR(8),
+    "cgstMinor" BIGINT NOT NULL DEFAULT 0,
+    "sgstMinor" BIGINT NOT NULL DEFAULT 0,
+    "igstMinor" BIGINT NOT NULL DEFAULT 0,
     "description" TEXT NOT NULL,
     "quantity" INTEGER NOT NULL DEFAULT 1,
-    "unitPriceMinor" INTEGER NOT NULL,
+    "unitPriceMinor" BIGINT NOT NULL,
     "taxRateBp" INTEGER NOT NULL DEFAULT 0,
-    "taxMinor" INTEGER NOT NULL DEFAULT 0,
-    "amountMinor" INTEGER NOT NULL,
+    "taxMinor" BIGINT NOT NULL DEFAULT 0,
+    "amountMinor" BIGINT NOT NULL,
     "sortOrder" INTEGER NOT NULL DEFAULT 0,
     "invoiceId" UUID NOT NULL,
+    "caseId" UUID,
     "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMPTZ(3) NOT NULL,
 
@@ -905,8 +1002,8 @@ CREATE TABLE "CreditNote" (
     "creditNoteNo" TEXT NOT NULL,
     "status" "CreditNoteStatus" NOT NULL DEFAULT 'draft',
     "reason" TEXT NOT NULL,
-    "amountMinor" INTEGER NOT NULL,
-    "taxMinor" INTEGER NOT NULL DEFAULT 0,
+    "amountMinor" BIGINT NOT NULL,
+    "taxMinor" BIGINT NOT NULL DEFAULT 0,
     "issuedAt" TIMESTAMPTZ(3),
     "invoiceId" UUID NOT NULL,
     "currency" CHAR(3) NOT NULL,
@@ -923,15 +1020,15 @@ CREATE TABLE "Payment" (
     "type" "PaymentType" NOT NULL,
     "method" "PaymentMethod" NOT NULL,
     "status" "PaymentStatus" NOT NULL DEFAULT 'pending',
-    "amountMinor" INTEGER NOT NULL,
-    "amountInrMinor" INTEGER,
+    "amountMinor" BIGINT NOT NULL,
+    "amountInrMinor" BIGINT,
     "fxRate" DECIMAL(18,8),
     "gateway" TEXT,
     "gatewayRef" TEXT,
     "payerName" TEXT,
     "failureReason" TEXT,
     "paidAt" TIMESTAMPTZ(3),
-    "caseId" UUID NOT NULL,
+    "caseId" UUID,
     "invoiceId" UUID,
     "quoteId" UUID,
     "currency" CHAR(3) NOT NULL,
@@ -946,7 +1043,7 @@ CREATE TABLE "Payment" (
 CREATE TABLE "Refund" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "status" "RefundStatus" NOT NULL DEFAULT 'requested',
-    "amountMinor" INTEGER NOT NULL,
+    "amountMinor" BIGINT NOT NULL,
     "reason" TEXT NOT NULL,
     "gatewayRef" TEXT,
     "processedAt" TIMESTAMPTZ(3),
@@ -1006,6 +1103,8 @@ CREATE TABLE "Stay" (
     "type" "StayType" NOT NULL,
     "name" TEXT NOT NULL,
     "address" TEXT,
+    "latitude" DECIMAL(9,6),
+    "longitude" DECIMAL(9,6),
     "halalKitchen" BOOLEAN NOT NULL DEFAULT false,
     "wheelchairAccessible" BOOLEAN NOT NULL DEFAULT false,
     "notes" TEXT,
@@ -1023,7 +1122,7 @@ CREATE TABLE "Stay" (
 CREATE TABLE "StayRoom" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "roomType" TEXT NOT NULL,
-    "ratePerNightMinor" INTEGER NOT NULL,
+    "ratePerNightMinor" BIGINT NOT NULL,
     "capacity" INTEGER NOT NULL DEFAULT 1,
     "quantity" INTEGER NOT NULL DEFAULT 1,
     "stayId" UUID NOT NULL,
@@ -1086,7 +1185,7 @@ CREATE TABLE "Interpreter" (
     "phone" VARCHAR(20),
     "employment" "InterpreterEmployment" NOT NULL DEFAULT 'in_house',
     "languages" TEXT[],
-    "hourlyRateMinor" INTEGER,
+    "hourlyRateMinor" BIGINT,
     "active" BOOLEAN NOT NULL DEFAULT true,
     "hourlyRateCurrency" CHAR(3),
     "userId" UUID,
@@ -1105,8 +1204,8 @@ CREATE TABLE "Booking" (
     "status" "BookingStatus" NOT NULL DEFAULT 'requested',
     "startsAt" TIMESTAMPTZ(3) NOT NULL,
     "endsAt" TIMESTAMPTZ(3),
-    "costMinor" INTEGER,
-    "priceMinor" INTEGER,
+    "costMinor" BIGINT,
+    "priceMinor" BIGINT,
     "reference" TEXT,
     "details" JSONB,
     "notes" TEXT,
@@ -1164,6 +1263,8 @@ CREATE TABLE "CommissionPlan" (
 CREATE TABLE "CommissionRule" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "rateBp" INTEGER NOT NULL,
+    "effectiveFrom" DATE,
+    "effectiveTo" DATE,
     "planId" UUID NOT NULL,
     "hospitalId" UUID,
     "treatmentId" UUID,
@@ -1176,9 +1277,10 @@ CREATE TABLE "CommissionRule" (
 -- CreateTable
 CREATE TABLE "Commission" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "basisMinor" INTEGER NOT NULL,
+    "basisMinor" BIGINT NOT NULL,
     "rateBp" INTEGER NOT NULL,
-    "amountMinor" INTEGER NOT NULL,
+    "amountMinor" BIGINT NOT NULL,
+    "tdsMinor" BIGINT NOT NULL DEFAULT 0,
     "status" "CommissionStatus" NOT NULL DEFAULT 'earned',
     "earnedAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "approvedAt" TIMESTAMPTZ(3),
@@ -1198,7 +1300,7 @@ CREATE TABLE "Payout" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "method" "PayoutMethod" NOT NULL,
     "status" "PayoutStatus" NOT NULL DEFAULT 'requested',
-    "amountMinor" INTEGER NOT NULL,
+    "amountMinor" BIGINT NOT NULL,
     "requestedAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "paidAt" TIMESTAMPTZ(3),
     "reference" TEXT,
@@ -1261,7 +1363,6 @@ CREATE TABLE "Message" (
     "deliveredAt" TIMESTAMPTZ(3),
     "readAt" TIMESTAMPTZ(3),
     "conversationId" UUID NOT NULL,
-    "caseId" UUID,
     "senderId" UUID,
     "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMPTZ(3) NOT NULL,
@@ -1347,7 +1448,7 @@ CREATE TABLE "AuditEvent" (
     "actorRole" VARCHAR(32),
     "action" TEXT NOT NULL,
     "entityType" TEXT NOT NULL,
-    "entityId" UUID NOT NULL,
+    "entityId" TEXT NOT NULL,
     "patientId" UUID,
     "before" JSONB,
     "after" JSONB,
@@ -1362,9 +1463,10 @@ CREATE TABLE "AuditEvent" (
 -- CreateTable
 CREATE TABLE "OutboxEvent" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "dedupeKey" TEXT,
     "type" TEXT NOT NULL,
     "aggregateType" TEXT NOT NULL,
-    "aggregateId" UUID NOT NULL,
+    "aggregateId" TEXT NOT NULL,
     "payload" JSONB NOT NULL,
     "status" "OutboxStatus" NOT NULL DEFAULT 'pending',
     "attempts" INTEGER NOT NULL DEFAULT 0,
@@ -1384,9 +1486,6 @@ CREATE TABLE "NumberSequence" (
 
     CONSTRAINT "NumberSequence_pkey" PRIMARY KEY ("key","period")
 );
-
--- CreateIndex
-CREATE INDEX "FxRate_baseCurrency_quoteCurrency_asOf_idx" ON "FxRate"("baseCurrency", "quoteCurrency", "asOf");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "FxRate_baseCurrency_quoteCurrency_asOf_key" ON "FxRate"("baseCurrency", "quoteCurrency", "asOf");
@@ -1476,6 +1575,9 @@ CREATE UNIQUE INDEX "StaffProfile_userId_key" ON "StaffProfile"("userId");
 CREATE INDEX "StaffProfile_cityId_idx" ON "StaffProfile"("cityId");
 
 -- CreateIndex
+CREATE INDEX "StaffProfile_managerId_idx" ON "StaffProfile"("managerId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "AgentUser_userId_key" ON "AgentUser"("userId");
 
 -- CreateIndex
@@ -1486,6 +1588,9 @@ CREATE UNIQUE INDEX "Patient_userId_key" ON "Patient"("userId");
 
 -- CreateIndex
 CREATE INDEX "Patient_phone_idx" ON "Patient"("phone");
+
+-- CreateIndex
+CREATE INDEX "Patient_passportExpiry_idx" ON "Patient"("passportExpiry");
 
 -- CreateIndex
 CREATE INDEX "Patient_passportNumber_idx" ON "Patient"("passportNumber");
@@ -1534,9 +1639,6 @@ CREATE INDEX "Consent_agentId_idx" ON "Consent"("agentId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Case_caseNo_key" ON "Case"("caseNo");
-
--- CreateIndex
-CREATE INDEX "Case_stage_idx" ON "Case"("stage");
 
 -- CreateIndex
 CREATE INDEX "Case_status_idx" ON "Case"("status");
@@ -1635,6 +1737,39 @@ CREATE INDEX "DocumentShare_sharedById_idx" ON "DocumentShare"("sharedById");
 CREATE UNIQUE INDEX "DocumentShare_documentId_hospitalId_key" ON "DocumentShare"("documentId", "hospitalId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "CaseIntake_caseId_key" ON "CaseIntake"("caseId");
+
+-- CreateIndex
+CREATE INDEX "CaseNote_caseId_createdAt_idx" ON "CaseNote"("caseId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "CaseNote_authorId_idx" ON "CaseNote"("authorId");
+
+-- CreateIndex
+CREATE INDEX "Admission_status_idx" ON "Admission"("status");
+
+-- CreateIndex
+CREATE INDEX "Admission_admittedAt_idx" ON "Admission"("admittedAt");
+
+-- CreateIndex
+CREATE INDEX "Admission_expectedDischargeAt_idx" ON "Admission"("expectedDischargeAt");
+
+-- CreateIndex
+CREATE INDEX "Admission_hospitalId_idx" ON "Admission"("hospitalId");
+
+-- CreateIndex
+CREATE INDEX "Admission_doctorId_idx" ON "Admission"("doctorId");
+
+-- CreateIndex
+CREATE INDEX "Admission_dischargeSummaryId_idx" ON "Admission"("dischargeSummaryId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Admission_caseId_hospitalId_key" ON "Admission"("caseId", "hospitalId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ProcessedWebhook_provider_eventId_key" ON "ProcessedWebhook"("provider", "eventId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Hospital_slug_key" ON "Hospital"("slug");
 
 -- CreateIndex
@@ -1680,6 +1815,9 @@ CREATE INDEX "Department_specialityId_idx" ON "Department"("specialityId");
 CREATE UNIQUE INDEX "Department_hospitalId_specialityId_key" ON "Department"("hospitalId", "specialityId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Doctor_slug_key" ON "Doctor"("slug");
+
+-- CreateIndex
 CREATE INDEX "Doctor_searchVector_idx" ON "Doctor" USING GIN ("searchVector");
 
 -- CreateIndex
@@ -1716,6 +1854,9 @@ CREATE INDEX "PackageTranslation_locale_idx" ON "PackageTranslation"("locale");
 CREATE UNIQUE INDEX "PackageTranslation_packageId_locale_key" ON "PackageTranslation"("packageId", "locale");
 
 -- CreateIndex
+CREATE INDEX "OpinionRequest_caseId_hospitalId_idx" ON "OpinionRequest"("caseId", "hospitalId");
+
+-- CreateIndex
 CREATE INDEX "OpinionRequest_hospitalId_status_idx" ON "OpinionRequest"("hospitalId", "status");
 
 -- CreateIndex
@@ -1728,13 +1869,10 @@ CREATE INDEX "OpinionRequest_doctorId_idx" ON "OpinionRequest"("doctorId");
 CREATE INDEX "OpinionRequest_summaryId_idx" ON "OpinionRequest"("summaryId");
 
 -- CreateIndex
+CREATE INDEX "OpinionRequest_consentId_idx" ON "OpinionRequest"("consentId");
+
+-- CreateIndex
 CREATE INDEX "OpinionRequest_sentById_idx" ON "OpinionRequest"("sentById");
-
--- CreateIndex
-CREATE UNIQUE INDEX "OpinionRequest_caseId_hospitalId_key" ON "OpinionRequest"("caseId", "hospitalId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Opinion_opinionRequestId_key" ON "Opinion"("opinionRequestId");
 
 -- CreateIndex
 CREATE INDEX "Opinion_doctorId_idx" ON "Opinion"("doctorId");
@@ -1746,13 +1884,16 @@ CREATE INDEX "Opinion_packageId_idx" ON "Opinion"("packageId");
 CREATE INDEX "Opinion_submittedById_idx" ON "Opinion"("submittedById");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Opinion_opinionRequestId_version_key" ON "Opinion"("opinionRequestId", "version");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Quote_quoteNo_key" ON "Quote"("quoteNo");
 
 -- CreateIndex
 CREATE INDEX "Quote_status_idx" ON "Quote"("status");
 
 -- CreateIndex
-CREATE INDEX "Quote_caseId_idx" ON "Quote"("caseId");
+CREATE INDEX "Quote_validUntil_idx" ON "Quote"("validUntil");
 
 -- CreateIndex
 CREATE INDEX "Quote_opinionId_idx" ON "Quote"("opinionId");
@@ -1765,6 +1906,9 @@ CREATE INDEX "Quote_createdById_idx" ON "Quote"("createdById");
 
 -- CreateIndex
 CREATE INDEX "Quote_pdfId_idx" ON "Quote"("pdfId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Quote_caseId_version_key" ON "Quote"("caseId", "version");
 
 -- CreateIndex
 CREATE INDEX "QuoteLine_quoteId_idx" ON "QuoteLine"("quoteId");
@@ -1792,6 +1936,9 @@ CREATE INDEX "Invoice_pdfId_idx" ON "Invoice"("pdfId");
 
 -- CreateIndex
 CREATE INDEX "InvoiceLine_invoiceId_idx" ON "InvoiceLine"("invoiceId");
+
+-- CreateIndex
+CREATE INDEX "InvoiceLine_caseId_idx" ON "InvoiceLine"("caseId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "CreditNote_creditNoteNo_key" ON "CreditNote"("creditNoteNo");
@@ -1834,6 +1981,9 @@ CREATE INDEX "Refund_approvedById_idx" ON "Refund"("approvedById");
 
 -- CreateIndex
 CREATE INDEX "VisaApplication_status_idx" ON "VisaApplication"("status");
+
+-- CreateIndex
+CREATE INDEX "VisaApplication_expiresAt_idx" ON "VisaApplication"("expiresAt");
 
 -- CreateIndex
 CREATE INDEX "VisaApplication_caseId_idx" ON "VisaApplication"("caseId");
@@ -1944,6 +2094,9 @@ CREATE INDEX "CommissionRule_hospitalId_idx" ON "CommissionRule"("hospitalId");
 CREATE INDEX "CommissionRule_treatmentId_idx" ON "CommissionRule"("treatmentId");
 
 -- CreateIndex
+CREATE INDEX "Commission_caseId_agentId_idx" ON "Commission"("caseId", "agentId");
+
+-- CreateIndex
 CREATE INDEX "Commission_status_idx" ON "Commission"("status");
 
 -- CreateIndex
@@ -1951,9 +2104,6 @@ CREATE INDEX "Commission_agentId_idx" ON "Commission"("agentId");
 
 -- CreateIndex
 CREATE INDEX "Commission_payoutId_idx" ON "Commission"("payoutId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Commission_caseId_agentId_key" ON "Commission"("caseId", "agentId");
 
 -- CreateIndex
 CREATE INDEX "Payout_status_idx" ON "Payout"("status");
@@ -1984,12 +2134,6 @@ CREATE INDEX "Conversation_agentId_idx" ON "Conversation"("agentId");
 
 -- CreateIndex
 CREATE INDEX "Message_conversationId_createdAt_idx" ON "Message"("conversationId", "createdAt");
-
--- CreateIndex
-CREATE INDEX "Message_channel_externalId_idx" ON "Message"("channel", "externalId");
-
--- CreateIndex
-CREATE INDEX "Message_caseId_idx" ON "Message"("caseId");
 
 -- CreateIndex
 CREATE INDEX "Message_senderId_idx" ON "Message"("senderId");
@@ -2040,6 +2184,9 @@ CREATE INDEX "Incident_escalatedToId_idx" ON "Incident"("escalatedToId");
 CREATE INDEX "AuditEvent_entityType_entityId_idx" ON "AuditEvent"("entityType", "entityId");
 
 -- CreateIndex
+CREATE INDEX "AuditEvent_action_createdAt_idx" ON "AuditEvent"("action", "createdAt");
+
+-- CreateIndex
 CREATE INDEX "AuditEvent_actorId_createdAt_idx" ON "AuditEvent"("actorId", "createdAt");
 
 -- CreateIndex
@@ -2049,7 +2196,13 @@ CREATE INDEX "AuditEvent_patientId_createdAt_idx" ON "AuditEvent"("patientId", "
 CREATE INDEX "AuditEvent_createdAt_idx" ON "AuditEvent"("createdAt");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "OutboxEvent_dedupeKey_key" ON "OutboxEvent"("dedupeKey");
+
+-- CreateIndex
 CREATE INDEX "OutboxEvent_status_availableAt_idx" ON "OutboxEvent"("status", "availableAt");
+
+-- CreateIndex
+CREATE INDEX "OutboxEvent_processedAt_idx" ON "OutboxEvent"("processedAt");
 
 -- CreateIndex
 CREATE INDEX "OutboxEvent_aggregateType_aggregateId_idx" ON "OutboxEvent"("aggregateType", "aggregateId");
@@ -2092,6 +2245,9 @@ ALTER TABLE "StaffProfile" ADD CONSTRAINT "StaffProfile_userId_fkey" FOREIGN KEY
 
 -- AddForeignKey
 ALTER TABLE "StaffProfile" ADD CONSTRAINT "StaffProfile_cityId_fkey" FOREIGN KEY ("cityId") REFERENCES "City"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "StaffProfile" ADD CONSTRAINT "StaffProfile_managerId_fkey" FOREIGN KEY ("managerId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "AgentUser" ADD CONSTRAINT "AgentUser_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -2205,10 +2361,34 @@ ALTER TABLE "DocumentShare" ADD CONSTRAINT "DocumentShare_documentId_fkey" FOREI
 ALTER TABLE "DocumentShare" ADD CONSTRAINT "DocumentShare_hospitalId_fkey" FOREIGN KEY ("hospitalId") REFERENCES "Hospital"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "DocumentShare" ADD CONSTRAINT "DocumentShare_consentId_fkey" FOREIGN KEY ("consentId") REFERENCES "Consent"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "DocumentShare" ADD CONSTRAINT "DocumentShare_consentId_fkey" FOREIGN KEY ("consentId") REFERENCES "Consent"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "DocumentShare" ADD CONSTRAINT "DocumentShare_sharedById_fkey" FOREIGN KEY ("sharedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CaseIntake" ADD CONSTRAINT "CaseIntake_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "Case"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CaseNote" ADD CONSTRAINT "CaseNote_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "Case"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CaseNote" ADD CONSTRAINT "CaseNote_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Admission" ADD CONSTRAINT "Admission_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "Case"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Admission" ADD CONSTRAINT "Admission_hospitalId_fkey" FOREIGN KEY ("hospitalId") REFERENCES "Hospital"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Admission" ADD CONSTRAINT "Admission_doctorId_fkey" FOREIGN KEY ("doctorId") REFERENCES "Doctor"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Admission" ADD CONSTRAINT "Admission_dischargeSummaryId_fkey" FOREIGN KEY ("dischargeSummaryId") REFERENCES "Document"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Admission" ADD CONSTRAINT "Admission_currency_fkey" FOREIGN KEY ("currency") REFERENCES "Currency"("code") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Hospital" ADD CONSTRAINT "Hospital_cityId_fkey" FOREIGN KEY ("cityId") REFERENCES "City"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -2286,6 +2466,9 @@ ALTER TABLE "OpinionRequest" ADD CONSTRAINT "OpinionRequest_doctorId_fkey" FOREI
 ALTER TABLE "OpinionRequest" ADD CONSTRAINT "OpinionRequest_summaryId_fkey" FOREIGN KEY ("summaryId") REFERENCES "MedicalSummary"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "OpinionRequest" ADD CONSTRAINT "OpinionRequest_consentId_fkey" FOREIGN KEY ("consentId") REFERENCES "Consent"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "OpinionRequest" ADD CONSTRAINT "OpinionRequest_sentById_fkey" FOREIGN KEY ("sentById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -2344,6 +2527,9 @@ ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_currency_fkey" FOREIGN KEY ("curre
 
 -- AddForeignKey
 ALTER TABLE "InvoiceLine" ADD CONSTRAINT "InvoiceLine_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "Invoice"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "InvoiceLine" ADD CONSTRAINT "InvoiceLine_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "Case"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "CreditNote" ADD CONSTRAINT "CreditNote_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "Invoice"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -2511,9 +2697,6 @@ ALTER TABLE "Conversation" ADD CONSTRAINT "Conversation_agentId_fkey" FOREIGN KE
 ALTER TABLE "Message" ADD CONSTRAINT "Message_conversationId_fkey" FOREIGN KEY ("conversationId") REFERENCES "Conversation"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Message" ADD CONSTRAINT "Message_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "Case"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "Message" ADD CONSTRAINT "Message_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -2552,36 +2735,61 @@ ALTER TABLE "Incident" ADD CONSTRAINT "Incident_assigneeId_fkey" FOREIGN KEY ("a
 -- AddForeignKey
 ALTER TABLE "Incident" ADD CONSTRAINT "Incident_escalatedToId_fkey" FOREIGN KEY ("escalatedToId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
+
 -- ---------------------------------------------------------------------------------------------------
--- Rules Prisma cannot express: value checks, one-current-version, append-only audit.
+-- Rules Prisma cannot express: value checks, partial unique indexes, consent binding, append-only audit.
 -- ---------------------------------------------------------------------------------------------------
 
 -- Emails are stored lower-case, so the unique index is effectively case-insensitive.
 ALTER TABLE "User" ADD CONSTRAINT "User_email_lowercase_check" CHECK ("email" IS NULL OR "email" = lower("email"));
 ALTER TABLE "Patient" ADD CONSTRAINT "Patient_email_lowercase_check" CHECK ("email" IS NULL OR "email" = lower("email"));
+ALTER TABLE "Attendant" ADD CONSTRAINT "Attendant_email_lowercase_check" CHECK ("email" IS NULL OR "email" = lower("email"));
+ALTER TABLE "Agent" ADD CONSTRAINT "Agent_email_lowercase_check" CHECK ("email" IS NULL OR "email" = lower("email"));
+ALTER TABLE "Vendor" ADD CONSTRAINT "Vendor_email_lowercase_check" CHECK ("email" IS NULL OR "email" = lower("email"));
+ALTER TABLE "Hospital" ADD CONSTRAINT "Hospital_email_lowercase_check" CHECK (
+  ("email" IS NULL OR "email" = lower("email")) AND ("internationalDeskEmail" IS NULL OR "internationalDeskEmail" = lower("internationalDeskEmail")));
 
 -- Money is never negative and a payment, refund or payout is never zero.
 ALTER TABLE "Case" ADD CONSTRAINT "Case_budget_check" CHECK ("budgetMinor" IS NULL OR "budgetMinor" >= 0);
 ALTER TABLE "Package" ADD CONSTRAINT "Package_price_check" CHECK ("priceMinor" >= 0);
-ALTER TABLE "Opinion" ADD CONSTRAINT "Opinion_estimate_check" CHECK ("estimateMinor" >= 0);
-ALTER TABLE "Quote" ADD CONSTRAINT "Quote_total_check" CHECK ("totalMinor" >= 0);
+ALTER TABLE "Opinion" ADD CONSTRAINT "Opinion_estimate_check" CHECK ("estimateMinor" >= 0 AND "version" >= 1);
+ALTER TABLE "Quote" ADD CONSTRAINT "Quote_total_check" CHECK ("totalMinor" >= 0 AND "version" >= 1);
 ALTER TABLE "QuoteLine" ADD CONSTRAINT "QuoteLine_quantity_check" CHECK ("quantity" > 0);
 ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_amounts_check" CHECK ("subtotalMinor" >= 0 AND "taxMinor" >= 0 AND "totalMinor" >= 0);
-ALTER TABLE "InvoiceLine" ADD CONSTRAINT "InvoiceLine_amounts_check" CHECK ("quantity" > 0 AND "taxMinor" >= 0 AND "amountMinor" >= 0);
+ALTER TABLE "InvoiceLine" ADD CONSTRAINT "InvoiceLine_amounts_check" CHECK (
+  "quantity" > 0 AND "taxMinor" >= 0 AND "amountMinor" >= 0 AND "cgstMinor" >= 0 AND "sgstMinor" >= 0 AND "igstMinor" >= 0);
 ALTER TABLE "CreditNote" ADD CONSTRAINT "CreditNote_amount_check" CHECK ("amountMinor" > 0 AND "taxMinor" >= 0);
 ALTER TABLE "Payment" ADD CONSTRAINT "Payment_amount_check" CHECK ("amountMinor" > 0 AND ("amountInrMinor" IS NULL OR "amountInrMinor" >= 0));
 ALTER TABLE "Refund" ADD CONSTRAINT "Refund_amount_check" CHECK ("amountMinor" > 0);
 ALTER TABLE "Booking" ADD CONSTRAINT "Booking_amounts_check" CHECK (("costMinor" IS NULL OR "costMinor" >= 0) AND ("priceMinor" IS NULL OR "priceMinor" >= 0));
 ALTER TABLE "StayRoom" ADD CONSTRAINT "StayRoom_rate_check" CHECK ("ratePerNightMinor" >= 0 AND "capacity" > 0 AND "quantity" >= 0);
-ALTER TABLE "Commission" ADD CONSTRAINT "Commission_amounts_check" CHECK ("basisMinor" >= 0 AND "amountMinor" >= 0);
+ALTER TABLE "Commission" ADD CONSTRAINT "Commission_amounts_check" CHECK ("basisMinor" >= 0 AND "amountMinor" >= 0 AND "tdsMinor" >= 0 AND "tdsMinor" <= "amountMinor");
 ALTER TABLE "Payout" ADD CONSTRAINT "Payout_amount_check" CHECK ("amountMinor" > 0);
+ALTER TABLE "Admission" ADD CONSTRAINT "Admission_amounts_check" CHECK (
+  ("estimateMinor" IS NULL OR "estimateMinor" >= 0) AND ("runningBillMinor" IS NULL OR "runningBillMinor" >= 0) AND ("finalBillMinor" IS NULL OR "finalBillMinor" >= 0));
+ALTER TABLE "Admission" ADD CONSTRAINT "Admission_dates_check" CHECK ("admittedAt" IS NULL OR "dischargedAt" IS NULL OR "dischargedAt" >= "admittedAt");
 ALTER TABLE "Currency" ADD CONSTRAINT "Currency_minor_units_check" CHECK ("minorUnits" BETWEEN 0 AND 4);
 ALTER TABLE "FxRate" ADD CONSTRAINT "FxRate_rate_check" CHECK ("rate" > 0 AND "baseCurrency" <> "quoteCurrency");
+
+-- An amount always comes with its currency (the currency columns are nullable where the amount is).
+ALTER TABLE "Case" ADD CONSTRAINT "Case_budget_currency_check" CHECK ("budgetMinor" IS NULL OR "budgetCurrency" IS NOT NULL);
+ALTER TABLE "Doctor" ADD CONSTRAINT "Doctor_fee_currency_check" CHECK ("consultFeeMinor" IS NULL OR "consultFeeCurrency" IS NOT NULL);
+ALTER TABLE "Interpreter" ADD CONSTRAINT "Interpreter_rate_currency_check" CHECK ("hourlyRateMinor" IS NULL OR "hourlyRateCurrency" IS NOT NULL);
+ALTER TABLE "Booking" ADD CONSTRAINT "Booking_currency_check" CHECK (("costMinor" IS NULL AND "priceMinor" IS NULL) OR "currency" IS NOT NULL);
+ALTER TABLE "Admission" ADD CONSTRAINT "Admission_currency_check" CHECK (
+  ("estimateMinor" IS NULL AND "runningBillMinor" IS NULL AND "finalBillMinor" IS NULL) OR "currency" IS NOT NULL);
+
+-- An invoice is for a case or a hospital (a referral-fee invoice is always for a hospital); a payment is for
+-- a case or an invoice (a hospital paying its monthly invoice has no case).
+ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_owner_check" CHECK (
+  num_nonnulls("caseId", "hospitalId") >= 1 AND ("kind" <> 'referral_fee' OR "hospitalId" IS NOT NULL));
+ALTER TABLE "Payment" ADD CONSTRAINT "Payment_owner_check" CHECK (num_nonnulls("caseId", "invoiceId") >= 1);
 
 -- Rates are basis points: 0 to 10000 is 0% to 100%.
 ALTER TABLE "Hospital" ADD CONSTRAINT "Hospital_agreement_check" CHECK ("agreementBp" IS NULL OR "agreementBp" BETWEEN 0 AND 10000);
 ALTER TABLE "CommissionPlan" ADD CONSTRAINT "CommissionPlan_rate_check" CHECK ("defaultRateBp" BETWEEN 0 AND 10000);
-ALTER TABLE "CommissionRule" ADD CONSTRAINT "CommissionRule_rate_check" CHECK ("rateBp" BETWEEN 0 AND 10000);
+ALTER TABLE "CommissionRule" ADD CONSTRAINT "CommissionRule_rate_check" CHECK (
+  "rateBp" BETWEEN 0 AND 10000 AND ("effectiveFrom" IS NULL OR "effectiveTo" IS NULL OR "effectiveTo" >= "effectiveFrom"));
 ALTER TABLE "Commission" ADD CONSTRAINT "Commission_rate_check" CHECK ("rateBp" BETWEEN 0 AND 10000);
 ALTER TABLE "InvoiceLine" ADD CONSTRAINT "InvoiceLine_tax_rate_check" CHECK ("taxRateBp" BETWEEN 0 AND 10000);
 ALTER TABLE "Quote" ADD CONSTRAINT "Quote_margin_check" CHECK ("marginBp" IS NULL OR "marginBp" BETWEEN 0 AND 100000);
@@ -2593,8 +2801,10 @@ ALTER TABLE "Feedback" ADD CONSTRAINT "Feedback_ratings_check" CHECK (
   ("coordinatorRating" IS NULL OR "coordinatorRating" BETWEEN 1 AND 5) AND
   ("stayRating" IS NULL OR "stayRating" BETWEEN 1 AND 5));
 
--- Files are 1 byte to 500 MB (PRD section 5.1).
+-- Files are 1 byte to 500 MB (PRD section 5.1) and belong to someone: a file nobody owns could never be
+-- reached by any access rule.
 ALTER TABLE "Document" ADD CONSTRAINT "Document_size_check" CHECK ("sizeBytes" BETWEEN 1 AND 524288000);
+ALTER TABLE "Document" ADD CONSTRAINT "Document_owner_check" CHECK (num_nonnulls("patientId", "caseId", "agentId", "hospitalId") >= 1);
 
 -- A visa application is for exactly one traveller: the patient or an attendant.
 ALTER TABLE "VisaApplication" ADD CONSTRAINT "VisaApplication_one_traveller_check" CHECK (num_nonnulls("patientId", "attendantId") = 1);
@@ -2604,28 +2814,104 @@ ALTER TABLE "Accreditation" ADD CONSTRAINT "Accreditation_dates_check" CHECK ("i
 ALTER TABLE "Consent" ADD CONSTRAINT "Consent_withdrawn_check" CHECK ("withdrawnAt" IS NULL OR "withdrawnAt" >= "grantedAt");
 ALTER TABLE "MedicalSummary" ADD CONSTRAINT "MedicalSummary_version_check" CHECK ("version" >= 1);
 
--- Exactly one current medical summary per case; older versions are kept but not current.
-CREATE UNIQUE INDEX "MedicalSummary_one_current_per_case" ON "MedicalSummary"("caseId") WHERE "current";
+-- A consent says who it is for: a hospital-sharing consent names the hospital, an agent one names the agent.
+ALTER TABLE "Consent" ADD CONSTRAINT "Consent_target_check" CHECK (
+  ("type" <> 'share_medical_with_hospital' OR "hospitalId" IS NOT NULL) AND ("type" <> 'share_stage_with_agent' OR "agentId" IS NOT NULL));
 
--- The audit trail is append-only: it can be written and read, never rewritten. (Deleting is left to the
--- retention job, which is the only thing allowed to.)
-CREATE FUNCTION audit_event_reject_update() RETURNS trigger LANGUAGE plpgsql AS $$
+-- A request may only leave draft (or be cancelled) with the patient's consent recorded.
+ALTER TABLE "OpinionRequest" ADD CONSTRAINT "OpinionRequest_consent_check" CHECK ("status" IN ('draft', 'cancelled') OR "consentId" IS NOT NULL);
+
+-- A hospital or agent conversation names the hospital or agent it is with.
+ALTER TABLE "Conversation" ADD CONSTRAINT "Conversation_party_check" CHECK (
+  ("kind" <> 'hospital' OR "hospitalId" IS NOT NULL) AND ("kind" <> 'agent' OR "agentId" IS NOT NULL));
+
+-- One-at-a-time rules, as partial unique indexes (they ignore soft-deleted and finished rows).
+CREATE UNIQUE INDEX "MedicalSummary_one_current_per_case" ON "MedicalSummary"("caseId") WHERE "current";
+CREATE UNIQUE INDEX "Opinion_one_current_per_request" ON "Opinion"("opinionRequestId") WHERE "current" AND "deletedAt" IS NULL;
+CREATE UNIQUE INDEX "OpinionRequest_one_open_per_case_hospital" ON "OpinionRequest"("caseId", "hospitalId")
+  WHERE "status" NOT IN ('cancelled', 'expired', 'declined') AND "deletedAt" IS NULL;
+CREATE UNIQUE INDEX "Quote_one_accepted_per_case" ON "Quote"("caseId") WHERE "status" = 'accepted' AND "deletedAt" IS NULL;
+CREATE UNIQUE INDEX "Commission_one_live_per_case_agent" ON "Commission"("caseId", "agentId") WHERE "status" <> 'cancelled' AND "deletedAt" IS NULL;
+
+-- Idempotency for work that is delivered at least once: a retried stage-change event must not create the same
+-- automatic task twice, and a replayed WhatsApp webhook must not store the same message twice.
+CREATE UNIQUE INDEX "Task_auto_key_per_case" ON "Task"("caseId", "autoKey") WHERE "autoKey" IS NOT NULL AND "deletedAt" IS NULL;
+CREATE UNIQUE INDEX "Message_external_id_per_channel" ON "Message"("channel", "externalId") WHERE "externalId" IS NOT NULL;
+
+-- Trigram indexes for the fuzzy name and phone lookups behind duplicate detection (PRD 6, lead inbox).
+CREATE INDEX "Patient_fullName_trgm_idx" ON "Patient" USING GIN (lower("fullName") gin_trgm_ops);
+CREATE INDEX "Patient_phone_trgm_idx" ON "Patient" USING GIN (lower("phone") gin_trgm_ops);
+
+-- ---------------------------------------------------------------------------------------------------
+-- The audit trail is append-only: it can be written and read, never rewritten or emptied. Deleting a
+-- single row stays possible for the retention job. The application should also connect with a role that
+-- is not the table owner and has no UPDATE or TRUNCATE on it (set up with the deployment, see ADR 002).
+-- ---------------------------------------------------------------------------------------------------
+CREATE FUNCTION audit_event_reject_change() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   RAISE EXCEPTION 'AuditEvent rows are append-only';
 END;
 $$;
 CREATE TRIGGER "AuditEvent_append_only" BEFORE UPDATE ON "AuditEvent"
-  FOR EACH ROW EXECUTE FUNCTION audit_event_reject_update();
+  FOR EACH ROW EXECUTE FUNCTION audit_event_reject_change();
+CREATE TRIGGER "AuditEvent_no_truncate" BEFORE TRUNCATE ON "AuditEvent"
+  FOR EACH STATEMENT EXECUTE FUNCTION audit_event_reject_change();
 
 -- ---------------------------------------------------------------------------------------------------
--- Full-text search. Each searchVector is filled by a trigger from the row's own columns (a generated
--- column would be simpler, but Prisma then tries to drop its "default" on every migration). The GIN
--- indexes above make `searchVector @@ to_tsquery('simple', 'asha:*')` fast. The 'simple' configuration
--- keeps names intact in every language; f_unaccent makes searches ignore diacritics.
+-- Consent binding. A hospital sees a patient's document only through a live DocumentShare, and a share can
+-- only exist under a consent that is of the right type, for the same patient and the same hospital. When a
+-- consent is withdrawn, every share made under it is revoked in the same transaction.
+-- ---------------------------------------------------------------------------------------------------
+CREATE FUNCTION document_share_check() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE
+  consent RECORD;
+  owner_patient uuid;
+BEGIN
+  SELECT "type", "patientId", "hospitalId", "withdrawnAt" INTO consent FROM "Consent" WHERE "id" = NEW."consentId";
+  SELECT "patientId" INTO owner_patient FROM "Document" WHERE "id" = NEW."documentId";
+  IF consent."type" <> 'share_medical_with_hospital' THEN
+    RAISE EXCEPTION 'A document share needs a share_medical_with_hospital consent';
+  END IF;
+  IF owner_patient IS NULL OR owner_patient <> consent."patientId" THEN
+    RAISE EXCEPTION 'The consent belongs to a different patient than the document';
+  END IF;
+  IF consent."hospitalId" IS DISTINCT FROM NEW."hospitalId" THEN
+    RAISE EXCEPTION 'The consent is for a different hospital';
+  END IF;
+  IF TG_OP = 'INSERT' AND consent."withdrawnAt" IS NOT NULL THEN
+    RAISE EXCEPTION 'The consent has been withdrawn';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+CREATE TRIGGER "DocumentShare_consent_check" BEFORE INSERT OR UPDATE OF "documentId", "hospitalId", "consentId" ON "DocumentShare"
+  FOR EACH ROW EXECUTE FUNCTION document_share_check();
+
+CREATE FUNCTION consent_withdrawn_revoke_shares() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW."withdrawnAt" IS NOT NULL AND OLD."withdrawnAt" IS NULL THEN
+    UPDATE "DocumentShare" SET "revokedAt" = NEW."withdrawnAt", "updatedAt" = now()
+      WHERE "consentId" = NEW."id" AND "revokedAt" IS NULL;
+  END IF;
+  RETURN NULL;
+END;
+$$;
+CREATE TRIGGER "Consent_withdrawn_revoke_shares" AFTER UPDATE OF "withdrawnAt" ON "Consent"
+  FOR EACH ROW EXECUTE FUNCTION consent_withdrawn_revoke_shares();
+
+-- ---------------------------------------------------------------------------------------------------
+-- Full-text search. Each searchVector is filled by a trigger from the row's own columns and, for
+-- treatments, hospitals and doctors, their translations (so Arabic names are found too). A generated
+-- column would be simpler, but Prisma then tries to drop its "default" on every migration. The GIN indexes
+-- above make `"searchVector" @@ websearch_to_tsquery('simple', f_unaccent('asha'))` fast. The 'simple'
+-- configuration keeps names intact in every language; f_unaccent ignores accents and Arabic vowel marks.
 -- ---------------------------------------------------------------------------------------------------
 CREATE FUNCTION treatment_search_vector() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  NEW."searchVector" := to_tsvector('simple'::regconfig, f_unaccent(coalesce(NEW."name", '') || ' ' || coalesce(NEW."summary", '')));
+  NEW."searchVector" := to_tsvector('simple'::regconfig, f_unaccent(
+    coalesce(NEW."name", '') || ' ' || coalesce(NEW."summary", '') || ' ' ||
+    coalesce((SELECT string_agg(coalesce(t."name", '') || ' ' || coalesce(t."summary", ''), ' ')
+              FROM "TreatmentTranslation" t WHERE t."treatmentId" = NEW."id"), '')));
   RETURN NEW;
 END;
 $$;
@@ -2634,7 +2920,8 @@ CREATE TRIGGER "Treatment_search_vector" BEFORE INSERT OR UPDATE ON "Treatment"
 
 CREATE FUNCTION patient_search_vector() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  -- Name, phone (as typed and digits only), passport number and email.
+  -- Name, phone (as typed and digits only), passport number and email (PRD 6: duplicate detection and the
+  -- lead inbox look patients up by these).
   NEW."searchVector" := to_tsvector('simple'::regconfig, f_unaccent(
     coalesce(NEW."fullName", '') || ' ' || coalesce(NEW."phone", '') || ' ' ||
     regexp_replace(coalesce(NEW."phone", ''), '\D', '', 'g') || ' ' ||
@@ -2647,7 +2934,9 @@ CREATE TRIGGER "Patient_search_vector" BEFORE INSERT OR UPDATE ON "Patient"
 
 CREATE FUNCTION hospital_search_vector() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  NEW."searchVector" := to_tsvector('simple'::regconfig, f_unaccent(coalesce(NEW."name", '') || ' ' || coalesce(NEW."address", '')));
+  NEW."searchVector" := to_tsvector('simple'::regconfig, f_unaccent(
+    coalesce(NEW."name", '') || ' ' || coalesce(NEW."address", '') || ' ' ||
+    coalesce((SELECT string_agg(coalesce(t."name", ''), ' ') FROM "HospitalTranslation" t WHERE t."hospitalId" = NEW."id"), '')));
   RETURN NEW;
 END;
 $$;
@@ -2656,9 +2945,46 @@ CREATE TRIGGER "Hospital_search_vector" BEFORE INSERT OR UPDATE ON "Hospital"
 
 CREATE FUNCTION doctor_search_vector() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  NEW."searchVector" := to_tsvector('simple'::regconfig, f_unaccent(coalesce(NEW."fullName", '') || ' ' || coalesce(NEW."qualifications", '')));
+  NEW."searchVector" := to_tsvector('simple'::regconfig, f_unaccent(
+    coalesce(NEW."fullName", '') || ' ' || coalesce(NEW."qualifications", '') || ' ' ||
+    coalesce((SELECT string_agg(coalesce(t."fullName", '') || ' ' || coalesce(t."qualifications", ''), ' ')
+              FROM "DoctorTranslation" t WHERE t."doctorId" = NEW."id"), '')));
   RETURN NEW;
 END;
 $$;
 CREATE TRIGGER "Doctor_search_vector" BEFORE INSERT OR UPDATE ON "Doctor"
   FOR EACH ROW EXECUTE FUNCTION doctor_search_vector();
+
+-- When a translation changes, touch its parent so the parent's vector is rebuilt.
+CREATE FUNCTION refresh_treatment_search() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE parent uuid;
+BEGIN
+  IF TG_OP = 'DELETE' THEN parent := OLD."treatmentId"; ELSE parent := NEW."treatmentId"; END IF;
+  UPDATE "Treatment" SET "updatedAt" = "updatedAt" WHERE "id" = parent;
+  RETURN NULL;
+END;
+$$;
+CREATE TRIGGER "TreatmentTranslation_refresh_search" AFTER INSERT OR UPDATE OR DELETE ON "TreatmentTranslation"
+  FOR EACH ROW EXECUTE FUNCTION refresh_treatment_search();
+
+CREATE FUNCTION refresh_hospital_search() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE parent uuid;
+BEGIN
+  IF TG_OP = 'DELETE' THEN parent := OLD."hospitalId"; ELSE parent := NEW."hospitalId"; END IF;
+  UPDATE "Hospital" SET "updatedAt" = "updatedAt" WHERE "id" = parent;
+  RETURN NULL;
+END;
+$$;
+CREATE TRIGGER "HospitalTranslation_refresh_search" AFTER INSERT OR UPDATE OR DELETE ON "HospitalTranslation"
+  FOR EACH ROW EXECUTE FUNCTION refresh_hospital_search();
+
+CREATE FUNCTION refresh_doctor_search() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE parent uuid;
+BEGIN
+  IF TG_OP = 'DELETE' THEN parent := OLD."doctorId"; ELSE parent := NEW."doctorId"; END IF;
+  UPDATE "Doctor" SET "updatedAt" = "updatedAt" WHERE "id" = parent;
+  RETURN NULL;
+END;
+$$;
+CREATE TRIGGER "DoctorTranslation_refresh_search" AFTER INSERT OR UPDATE OR DELETE ON "DoctorTranslation"
+  FOR EACH ROW EXECUTE FUNCTION refresh_doctor_search();

@@ -3,7 +3,8 @@ import type { DocumentKind } from '../generated/prisma/enums.ts';
 import { createPrismaClient, type PrismaClient } from '../src/client.ts';
 
 /**
- * Seed data for local development. Idempotent: running it twice changes nothing.
+ * Seed data for local development. Idempotent, and it never overwrites a row that exists: an admin who
+ * renames a country in the admin screens keeps the new name when the seed runs again.
  *
  * F-01 seeds the master data every later screen needs (currencies, countries, languages, cities,
  * specialities, treatments, document types, lost reasons) with Arabic names. F-11 adds one user per role,
@@ -126,24 +127,24 @@ async function seedMasters(prisma: PrismaClient): Promise<void> {
   for (const [code, name, arabic, dialCode, region] of COUNTRIES) {
     await prisma.country.upsert({
       where: { code },
-      update: { name, dialCode, region },
+      update: {},
       create: { code, name, dialCode, region },
     });
     await prisma.countryTranslation.upsert({
       where: { countryCode_locale: { countryCode: code, locale: 'ar' } },
-      update: { name: arabic },
+      update: {},
       create: { countryCode: code, locale: 'ar', name: arabic },
     });
   }
   for (const [slug, name, arabic] of CITIES) {
     const city = await prisma.city.upsert({
       where: { slug },
-      update: { name },
+      update: {},
       create: { slug, name, countryCode: 'IN' },
     });
     await prisma.cityTranslation.upsert({
       where: { cityId_locale: { cityId: city.id, locale: 'ar' } },
-      update: { name: arabic },
+      update: {},
       create: { cityId: city.id, locale: 'ar', name: arabic },
     });
   }
@@ -151,13 +152,13 @@ async function seedMasters(prisma: PrismaClient): Promise<void> {
   for (const [slug, name, arabic] of SPECIALITIES) {
     const speciality = await prisma.speciality.upsert({
       where: { slug },
-      update: { name },
+      update: {},
       create: { slug, name },
     });
     specialityIds.set(slug, speciality.id);
     await prisma.specialityTranslation.upsert({
       where: { specialityId_locale: { specialityId: speciality.id, locale: 'ar' } },
-      update: { name: arabic },
+      update: {},
       create: { specialityId: speciality.id, locale: 'ar', name: arabic },
     });
   }
@@ -166,36 +167,36 @@ async function seedMasters(prisma: PrismaClient): Promise<void> {
     if (!specialityId) throw new Error(`Unknown speciality ${specialitySlug}`);
     const treatment = await prisma.treatment.upsert({
       where: { slug },
-      update: { name, typicalStayDays },
+      update: {},
       create: { slug, name, typicalStayDays, specialityId },
     });
     await prisma.treatmentTranslation.upsert({
       where: { treatmentId_locale: { treatmentId: treatment.id, locale: 'ar' } },
-      update: { name: arabic },
+      update: {},
       create: { treatmentId: treatment.id, locale: 'ar', name: arabic },
     });
   }
   for (const [code, kind, name, arabic] of DOCUMENT_TYPES) {
     const type = await prisma.documentType.upsert({
       where: { code },
-      update: { name },
+      update: {},
       create: { code, name, kind: kind as DocumentKind },
     });
     await prisma.documentTypeTranslation.upsert({
       where: { documentTypeId_locale: { documentTypeId: type.id, locale: 'ar' } },
-      update: { name: arabic },
+      update: {},
       create: { documentTypeId: type.id, locale: 'ar', name: arabic },
     });
   }
   for (const [code, name, arabic] of LOST_REASONS) {
     const reason = await prisma.lostReason.upsert({
       where: { code },
-      update: { name },
+      update: {},
       create: { code, name },
     });
     await prisma.lostReasonTranslation.upsert({
       where: { lostReasonId_locale: { lostReasonId: reason.id, locale: 'ar' } },
-      update: { name: arabic },
+      update: {},
       create: { lostReasonId: reason.id, locale: 'ar', name: arabic },
     });
   }

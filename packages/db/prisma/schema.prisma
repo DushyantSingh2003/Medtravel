@@ -126,17 +126,19 @@ enum DocumentKind {
   passport
   visa
   invoice
+  bill
   discharge
   invitation_letter
   photo
+  pickup_photo
+  kyc
   agreement
   other
 }
 
-/// private: patient and our staff; shared: also the hospitals the patient consented to; internal: our staff only.
+/// private: the patient and our staff, and any hospital with a live DocumentShare; internal: our staff only. Hospital access is never a flag: it is a DocumentShare row.
 enum DocumentVisibility {
   private
-  shared
   internal
 }
 
@@ -212,12 +214,13 @@ enum QuoteLineKind {
   other
 }
 
-/// Deposit, our service fee, a hospital pass-through (not revenue) or an add-on.
+/// Deposit, our service fee, a hospital pass-through (not revenue), an add-on, or a hospital paying its referral fee.
 enum PaymentType {
   deposit
   service
   pass_through
   add_on
+  referral_fee
 }
 
 /// How a payment was made.
@@ -239,6 +242,7 @@ enum PaymentStatus {
   cancelled
   partially_refunded
   refunded
+  chargeback
 }
 
 /// Invoice to a patient for our fees, or to a hospital for the referral fee.
@@ -302,10 +306,12 @@ enum BookingType {
   other
 }
 
-/// Booking lifecycle.
+/// Booking lifecycle (en_route and picked_up are for transfers).
 enum BookingStatus {
   requested
   confirmed
+  en_route
+  picked_up
   in_progress
   completed
   cancelled
@@ -401,11 +407,10 @@ enum MessageChannel {
   sms
 }
 
-/// inbound from the patient, outbound to them, internal staff note.
+/// inbound from the other party, outbound to them. Staff-only notes are CaseNote, not messages.
 enum MessageDirection {
   inbound
   outbound
-  internal
 }
 
 /// Who the conversation is with.
@@ -459,6 +464,14 @@ enum IncidentStatus {
   closed
 }
 
+/// Where a hospital stay stands.
+enum AdmissionStatus {
+  planned
+  admitted
+  discharged
+  cancelled
+}
+
 /// Outbox event state; the worker moves events along.
 enum OutboxStatus {
   pending
@@ -509,6 +522,7 @@ model Currency {
   fxRatesAsBase                    FxRate[]      @relation("FxBase")
   fxRatesAsQuote                   FxRate[]      @relation("FxQuote")
   casesByBudgetCurrency            Case[]        @relation("CaseBudgetCurrency")
+  admissionsByCurrency             Admission[]   @relation("AdmissionCurrency")
   doctorsByConsultFeeCurrency      Doctor[]      @relation("DoctorConsultFeeCurrency")
   packagesByCurrency               Package[]     @relation("PackageCurrency")
   opinionsByCurrency               Opinion[]     @relation("OpinionCurrency")
@@ -539,7 +553,6 @@ model FxRate {
   quoteCurrencyInfo Currency @relation("FxQuote", fields: [quoteCurrency], references: [code], onDelete: Restrict)
 
   @@unique([baseCurrency, quoteCurrency, asOf])
-  @@index([baseCurrency, quoteCurrency, asOf])
 }
 
 /// Medical speciality (cardiology, orthopaedics).
@@ -593,9 +606,9 @@ model City {
   staffProfiles       StaffProfile[]
   casesPreferringCity Case[]            @relation("CasePreferredCity")
   hospitals           Hospital[]
-  hospitalBranchs     HospitalBranch[]
+  hospitalBranches    HospitalBranch[]
   vendors             Vendor[]
-  staies              Stay[]
+  stays               Stay[]
   drivers             Driver[]
   vehicles            Vehicle[]
   interpreters        Interpreter[]
@@ -735,6 +748,7 @@ model User {
   lastLoginAt         DateTime?          @db.Timestamptz(3)
   sessions            Session[]
   staffProfile        StaffProfile?
+  managedStaff        StaffProfile[]     @relation("StaffManager")
   agentUser           AgentUser?
   patient             Patient?
   attendant           Attendant?
@@ -744,6 +758,7 @@ model User {
   medicalSummaries    MedicalSummary[]
   uploadedDocuments   Document[]         @relation("DocumentUploader")
   documentShares      DocumentShare[]
+  caseNotes           CaseNote[]
   hospitalStaffs      HospitalStaff[]
   sentOpinionRequests OpinionRequest[]
   submittedOpinions   Opinion[]
@@ -786,6 +801,7 @@ model Session {
 /// Our own staff (case managers, reviewers, ground coordinators, interpreters, finance): city, languages and round-robin state.
 model StaffProfile {
   id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  isManager      Boolean   @default(false)
   title          String?
   languages      String[]
   assignable     Boolean   @default(true)
@@ -795,11 +811,14 @@ model StaffProfile {
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   cityId         String?   @db.Uuid
   city           City?     @relation(fields: [cityId], references: [id], onDelete: Restrict)
+  managerId      String?   @db.Uuid
+  manager        User?     @relation("StaffManager", fields: [managerId], references: [id], onDelete: SetNull)
   createdAt      DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt      DateTime  @updatedAt @db.Timestamptz(3)
   deletedAt      DateTime? @db.Timestamptz(3)
 
   @@index([cityId])
+  @@index([managerId])
 }
 
 /// A login belonging to an agent organisation (sub-users).
@@ -829,6 +848,7 @@ model Patient {
   email                    String?
   address                  String?                  @db.Text
   preferredLanguage        String                   @default("en") @db.VarChar(8)
+  anonymizedAt             DateTime?                @db.Timestamptz(3)
   emergencyContactName     String?
   emergencyContactPhone    String?                  @db.VarChar(20)
   emergencyContactRelation String?
@@ -850,6 +870,7 @@ model Patient {
   deletedAt                DateTime?                @db.Timestamptz(3)
 
   @@index([phone])
+  @@index([passportExpiry])
   @@index([passportNumber])
   @@index([email])
   @@index([createdAt])
@@ -863,6 +884,8 @@ model Attendant {
   id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   fullName         String
   relation         String?
+  email            String?
+  anonymizedAt     DateTime?         @db.Timestamptz(3)
   passportNumber   String?           @db.VarChar(32)
   passportExpiry   DateTime?         @db.Date
   dateOfBirth      DateTime?         @db.Date
@@ -902,24 +925,25 @@ model CaseAttendant {
 
 /// What a patient agreed to, when, and whether they withdrew it. Hospital and agent sharing depend on these rows.
 model Consent {
-  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  type           ConsentType
-  grantedAt      DateTime        @default(now()) @db.Timestamptz(3)
-  withdrawnAt    DateTime?       @db.Timestamptz(3)
-  ip             String?         @db.VarChar(45)
-  textVersion    String?         @db.VarChar(32)
-  patientId      String          @db.Uuid
-  patient        Patient         @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  caseId         String?         @db.Uuid
-  case           Case?           @relation(fields: [caseId], references: [id], onDelete: Restrict)
-  hospitalId     String?         @db.Uuid
-  hospital       Hospital?       @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
-  agentId        String?         @db.Uuid
-  agent          Agent?          @relation(fields: [agentId], references: [id], onDelete: Restrict)
-  documentShares DocumentShare[]
-  createdAt      DateTime        @default(now()) @db.Timestamptz(3)
-  updatedAt      DateTime        @updatedAt @db.Timestamptz(3)
-  deletedAt      DateTime?       @db.Timestamptz(3)
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type            ConsentType
+  grantedAt       DateTime         @default(now()) @db.Timestamptz(3)
+  withdrawnAt     DateTime?        @db.Timestamptz(3)
+  ip              String?          @db.VarChar(45)
+  textVersion     String?          @db.VarChar(32)
+  patientId       String           @db.Uuid
+  patient         Patient          @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  caseId          String?          @db.Uuid
+  case            Case?            @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  hospitalId      String?          @db.Uuid
+  hospital        Hospital?        @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
+  agentId         String?          @db.Uuid
+  agent           Agent?           @relation(fields: [agentId], references: [id], onDelete: Restrict)
+  documentShares  DocumentShare[]
+  opinionRequests OpinionRequest[]
+  createdAt       DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime         @updatedAt @db.Timestamptz(3)
+  deletedAt       DateTime?        @db.Timestamptz(3)
 
   @@index([patientId, type])
   @@index([caseId])
@@ -933,13 +957,14 @@ model Case {
   caseNo             String             @unique
   stage              CaseStage          @default(enquiry)
   status             CaseStatus         @default(new)
-  conditionSummary   String?            @db.Text
   urgency            Urgency            @default(routine)
-  budgetMinor        Int?
+  budgetMinor        BigInt?
   source             CaseSource         @default(website)
   campaign           String?
   preferredLanguage  String?            @db.VarChar(8)
   stageEnteredAt     DateTime           @default(now()) @db.Timestamptz(3)
+  plannedArrivalAt   DateTime?          @db.Timestamptz(3)
+  plannedDepartureAt DateTime?          @db.Timestamptz(3)
   firstResponseDueAt DateTime?          @db.Timestamptz(3)
   firstRespondedAt   DateTime?          @db.Timestamptz(3)
   slaDueAt           DateTime?          @db.Timestamptz(3)
@@ -971,16 +996,19 @@ model Case {
   stageHistory       CaseStageHistory[]
   medicalSummaries   MedicalSummary[]
   documents          Document[]
+  caseIntake         CaseIntake?
+  caseNotes          CaseNote[]
+  admissions         Admission[]
   opinionRequests    OpinionRequest[]
   quotes             Quote[]
   invoices           Invoice[]
+  invoiceLines       InvoiceLine[]
   payments           Payment[]
   visaApplications   VisaApplication[]
   bookings           Booking[]
   commissions        Commission[]
   tasks              Task[]
   conversations      Conversation[]
-  messages           Message[]
   notifications      Notification[]
   feedback           Feedback?
   incidents          Incident[]
@@ -988,7 +1016,6 @@ model Case {
   updatedAt          DateTime           @updatedAt @db.Timestamptz(3)
   deletedAt          DateTime?          @db.Timestamptz(3)
 
-  @@index([stage])
   @@index([status])
   @@index([createdAt])
   @@index([slaDueAt])
@@ -1047,38 +1074,39 @@ model MedicalSummary {
 
 /// A file in the private bucket. Only metadata is here; downloads go through presigned URLs and are audited.
 model Document {
-  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  kind               DocumentKind
-  visibility         DocumentVisibility  @default(private)
-  fileName           String
-  mimeType           String              @db.VarChar(127)
-  sizeBytes          Int
-  storageKey         String              @unique
-  checksum           String?             @db.VarChar(64)
-  scanStatus         ScanStatus          @default(pending)
-  takenAt            DateTime?           @db.Date
-  notes              String?             @db.Text
-  patientId          String?             @db.Uuid
-  patient            Patient?            @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  caseId             String?             @db.Uuid
-  case               Case?               @relation(fields: [caseId], references: [id], onDelete: Restrict)
-  agentId            String?             @db.Uuid
-  agent              Agent?              @relation(fields: [agentId], references: [id], onDelete: Restrict)
-  hospitalId         String?             @db.Uuid
-  hospital           Hospital?           @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
-  typeId             String?             @db.Uuid
-  type               DocumentType?       @relation(fields: [typeId], references: [id], onDelete: Restrict)
-  uploadedById       String?             @db.Uuid
-  uploadedBy         User?               @relation("DocumentUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
-  shares             DocumentShare[]
-  accreditations     Accreditation[]
-  quotes             Quote[]
-  invoices           Invoice[]
-  visaInvitations    VisaApplication[]
-  messageAttachments MessageAttachment[]
-  createdAt          DateTime            @default(now()) @db.Timestamptz(3)
-  updatedAt          DateTime            @updatedAt @db.Timestamptz(3)
-  deletedAt          DateTime?           @db.Timestamptz(3)
+  id                   String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  kind                 DocumentKind
+  visibility           DocumentVisibility  @default(private)
+  fileName             String
+  mimeType             String              @db.VarChar(127)
+  sizeBytes            Int
+  storageKey           String              @unique
+  checksum             String?             @db.VarChar(64)
+  scanStatus           ScanStatus          @default(pending)
+  takenAt              DateTime?           @db.Date
+  notes                String?             @db.Text
+  patientId            String?             @db.Uuid
+  patient              Patient?            @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  caseId               String?             @db.Uuid
+  case                 Case?               @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  agentId              String?             @db.Uuid
+  agent                Agent?              @relation(fields: [agentId], references: [id], onDelete: Restrict)
+  hospitalId           String?             @db.Uuid
+  hospital             Hospital?           @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
+  typeId               String?             @db.Uuid
+  type                 DocumentType?       @relation(fields: [typeId], references: [id], onDelete: Restrict)
+  uploadedById         String?             @db.Uuid
+  uploadedBy           User?               @relation("DocumentUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  shares               DocumentShare[]
+  admissionsDischarged Admission[]
+  accreditations       Accreditation[]
+  quotes               Quote[]
+  invoices             Invoice[]
+  visaInvitations      VisaApplication[]
+  messageAttachments   MessageAttachment[]
+  createdAt            DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime            @updatedAt @db.Timestamptz(3)
+  deletedAt            DateTime?           @db.Timestamptz(3)
 
   @@index([kind])
   @@index([caseId, kind])
@@ -1097,8 +1125,8 @@ model DocumentShare {
   document   Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
   hospitalId String    @db.Uuid
   hospital   Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
-  consentId  String?   @db.Uuid
-  consent    Consent?  @relation(fields: [consentId], references: [id], onDelete: SetNull)
+  consentId  String    @db.Uuid
+  consent    Consent   @relation(fields: [consentId], references: [id], onDelete: Restrict)
   sharedById String?   @db.Uuid
   sharedBy   User?     @relation(fields: [sharedById], references: [id], onDelete: SetNull)
   createdAt  DateTime  @default(now()) @db.Timestamptz(3)
@@ -1109,6 +1137,84 @@ model DocumentShare {
   @@index([hospitalId])
   @@index([consentId])
   @@index([sharedById])
+}
+
+/// What the patient told us about their condition. Medical text: kept off the Case row so an agent's or a list query never carries it by accident.
+model CaseIntake {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  condition   String    @db.Text
+  history     String?   @db.Text
+  medications String?   @db.Text
+  caseId      String    @unique @db.Uuid
+  case        Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt   DateTime? @db.Timestamptz(3)
+}
+
+/// A staff-only note on a case (Case 360 notes). Never shown to patients, hospitals or agents; messages to those people live in Message.
+model CaseNote {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  body      String    @db.Text
+  pinned    Boolean   @default(false)
+  caseId    String    @db.Uuid
+  case      Case      @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  authorId  String?   @db.Uuid
+  author    User?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt DateTime? @db.Timestamptz(3)
+
+  @@index([caseId, createdAt])
+  @@index([authorId])
+}
+
+/// The treatment stay at a hospital: admission, surgery and discharge dates, and the estimate, running bill and final bill. Referral fees, commission and the bill-versus-estimate alert read these.
+model Admission {
+  id                  String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  status              AdmissionStatus @default(planned)
+  admittedAt          DateTime?       @db.Timestamptz(3)
+  procedureAt         DateTime?       @db.Timestamptz(3)
+  ward                String?
+  expectedDischargeAt DateTime?       @db.Timestamptz(3)
+  dischargedAt        DateTime?       @db.Timestamptz(3)
+  fitToFlyAt          DateTime?       @db.Timestamptz(3)
+  estimateMinor       BigInt?
+  runningBillMinor    BigInt?
+  finalBillMinor      BigInt?
+  notes               String?         @db.Text
+  caseId              String          @db.Uuid
+  case                Case            @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  hospitalId          String          @db.Uuid
+  hospital            Hospital        @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
+  doctorId            String?         @db.Uuid
+  doctor              Doctor?         @relation(fields: [doctorId], references: [id], onDelete: Restrict)
+  dischargeSummaryId  String?         @db.Uuid
+  dischargeSummary    Document?       @relation(fields: [dischargeSummaryId], references: [id], onDelete: SetNull)
+  currency            String?         @db.Char(3)
+  currencyInfo        Currency?       @relation("AdmissionCurrency", fields: [currency], references: [code], onDelete: Restrict)
+  createdAt           DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime        @updatedAt @db.Timestamptz(3)
+  deletedAt           DateTime?       @db.Timestamptz(3)
+
+  @@unique([caseId, hospitalId])
+  @@index([status])
+  @@index([admittedAt])
+  @@index([expectedDischargeAt])
+  @@index([hospitalId])
+  @@index([doctorId])
+  @@index([dischargeSummaryId])
+}
+
+/// Webhook events already handled (payment gateways, WhatsApp), so a replayed delivery is recognised and ignored.
+model ProcessedWebhook {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  provider   String
+  eventId    String
+  payload    Json?
+  receivedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([provider, eventId])
 }
 
 /// A partner hospital. `agreementBp` is the referral-fee share in basis points (1250 = 12.5%). Bank details are stored encrypted by the application.
@@ -1129,6 +1235,8 @@ model Hospital {
   bankDetails            Json?
   bedCount               Int?
   establishedYear        Int?
+  latitude               Decimal?                 @db.Decimal(9, 6)
+  longitude              Decimal?                 @db.Decimal(9, 6)
   publishedAt            DateTime?                @db.Timestamptz(3)
   searchVector           Unsupported("tsvector")?
   cityId                 String                   @db.Uuid
@@ -1137,6 +1245,7 @@ model Hospital {
   cases                  Case[]
   documents              Document[]
   documentShares         DocumentShare[]
+  admissions             Admission[]
   branches               HospitalBranch[]
   staff                  HospitalStaff[]
   accreditations         Accreditation[]
@@ -1240,11 +1349,12 @@ model Department {
 /// A treating specialist at a hospital.
 model Doctor {
   id                     String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug                   String?                  @unique
   fullName               String
   qualifications         String?                  @db.Text
   experienceYears        Int?
   languages              String[]
-  consultFeeMinor        Int?
+  consultFeeMinor        BigInt?
   bio                    String?                  @db.Text
   published              Boolean                  @default(false)
   searchVector           Unsupported("tsvector")?
@@ -1256,6 +1366,7 @@ model Doctor {
   branch                 HospitalBranch?          @relation(fields: [branchId], references: [id], onDelete: Restrict)
   specialityId           String                   @db.Uuid
   speciality             Speciality               @relation(fields: [specialityId], references: [id], onDelete: Restrict)
+  admissions             Admission[]
   hospitalStaffs         HospitalStaff[]
   translations           DoctorTranslation[]
   opinionRequests        OpinionRequest[]
@@ -1307,7 +1418,7 @@ model Package {
   id           String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name         String
   roomCategory String?
-  priceMinor   Int
+  priceMinor   BigInt
   stayDays     Int?
   inclusions   String[]
   exclusions   String[]
@@ -1362,32 +1473,37 @@ model OpinionRequest {
   doctor        Doctor?              @relation(fields: [doctorId], references: [id], onDelete: Restrict)
   summaryId     String?              @db.Uuid
   summary       MedicalSummary?      @relation(fields: [summaryId], references: [id], onDelete: SetNull)
+  consentId     String?              @db.Uuid
+  consent       Consent?             @relation(fields: [consentId], references: [id], onDelete: Restrict)
   sentById      String?              @db.Uuid
   sentBy        User?                @relation(fields: [sentById], references: [id], onDelete: SetNull)
-  opinion       Opinion?
+  opinions      Opinion[]
   createdAt     DateTime             @default(now()) @db.Timestamptz(3)
   updatedAt     DateTime             @updatedAt @db.Timestamptz(3)
   deletedAt     DateTime?            @db.Timestamptz(3)
 
-  @@unique([caseId, hospitalId])
+  @@index([caseId, hospitalId])
   @@index([hospitalId, status])
   @@index([dueAt])
   @@index([doctorId])
   @@index([summaryId])
+  @@index([consentId])
   @@index([sentById])
 }
 
 /// The hospital's answer to an OpinionRequest: plan, doctor, stay, estimate.
 model Opinion {
   id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  version          Int            @default(1)
+  current          Boolean        @default(true)
   treatmentPlan    String         @db.Text
   stayDaysHospital Int?
   stayDaysOutside  Int?
-  estimateMinor    Int
+  estimateMinor    BigInt
   inclusions       String[]
   exclusions       String[]
   validUntil       DateTime?      @db.Date
-  opinionRequestId String         @unique @db.Uuid
+  opinionRequestId String         @db.Uuid
   opinionRequest   OpinionRequest @relation(fields: [opinionRequestId], references: [id], onDelete: Restrict)
   doctorId         String?        @db.Uuid
   doctor           Doctor?        @relation(fields: [doctorId], references: [id], onDelete: Restrict)
@@ -1402,6 +1518,7 @@ model Opinion {
   updatedAt        DateTime       @updatedAt @db.Timestamptz(3)
   deletedAt        DateTime?      @db.Timestamptz(3)
 
+  @@unique([opinionRequestId, version])
   @@index([doctorId])
   @@index([packageId])
   @@index([submittedById])
@@ -1412,7 +1529,7 @@ model Quote {
   id                 String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   quoteNo            String      @unique
   status             QuoteStatus @default(draft)
-  totalMinor         Int
+  totalMinor         BigInt
   version            Int         @default(1)
   fxRate             Decimal?    @db.Decimal(18, 8)
   fxRateAt           DateTime?   @db.Timestamptz(3)
@@ -1442,8 +1559,9 @@ model Quote {
   updatedAt          DateTime    @updatedAt @db.Timestamptz(3)
   deletedAt          DateTime?   @db.Timestamptz(3)
 
+  @@unique([caseId, version])
   @@index([status])
-  @@index([caseId])
+  @@index([validUntil])
   @@index([opinionId])
   @@index([acceptedById])
   @@index([createdById])
@@ -1456,9 +1574,9 @@ model QuoteLine {
   kind           QuoteLineKind
   description    String
   quantity       Int           @default(1)
-  unitPriceMinor Int
-  amountMinor    Int
-  costMinor      Int?
+  unitPriceMinor BigInt
+  amountMinor    BigInt
+  costMinor      BigInt?
   sortOrder      Int           @default(0)
   quoteId        String        @db.Uuid
   quote          Quote         @relation(fields: [quoteId], references: [id], onDelete: Cascade)
@@ -1472,34 +1590,38 @@ model QuoteLine {
 
 /// GST invoice for our fees (to a patient) or a referral fee (to a hospital). Numbers look like INV/26-27/00001.
 model Invoice {
-  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  invoiceNo     String        @unique
-  kind          InvoiceKind
-  status        InvoiceStatus @default(draft)
-  subtotalMinor Int
-  taxMinor      Int           @default(0)
-  totalMinor    Int
-  gstin         String?       @db.VarChar(15)
-  placeOfSupply String?
-  billToName    String
-  billToAddress String?       @db.Text
-  issuedAt      DateTime?     @db.Timestamptz(3)
-  dueAt         DateTime?     @db.Timestamptz(3)
-  paidAt        DateTime?     @db.Timestamptz(3)
-  caseId        String?       @db.Uuid
-  case          Case?         @relation(fields: [caseId], references: [id], onDelete: Restrict)
-  hospitalId    String?       @db.Uuid
-  hospital      Hospital?     @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
-  pdfId         String?       @db.Uuid
-  pdf           Document?     @relation(fields: [pdfId], references: [id], onDelete: SetNull)
-  currency      String        @db.Char(3)
-  currencyInfo  Currency      @relation("InvoiceCurrency", fields: [currency], references: [code], onDelete: Restrict)
-  lines         InvoiceLine[]
-  creditNotes   CreditNote[]
-  payments      Payment[]
-  createdAt     DateTime      @default(now()) @db.Timestamptz(3)
-  updatedAt     DateTime      @updatedAt @db.Timestamptz(3)
-  deletedAt     DateTime?     @db.Timestamptz(3)
+  id               String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceNo        String        @unique
+  supplierGstin    String?       @db.VarChar(15)
+  exportOfServices Boolean       @default(false)
+  disputedAt       DateTime?     @db.Timestamptz(3)
+  disputeNote      String?       @db.Text
+  kind             InvoiceKind
+  status           InvoiceStatus @default(draft)
+  subtotalMinor    BigInt
+  taxMinor         BigInt        @default(0)
+  totalMinor       BigInt
+  gstin            String?       @db.VarChar(15)
+  placeOfSupply    String?
+  billToName       String
+  billToAddress    String?       @db.Text
+  issuedAt         DateTime?     @db.Timestamptz(3)
+  dueAt            DateTime?     @db.Timestamptz(3)
+  paidAt           DateTime?     @db.Timestamptz(3)
+  caseId           String?       @db.Uuid
+  case             Case?         @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  hospitalId       String?       @db.Uuid
+  hospital         Hospital?     @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
+  pdfId            String?       @db.Uuid
+  pdf              Document?     @relation(fields: [pdfId], references: [id], onDelete: SetNull)
+  currency         String        @db.Char(3)
+  currencyInfo     Currency      @relation("InvoiceCurrency", fields: [currency], references: [code], onDelete: Restrict)
+  lines            InvoiceLine[]
+  creditNotes      CreditNote[]
+  payments         Payment[]
+  createdAt        DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime      @updatedAt @db.Timestamptz(3)
+  deletedAt        DateTime?     @db.Timestamptz(3)
 
   @@index([status])
   @@index([issuedAt])
@@ -1511,19 +1633,26 @@ model Invoice {
 
 model InvoiceLine {
   id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sacCode        String?  @db.VarChar(8)
+  cgstMinor      BigInt   @default(0)
+  sgstMinor      BigInt   @default(0)
+  igstMinor      BigInt   @default(0)
   description    String
   quantity       Int      @default(1)
-  unitPriceMinor Int
+  unitPriceMinor BigInt
   taxRateBp      Int      @default(0)
-  taxMinor       Int      @default(0)
-  amountMinor    Int
+  taxMinor       BigInt   @default(0)
+  amountMinor    BigInt
   sortOrder      Int      @default(0)
   invoiceId      String   @db.Uuid
   invoice        Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  caseId         String?  @db.Uuid
+  case           Case?    @relation(fields: [caseId], references: [id], onDelete: Restrict)
   createdAt      DateTime @default(now()) @db.Timestamptz(3)
   updatedAt      DateTime @updatedAt @db.Timestamptz(3)
 
   @@index([invoiceId])
+  @@index([caseId])
 }
 
 /// Reduces an invoice.
@@ -1532,8 +1661,8 @@ model CreditNote {
   creditNoteNo String           @unique
   status       CreditNoteStatus @default(draft)
   reason       String           @db.Text
-  amountMinor  Int
-  taxMinor     Int              @default(0)
+  amountMinor  BigInt
+  taxMinor     BigInt           @default(0)
   issuedAt     DateTime?        @db.Timestamptz(3)
   invoiceId    String           @db.Uuid
   invoice      Invoice          @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
@@ -1552,16 +1681,16 @@ model Payment {
   type           PaymentType
   method         PaymentMethod
   status         PaymentStatus @default(pending)
-  amountMinor    Int
-  amountInrMinor Int?
+  amountMinor    BigInt
+  amountInrMinor BigInt?
   fxRate         Decimal?      @db.Decimal(18, 8)
   gateway        String?
   gatewayRef     String?
   payerName      String?
   failureReason  String?       @db.Text
   paidAt         DateTime?     @db.Timestamptz(3)
-  caseId         String        @db.Uuid
-  case           Case          @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  caseId         String?       @db.Uuid
+  case           Case?         @relation(fields: [caseId], references: [id], onDelete: Restrict)
   invoiceId      String?       @db.Uuid
   invoice        Invoice?      @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
   quoteId        String?       @db.Uuid
@@ -1586,7 +1715,7 @@ model Payment {
 model Refund {
   id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   status        RefundStatus @default(requested)
-  amountMinor   Int
+  amountMinor   BigInt
   reason        String       @db.Text
   gatewayRef    String?
   processedAt   DateTime?    @db.Timestamptz(3)
@@ -1631,6 +1760,7 @@ model VisaApplication {
   deletedAt          DateTime?  @db.Timestamptz(3)
 
   @@index([status])
+  @@index([expiresAt])
   @@index([caseId])
   @@index([patientId])
   @@index([attendantId])
@@ -1649,7 +1779,7 @@ model Vendor {
   active      Boolean    @default(true)
   cityId      String?    @db.Uuid
   city        City?      @relation(fields: [cityId], references: [id], onDelete: Restrict)
-  staies      Stay[]
+  stays       Stay[]
   drivers     Driver[]
   vehicles    Vehicle[]
   bookings    Booking[]
@@ -1667,6 +1797,8 @@ model Stay {
   type                 StayType
   name                 String
   address              String?                @db.Text
+  latitude             Decimal?               @db.Decimal(9, 6)
+  longitude            Decimal?               @db.Decimal(9, 6)
   halalKitchen         Boolean                @default(false)
   wheelchairAccessible Boolean                @default(false)
   notes                String?                @db.Text
@@ -1689,7 +1821,7 @@ model Stay {
 model StayRoom {
   id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   roomType          String
-  ratePerNightMinor Int
+  ratePerNightMinor BigInt
   capacity          Int      @default(1)
   quantity          Int      @default(1)
   stayId            String   @db.Uuid
@@ -1765,7 +1897,7 @@ model Interpreter {
   phone                  String?               @db.VarChar(20)
   employment             InterpreterEmployment @default(in_house)
   languages              String[]
-  hourlyRateMinor        Int?
+  hourlyRateMinor        BigInt?
   active                 Boolean               @default(true)
   hourlyRateCurrency     String?               @db.Char(3)
   hourlyRateCurrencyInfo Currency?             @relation("InterpreterHourlyRateCurrency", fields: [hourlyRateCurrency], references: [code], onDelete: Restrict)
@@ -1788,8 +1920,8 @@ model Booking {
   status        BookingStatus @default(requested)
   startsAt      DateTime      @db.Timestamptz(3)
   endsAt        DateTime?     @db.Timestamptz(3)
-  costMinor     Int?
-  priceMinor    Int?
+  costMinor     BigInt?
+  priceMinor    BigInt?
   reference     String?
   details       Json?
   notes         String?       @db.Text
@@ -1873,16 +2005,18 @@ model CommissionPlan {
 
 /// Overrides the plan's default for one hospital and/or treatment.
 model CommissionRule {
-  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  rateBp      Int
-  planId      String         @db.Uuid
-  plan        CommissionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
-  hospitalId  String?        @db.Uuid
-  hospital    Hospital?      @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
-  treatmentId String?        @db.Uuid
-  treatment   Treatment?     @relation(fields: [treatmentId], references: [id], onDelete: Restrict)
-  createdAt   DateTime       @default(now()) @db.Timestamptz(3)
-  updatedAt   DateTime       @updatedAt @db.Timestamptz(3)
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rateBp        Int
+  effectiveFrom DateTime?      @db.Date
+  effectiveTo   DateTime?      @db.Date
+  planId        String         @db.Uuid
+  plan          CommissionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  hospitalId    String?        @db.Uuid
+  hospital      Hospital?      @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
+  treatmentId   String?        @db.Uuid
+  treatment     Treatment?     @relation(fields: [treatmentId], references: [id], onDelete: Restrict)
+  createdAt     DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime       @updatedAt @db.Timestamptz(3)
 
   @@index([planId])
   @@index([hospitalId])
@@ -1892,9 +2026,10 @@ model CommissionRule {
 /// What an agent earned on a case, once the hospital fee is received.
 model Commission {
   id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  basisMinor   Int
+  basisMinor   BigInt
   rateBp       Int
-  amountMinor  Int
+  amountMinor  BigInt
+  tdsMinor     BigInt           @default(0)
   status       CommissionStatus @default(earned)
   earnedAt     DateTime         @default(now()) @db.Timestamptz(3)
   approvedAt   DateTime?        @db.Timestamptz(3)
@@ -1910,7 +2045,7 @@ model Commission {
   updatedAt    DateTime         @updatedAt @db.Timestamptz(3)
   deletedAt    DateTime?        @db.Timestamptz(3)
 
-  @@unique([caseId, agentId])
+  @@index([caseId, agentId])
   @@index([status])
   @@index([agentId])
   @@index([payoutId])
@@ -1921,7 +2056,7 @@ model Payout {
   id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   method       PayoutMethod
   status       PayoutStatus @default(requested)
-  amountMinor  Int
+  amountMinor  BigInt
   requestedAt  DateTime     @default(now()) @db.Timestamptz(3)
   paidAt       DateTime?    @db.Timestamptz(3)
   reference    String?
@@ -2001,8 +2136,6 @@ model Message {
   readAt         DateTime?           @db.Timestamptz(3)
   conversationId String              @db.Uuid
   conversation   Conversation        @relation(fields: [conversationId], references: [id], onDelete: Restrict)
-  caseId         String?             @db.Uuid
-  case           Case?               @relation(fields: [caseId], references: [id], onDelete: Restrict)
   senderId       String?             @db.Uuid
   sender         User?               @relation(fields: [senderId], references: [id], onDelete: SetNull)
   attachments    MessageAttachment[]
@@ -2011,8 +2144,6 @@ model Message {
   deletedAt      DateTime?           @db.Timestamptz(3)
 
   @@index([conversationId, createdAt])
-  @@index([channel, externalId])
-  @@index([caseId])
   @@index([senderId])
 }
 
@@ -2113,7 +2244,7 @@ model AuditEvent {
   actorRole  String?  @db.VarChar(32)
   action     String
   entityType String
-  entityId   String   @db.Uuid
+  entityId   String
   patientId  String?  @db.Uuid
   before     Json?
   after      Json?
@@ -2123,6 +2254,7 @@ model AuditEvent {
   createdAt  DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([entityType, entityId])
+  @@index([action, createdAt])
   @@index([actorId, createdAt])
   @@index([patientId, createdAt])
   @@index([createdAt])
@@ -2131,9 +2263,10 @@ model AuditEvent {
 /// Domain events written in the same transaction as the change that caused them; the worker delivers them (notifications, audit, SLA timers).
 model OutboxEvent {
   id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  dedupeKey     String?      @unique
   type          String
   aggregateType String
-  aggregateId   String       @db.Uuid
+  aggregateId   String
   payload       Json
   status        OutboxStatus @default(pending)
   attempts      Int          @default(0)
@@ -2143,6 +2276,7 @@ model OutboxEvent {
   createdAt     DateTime     @default(now()) @db.Timestamptz(3)
 
   @@index([status, availableAt])
+  @@index([processedAt])
   @@index([aggregateType, aggregateId])
 }
 

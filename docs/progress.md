@@ -170,8 +170,11 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01.
 
 - **Not yet verified on GitHub:** the new database tests run in the API e2e job (`pnpm --filter @medtravel/db test:e2e`
   against the Postgres service container); the first result is recorded here once it has run.
-- Money columns are 32-bit `Int` (ADR 002): 21.4 million major units per column. Widen one to `BigInt` if a
-  single amount can exceed that.
+- Money columns are `BigInt` (ADR 002). Prisma returns them as `bigint`; the API layer (F-02 onward) must
+  serialise them as strings.
+- `AuditEvent` is append-only through triggers a table owner could drop: in production the application role must
+  not own the tables (deployment task).
+- `Patient.passportNumber` is in the search vector as the task asks (clear text); see `docs/questions.md`.
 - The migration enables `pg_trgm` and `unaccent` itself (trusted extensions, PostgreSQL 13+). On a managed
   database whose owner role cannot create extensions, create them once by hand before `migrate deploy`.
 - Bank and payout details and passport numbers are plain columns the application is expected to encrypt (F-03/F-06);

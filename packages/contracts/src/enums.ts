@@ -22,38 +22,17 @@ export const urgencySchema = z.enum(URGENCIES);
 export type Urgency = z.infer<typeof urgencySchema>;
 
 /** Where a lead came from (PRD 6, lead inbox). */
-export const CASE_SOURCES = [
-  'website',
-  'whatsapp',
-  'phone',
-  'email',
-  'agent',
-  'referral',
-  'walk_in',
-  'other',
-] as const;
+export const CASE_SOURCES = ['website', 'whatsapp', 'phone', 'email', 'agent', 'referral', 'walk_in', 'other'] as const;
 export const caseSourceSchema = z.enum(CASE_SOURCES);
 export type CaseSource = z.infer<typeof caseSourceSchema>;
 
 /** Broad category of a stored file (PRD 11). */
-export const DOCUMENT_KINDS = [
-  'report',
-  'scan',
-  'prescription',
-  'passport',
-  'visa',
-  'invoice',
-  'discharge',
-  'invitation_letter',
-  'photo',
-  'agreement',
-  'other',
-] as const;
+export const DOCUMENT_KINDS = ['report', 'scan', 'prescription', 'passport', 'visa', 'invoice', 'bill', 'discharge', 'invitation_letter', 'photo', 'pickup_photo', 'kyc', 'agreement', 'other'] as const;
 export const documentKindSchema = z.enum(DOCUMENT_KINDS);
 export type DocumentKind = z.infer<typeof documentKindSchema>;
 
-/** private: patient and our staff; shared: also the hospitals the patient consented to; internal: our staff only. */
-export const DOCUMENT_VISIBILITIES = ['private', 'shared', 'internal'] as const;
+/** private: the patient and our staff, and any hospital with a live DocumentShare; internal: our staff only. Hospital access is never a flag: it is a DocumentShare row. */
+export const DOCUMENT_VISIBILITIES = ['private', 'internal'] as const;
 export const documentVisibilitySchema = z.enum(DOCUMENT_VISIBILITIES);
 export type DocumentVisibility = z.infer<typeof documentVisibilitySchema>;
 
@@ -63,26 +42,12 @@ export const scanStatusSchema = z.enum(SCAN_STATUSES);
 export type ScanStatus = z.infer<typeof scanStatusSchema>;
 
 /** What a patient agreed to. */
-export const CONSENT_TYPES = [
-  'data_processing',
-  'share_medical_with_hospital',
-  'share_stage_with_agent',
-  'marketing',
-  'public_review',
-  'whatsapp_contact',
-] as const;
+export const CONSENT_TYPES = ['data_processing', 'share_medical_with_hospital', 'share_stage_with_agent', 'marketing', 'public_review', 'whatsapp_contact'] as const;
 export const consentTypeSchema = z.enum(CONSENT_TYPES);
 export type ConsentType = z.infer<typeof consentTypeSchema>;
 
 /** Onboarding and publishing state of a hospital profile. */
-export const HOSPITAL_STATUSES = [
-  'draft',
-  'pending_review',
-  'approved',
-  'published',
-  'unpublished',
-  'suspended',
-] as const;
+export const HOSPITAL_STATUSES = ['draft', 'pending_review', 'approved', 'published', 'unpublished', 'suspended'] as const;
 export const hospitalStatusSchema = z.enum(HOSPITAL_STATUSES);
 export type HospitalStatus = z.infer<typeof hospitalStatusSchema>;
 
@@ -92,73 +57,32 @@ export const accreditationBodySchema = z.enum(ACCREDITATION_BODIES);
 export type AccreditationBody = z.infer<typeof accreditationBodySchema>;
 
 /** Where a request to a hospital stands. */
-export const OPINION_REQUEST_STATUSES = [
-  'draft',
-  'sent',
-  'viewed',
-  'accepted',
-  'declined',
-  'answered',
-  'expired',
-  'cancelled',
-] as const;
+export const OPINION_REQUEST_STATUSES = ['draft', 'sent', 'viewed', 'accepted', 'declined', 'answered', 'expired', 'cancelled'] as const;
 export const opinionRequestStatusSchema = z.enum(OPINION_REQUEST_STATUSES);
 export type OpinionRequestStatus = z.infer<typeof opinionRequestStatusSchema>;
 
 /** Quote lifecycle. */
-export const QUOTE_STATUSES = [
-  'draft',
-  'sent',
-  'viewed',
-  'accepted',
-  'rejected',
-  'expired',
-  'superseded',
-] as const;
+export const QUOTE_STATUSES = ['draft', 'sent', 'viewed', 'accepted', 'rejected', 'expired', 'superseded'] as const;
 export const quoteStatusSchema = z.enum(QUOTE_STATUSES);
 export type QuoteStatus = z.infer<typeof quoteStatusSchema>;
 
 /** What a quote line is for. */
-export const QUOTE_LINE_KINDS = [
-  'hospital',
-  'stay',
-  'transfer',
-  'interpreter',
-  'service_fee',
-  'add_on',
-  'discount',
-  'other',
-] as const;
+export const QUOTE_LINE_KINDS = ['hospital', 'stay', 'transfer', 'interpreter', 'service_fee', 'add_on', 'discount', 'other'] as const;
 export const quoteLineKindSchema = z.enum(QUOTE_LINE_KINDS);
 export type QuoteLineKind = z.infer<typeof quoteLineKindSchema>;
 
-/** Deposit, our service fee, a hospital pass-through (not revenue) or an add-on. */
-export const PAYMENT_TYPES = ['deposit', 'service', 'pass_through', 'add_on'] as const;
+/** Deposit, our service fee, a hospital pass-through (not revenue), an add-on, or a hospital paying its referral fee. */
+export const PAYMENT_TYPES = ['deposit', 'service', 'pass_through', 'add_on', 'referral_fee'] as const;
 export const paymentTypeSchema = z.enum(PAYMENT_TYPES);
 export type PaymentType = z.infer<typeof paymentTypeSchema>;
 
 /** How a payment was made. */
-export const PAYMENT_METHODS = [
-  'card',
-  'bank_wire',
-  'upi',
-  'payment_link',
-  'cash',
-  'other',
-] as const;
+export const PAYMENT_METHODS = ['card', 'bank_wire', 'upi', 'payment_link', 'cash', 'other'] as const;
 export const paymentMethodSchema = z.enum(PAYMENT_METHODS);
 export type PaymentMethod = z.infer<typeof paymentMethodSchema>;
 
 /** Payment lifecycle. */
-export const PAYMENT_STATUSES = [
-  'pending',
-  'authorized',
-  'succeeded',
-  'failed',
-  'cancelled',
-  'partially_refunded',
-  'refunded',
-] as const;
+export const PAYMENT_STATUSES = ['pending', 'authorized', 'succeeded', 'failed', 'cancelled', 'partially_refunded', 'refunded', 'chargeback'] as const;
 export const paymentStatusSchema = z.enum(PAYMENT_STATUSES);
 export type PaymentStatus = z.infer<typeof paymentStatusSchema>;
 
@@ -168,14 +92,7 @@ export const invoiceKindSchema = z.enum(INVOICE_KINDS);
 export type InvoiceKind = z.infer<typeof invoiceKindSchema>;
 
 /** Invoice lifecycle. */
-export const INVOICE_STATUSES = [
-  'draft',
-  'issued',
-  'partially_paid',
-  'paid',
-  'overdue',
-  'void',
-] as const;
+export const INVOICE_STATUSES = ['draft', 'issued', 'partially_paid', 'paid', 'overdue', 'void'] as const;
 export const invoiceStatusSchema = z.enum(INVOICE_STATUSES);
 export type InvoiceStatus = z.infer<typeof invoiceStatusSchema>;
 
@@ -185,13 +102,7 @@ export const creditNoteStatusSchema = z.enum(CREDIT_NOTE_STATUSES);
 export type CreditNoteStatus = z.infer<typeof creditNoteStatusSchema>;
 
 /** Refund lifecycle. */
-export const REFUND_STATUSES = [
-  'requested',
-  'approved',
-  'rejected',
-  'processed',
-  'failed',
-] as const;
+export const REFUND_STATUSES = ['requested', 'approved', 'rejected', 'processed', 'failed'] as const;
 export const refundStatusSchema = z.enum(REFUND_STATUSES);
 export type RefundStatus = z.infer<typeof refundStatusSchema>;
 
@@ -201,16 +112,7 @@ export const visaTypeSchema = z.enum(VISA_TYPES);
 export type VisaType = z.infer<typeof visaTypeSchema>;
 
 /** Visa tracker status (PRD 6). */
-export const VISA_STATUSES = [
-  'not_started',
-  'documents_pending',
-  'invitation_requested',
-  'invitation_issued',
-  'applied',
-  'approved',
-  'rejected',
-  'expired',
-] as const;
+export const VISA_STATUSES = ['not_started', 'documents_pending', 'invitation_requested', 'invitation_issued', 'applied', 'approved', 'rejected', 'expired'] as const;
 export const visaStatusSchema = z.enum(VISA_STATUSES);
 export type VisaStatus = z.infer<typeof visaStatusSchema>;
 
@@ -219,14 +121,8 @@ export const BOOKING_TYPES = ['flight', 'stay', 'transfer', 'interpreter', 'sim'
 export const bookingTypeSchema = z.enum(BOOKING_TYPES);
 export type BookingType = z.infer<typeof bookingTypeSchema>;
 
-/** Booking lifecycle. */
-export const BOOKING_STATUSES = [
-  'requested',
-  'confirmed',
-  'in_progress',
-  'completed',
-  'cancelled',
-] as const;
+/** Booking lifecycle (en_route and picked_up are for transfers). */
+export const BOOKING_STATUSES = ['requested', 'confirmed', 'en_route', 'picked_up', 'in_progress', 'completed', 'cancelled'] as const;
 export const bookingStatusSchema = z.enum(BOOKING_STATUSES);
 export type BookingStatus = z.infer<typeof bookingStatusSchema>;
 
@@ -246,13 +142,7 @@ export const vehicleTypeSchema = z.enum(VEHICLE_TYPES);
 export type VehicleType = z.infer<typeof vehicleTypeSchema>;
 
 /** Agent onboarding state. */
-export const AGENT_STATUSES = [
-  'applied',
-  'kyc_review',
-  'approved',
-  'suspended',
-  'rejected',
-] as const;
+export const AGENT_STATUSES = ['applied', 'kyc_review', 'approved', 'suspended', 'rejected'] as const;
 export const agentStatusSchema = z.enum(AGENT_STATUSES);
 export type AgentStatus = z.infer<typeof agentStatusSchema>;
 
@@ -267,14 +157,7 @@ export const commissionStatusSchema = z.enum(COMMISSION_STATUSES);
 export type CommissionStatus = z.infer<typeof commissionStatusSchema>;
 
 /** Agent payout lifecycle. */
-export const PAYOUT_STATUSES = [
-  'requested',
-  'approved',
-  'processing',
-  'paid',
-  'failed',
-  'cancelled',
-] as const;
+export const PAYOUT_STATUSES = ['requested', 'approved', 'processing', 'paid', 'failed', 'cancelled'] as const;
 export const payoutStatusSchema = z.enum(PAYOUT_STATUSES);
 export type PayoutStatus = z.infer<typeof payoutStatusSchema>;
 
@@ -298,8 +181,8 @@ export const MESSAGE_CHANNELS = ['in_app', 'whatsapp', 'email', 'sms'] as const;
 export const messageChannelSchema = z.enum(MESSAGE_CHANNELS);
 export type MessageChannel = z.infer<typeof messageChannelSchema>;
 
-/** inbound from the patient, outbound to them, internal staff note. */
-export const MESSAGE_DIRECTIONS = ['inbound', 'outbound', 'internal'] as const;
+/** inbound from the other party, outbound to them. Staff-only notes are CaseNote, not messages. */
+export const MESSAGE_DIRECTIONS = ['inbound', 'outbound'] as const;
 export const messageDirectionSchema = z.enum(MESSAGE_DIRECTIONS);
 export type MessageDirection = z.infer<typeof messageDirectionSchema>;
 
@@ -319,13 +202,7 @@ export const notificationStatusSchema = z.enum(NOTIFICATION_STATUSES);
 export type NotificationStatus = z.infer<typeof notificationStatusSchema>;
 
 /** Kind of incident (PRD 6). */
-export const INCIDENT_TYPES = [
-  'complaint',
-  'medical_complication',
-  'lost_documents',
-  'delay',
-  'other',
-] as const;
+export const INCIDENT_TYPES = ['complaint', 'medical_complication', 'lost_documents', 'delay', 'other'] as const;
 export const incidentTypeSchema = z.enum(INCIDENT_TYPES);
 export type IncidentType = z.infer<typeof incidentTypeSchema>;
 
@@ -338,6 +215,11 @@ export type IncidentSeverity = z.infer<typeof incidentSeveritySchema>;
 export const INCIDENT_STATUSES = ['open', 'escalated', 'resolved', 'closed'] as const;
 export const incidentStatusSchema = z.enum(INCIDENT_STATUSES);
 export type IncidentStatus = z.infer<typeof incidentStatusSchema>;
+
+/** Where a hospital stay stands. */
+export const ADMISSION_STATUSES = ['planned', 'admitted', 'discharged', 'cancelled'] as const;
+export const admissionStatusSchema = z.enum(ADMISSION_STATUSES);
+export type AdmissionStatus = z.infer<typeof admissionStatusSchema>;
 
 /** Outbox event state; the worker moves events along. */
 export const OUTBOX_STATUSES = ['pending', 'processing', 'processed', 'failed'] as const;
