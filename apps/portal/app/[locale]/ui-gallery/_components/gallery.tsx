@@ -7,6 +7,7 @@ import { Link, usePathname } from '../../../../i18n/navigation';
 import { DataSections } from './data-sections';
 import { DisplaySections } from './display-sections';
 import { InputSections } from './input-sections';
+import { ShellSections } from './shell-sections';
 import { WorkflowSections } from './workflow-sections';
 
 export function Gallery() {
@@ -38,6 +39,7 @@ export function Gallery() {
       <DisplaySections />
       <DataSections locale={locale} />
       <WorkflowSections locale={locale} />
+      <ShellSections locale={locale} />
     </main>
   );
 }

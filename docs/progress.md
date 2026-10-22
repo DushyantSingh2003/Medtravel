@@ -4,7 +4,7 @@ Tick a task here when it is finished and `pnpm check` is green. The task queue t
 build loop is `loop/cloud-state.json`; this file is the human-readable view and also records
 what each task deferred.
 
-Tasks: 116 in the plan. Done: S-01 to S-05.
+Tasks: 116 in the plan. Done: S-01 to S-06.
 
 ### Phase 0 — Scaffold (week 1)
 
@@ -13,7 +13,7 @@ Tasks: 116 in the plan. Done: S-01 to S-05.
 - [x] **S-03** Claude Code configuration and progress tracker
 - [x] **S-04** CI pipeline and staging deploy — CI green on `develop` (run 2); deploy workflow not yet run (see deferred notes)
 - [x] **S-05** Design system (packages/ui)
-- [ ] **S-06** App shells and layouts
+- [x] **S-06** App shells and layouts
 
 ### Phase 1A — Foundation (weeks 2–4)
 
@@ -165,6 +165,29 @@ Tasks: 116 in the plan. Done: S-01 to S-05.
 - [ ] **G-08** Advanced analytics
 
 ## Notes and deferred work
+
+### Deferred from S-06
+
+- **Real sign-in.** The portal login is a stub: `ENABLE_STUB_AUTH=true` lets anyone pick any of the
+  eleven roles. It is off unless that variable is set (`apps/portal/.env.example` and the CI browser job
+  set it; an existing `apps/portal/.env` needs the line added). F-03 replaces it; the guards
+  (`requirePortalSession`) and the shell stay. Never enable it on a deployed environment.
+- **Role-level menus.** One role sees its whole portal's menu (an interpreter sees all of the coordinator
+  portal, finance sees all of admin). Hiding screens per role needs the permission matrix (F-04).
+- **Every screen is a placeholder** (79 portal screens, 15 public pages) with its PRD priority shown.
+  Each fills in with its own task. Search, notifications and the currency choice are UI only for now.
+- **Public site settings.** Set `NEXT_PUBLIC_WHATSAPP_NUMBER` (the floating button is hidden without it)
+  and `NEXT_PUBLIC_SITE_URL` (canonical links and the sitemap) as build arguments: the Docker image and the
+  deploy workflow take them from the optional repository variables `STAGING_WHATSAPP_NUMBER` and
+  `STAGING_SITE_URL` (see `docs/deploy.md`). The browser tests need the website **built with a WhatsApp
+  number** (CI sets a placeholder one).
+- **Brand mark and favicons** are a simple placeholder (blue rounded square, white cross, amber arc);
+  replace with the real logo when there is one (`apps/*/app/icon.svg`, `favicon.ico`, `apple-icon.png`,
+  `public/icon-*.png`).
+- The Arabic for the menus, page descriptions, login and error pages is a machine draft
+  (`packages/i18n/REVIEW.md`).
+- Website menus are plain links to index pages; mega-menus that list treatments and hospitals need CMS content.
+- The CI job now runs the portal and website shell tests on every push; the first GitHub result is recorded here once it has run.
 
 ### Deferred from S-05
 

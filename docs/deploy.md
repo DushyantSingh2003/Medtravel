@@ -62,6 +62,8 @@ There are **no AWS access keys** in GitHub: the workflow uses OIDC (`id-token: w
 
 | Name | Kind | Default | Used for |
 | --- | --- | --- | --- |
+| `STAGING_SITE_URL` | variable | empty (`http://localhost:3000`) | Public website only. Compiled in as `NEXT_PUBLIC_SITE_URL`: the base for canonical links, `sitemap.xml` and social previews. |
+| `STAGING_WHATSAPP_NUMBER` | variable | empty (button hidden) | Public website only. Digits with country code, for example `919876543210`. Compiled in as `NEXT_PUBLIC_WHATSAPP_NUMBER`; the floating WhatsApp button appears only when it is set. |
 | `AWS_REGION` | variable | `ap-south-1` | Region of ECR and ECS |
 | `ECS_CLUSTER` | variable | `medtravel-staging` | ECS cluster name |
 | `ECS_SERVICE_PREFIX` | variable | `medtravel-staging` | Services are `<prefix>-api`, `-worker`, `-web`, `-portal` |

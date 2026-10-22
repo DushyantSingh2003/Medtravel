@@ -28,3 +28,12 @@ Appended by build tasks. Format: `- [<TASK-ID>] <question> — assumed: <what wa
 - [S-05] Components carry no default text — assumed: every visible string is a prop supplied by the app through next-intl.
 - [S-05] Dark mode — assumed: tokens and components are dark-ready and tested, but no toggle ships yet.
 - [S-05] The S-01 Arabic brand name mixed scripts ("ميدتravel") — assumed: "ميد ترافل"; flagged in `packages/i18n/REVIEW.md`.
+- [S-06] Authentication does not exist yet but the portals must redirect by role — assumed: a stub login (pick any of the eleven roles) that sets a cookie holding the role, switched on only by `ENABLE_STUB_AUTH=true`; F-03 replaces it.
+- [S-06] Which routes are "the five route groups" — assumed: `/{locale}/patient`, `/ops` (the coordinator portal, PRD section 6), `/hospital`, `/agent`, `/admin`; one role belongs to exactly one portal (PRD section 2).
+- [S-06] Whether a role sees only part of its portal (interpreter, finance) — assumed: not yet; every role sees its portal's whole menu until the permission matrix (F-04).
+- [S-06] How to show screens that belong to later tasks — assumed: a placeholder page per PRD feature with its priority (launch, phase 2, phase 3); Case 360 is `/ops/cases/CASE-YYYY-NNNNNN`, the rest are flat pages.
+- [S-06] The WhatsApp number — assumed: `NEXT_PUBLIC_WHATSAPP_NUMBER` at build time; the button is hidden when it is not set, rather than shipping a fake number.
+- [S-06] What the header's "menus" contain — assumed: links to index pages (Treatments, Hospitals, Doctors, Destinations, Cost calculator, About) until the CMS has content for mega-menus.
+- [S-06] Currency switcher scope — assumed: USD, EUR, INR, AED stored in a `mt_currency` cookie; nothing reads it until prices are shown (F-09 and the cost calculator).
+- [S-06] Logo and favicon — assumed: a placeholder mark (blue square, white cross, amber arc) drawn for this task; replace with the real brand.
+
