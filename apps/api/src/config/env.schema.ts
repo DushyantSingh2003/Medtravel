@@ -41,10 +41,14 @@ export const envSchema = z
       .optional()
       .transform((value) => value === 'true'),
   })
-  .refine((env) => !(env.ENABLE_STUB_AUTH && env.NODE_ENV === 'production'), {
-    path: ['ENABLE_STUB_AUTH'],
-    message: 'The stub sign-in must never be enabled in production',
-  });
+  .refine(
+    (env) => !env.ENABLE_STUB_AUTH || env.NODE_ENV === 'development' || env.NODE_ENV === 'test',
+    {
+      path: ['ENABLE_STUB_AUTH'],
+      message:
+        'The stub sign-in must never be enabled in production (only NODE_ENV=development or test)',
+    },
+  );
 
 export type Env = z.infer<typeof envSchema>;
 
