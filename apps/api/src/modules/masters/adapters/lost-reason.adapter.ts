@@ -102,7 +102,7 @@ export const lostReasonAdapter = defineMaster({
     return toRow(
       await db.lostReason.update({
         where: { id: key },
-        data: { deletedAt: deleted ? new Date() : null, active: !deleted },
+        data: { deletedAt: deleted ? new Date() : null },
         include,
       }),
     );

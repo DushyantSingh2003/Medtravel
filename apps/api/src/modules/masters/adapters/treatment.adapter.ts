@@ -123,10 +123,18 @@ export const treatmentAdapter = defineMaster({
   },
 
   async setDeleted(db, key, deleted) {
+    if (!deleted) {
+      // Bringing a treatment back under a deleted speciality would leave it orphaned.
+      const treatment = await db.treatment.findUnique({
+        where: { id: key },
+        select: { specialityId: true },
+      });
+      if (treatment) await assertSpeciality(db, treatment.specialityId);
+    }
     return toRow(
       await db.treatment.update({
         where: { id: key },
-        data: { deletedAt: deleted ? new Date() : null, active: !deleted },
+        data: { deletedAt: deleted ? new Date() : null },
         include,
       }),
     );

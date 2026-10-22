@@ -185,6 +185,14 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01, F-02.
 - The Arabic seed names are machine drafts: 245 country names come from CLDR (reliable), the 25 specialities,
   60 treatments, 15 cities, document types and lost reasons were drafted by hand (`packages/i18n/REVIEW.md`).
 
+- From the F-02 review, not done: (1) saving translations replaces all of a row's translations, which is only safe
+  while Arabic is the one translated language; make it per locale before a third language is added. (2) Validation
+  messages in `packages/contracts` are English, so Arabic users see them on fields. (3) The seed re-adds a machine
+  Arabic name that an admin cleared. (4) Seed country names depend on the Node ICU version. (5) `trustProxy: true`
+  trusts any forwarded IP in the audit trail; set the real hop count at deployment. (6) Updates read the row
+  without a lock, so two simultaneous edits can record a stale `before`.
+- Sorting by a nullable column (typical stay) was removed: a cursor cannot page across NULLs.
+
 ### Deferred from F-01
 
 - **Verified on GitHub:** `ci.yml` run 11 on `develop` (commit 5ba538a) passed, including the database tests in the

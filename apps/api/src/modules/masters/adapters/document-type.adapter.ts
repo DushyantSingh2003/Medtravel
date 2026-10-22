@@ -104,7 +104,7 @@ export const documentTypeAdapter = defineMaster({
     return toRow(
       await db.documentType.update({
         where: { id: key },
-        data: { deletedAt: deleted ? new Date() : null, active: !deleted },
+        data: { deletedAt: deleted ? new Date() : null },
         include,
       }),
     );

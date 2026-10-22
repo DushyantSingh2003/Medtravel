@@ -114,7 +114,7 @@ export const specialityAdapter = defineMaster({
     return toRow(
       await db.speciality.update({
         where: { id: key },
-        data: { deletedAt: deleted ? new Date() : null, active: !deleted },
+        data: { deletedAt: deleted ? new Date() : null },
         include,
       }),
     );

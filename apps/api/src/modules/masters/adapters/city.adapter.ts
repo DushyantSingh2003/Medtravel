@@ -115,7 +115,7 @@ export const cityAdapter = defineMaster({
     return toRow(
       await db.city.update({
         where: { id: key },
-        data: { deletedAt: deleted ? new Date() : null, active: !deleted },
+        data: { deletedAt: deleted ? new Date() : null },
         include,
       }),
     );

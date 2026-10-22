@@ -48,6 +48,7 @@ import type { SortingState } from '@tanstack/react-table';
 import { MoreHorizontal, Plus } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useEffect, useMemo, useState } from 'react';
+import { fieldProblems } from './master-api-errors';
 import { masterColumns, state, type MastersT } from './master-columns';
 import { MasterForm } from './master-form';
 import { useMasterOptions } from './use-master-options';
@@ -59,7 +60,8 @@ interface MasterScreenProps {
 }
 
 const ALL = 'all';
-const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+// Capped at 50 rows: longer pages would have to be virtualised (CLAUDE.md), and nobody reads 100 rows of master data.
+const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
 /** The list, filters and editors of one master table. */
 export function MasterScreen({ resource, canManage }: MasterScreenProps) {
@@ -120,18 +122,23 @@ export function MasterScreen({ resource, canManage }: MasterScreenProps) {
     await queryClient.invalidateQueries({ queryKey: ['master-options'] });
   };
 
-  /** Show the row that was just saved: newest change first, from the first page, with no search in the way. */
+  /** Show the row that was just saved: clear every filter, go to the first page and put the newest change first. */
   const revealNewest = () => {
-    setSorting([{ id: 'updatedAt', desc: true }]);
+    const hasDates = resource !== 'languages' && resource !== 'currencies';
+    setSorting([hasDates ? { id: 'updatedAt', desc: true } : { id: 'name', desc: false }]);
     setSearch('');
     setDebounced('');
     setStatus(ALL);
+    setShowDeleted(false);
+    setSpecialityId(ALL);
+    setCountryCode(ALL);
+    setKind(ALL);
     restart();
   };
 
   const saved = async (kindOfChange: 'created' | 'updated', row: MasterRowDto) => {
     toast.success(t(`toast.${kindOfChange}`, { name: row.name }));
-    if (definition.softDelete || resource === 'countries') revealNewest();
+    revealNewest();
     await refresh();
   };
 
@@ -140,8 +147,9 @@ export function MasterScreen({ resource, canManage }: MasterScreenProps) {
       await action();
       toast.success(t(done, { name }));
       await refresh();
-    } catch {
-      toast.error(t('toast.failed'));
+    } catch (error) {
+      // A conflict says why (for example that a speciality still has treatments); show that rather than a generic line.
+      toast.error(fieldProblems(error)[0]?.message ?? t('toast.failed'));
     }
   };
 

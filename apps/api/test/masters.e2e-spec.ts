@@ -252,7 +252,7 @@ describe('treatments: add one in English and Arabic', () => {
     const treatment = await makeTreatment(speciality.id);
     const deleted = await t.call(admin, 'DELETE', `/masters/treatments/${treatment.id}`);
     expect(deleted.status).toBe(200);
-    expect(row(deleted.body)).toMatchObject({ active: false });
+    expect(row(deleted.body)).toMatchObject({ active: true });
     expect(row(deleted.body).deletedAt).not.toBeNull();
 
     const visible = pageOf(
@@ -314,6 +314,26 @@ describe('treatments: add one in English and Arabic', () => {
         .body,
     );
     expect(descending.items.map((item) => item.name)).toEqual(['B treatment', 'A treatment']);
+  });
+});
+
+describe('restoring', () => {
+  it('leaves an inactive treatment inactive, and refuses to restore it under a deleted speciality', async () => {
+    const speciality = await makeSpeciality();
+    const treatment = await makeTreatment(speciality.id, { active: false });
+    await t.call(admin, 'DELETE', `/masters/treatments/${treatment.id}`);
+    const restored = row(
+      (await t.call(admin, 'POST', `/masters/treatments/${treatment.id}/restore`)).body,
+    );
+    expect(restored).toMatchObject({ active: false, deletedAt: null });
+
+    await t.call(admin, 'DELETE', `/masters/treatments/${treatment.id}`);
+    expect((await t.call(admin, 'DELETE', `/masters/specialities/${speciality.id}`)).status).toBe(
+      200,
+    );
+    const orphan = await t.call(admin, 'POST', `/masters/treatments/${treatment.id}/restore`);
+    expect(orphan.status).toBe(422);
+    expect(errorFields(orphan.body)).toEqual(['specialityId']);
   });
 });
 

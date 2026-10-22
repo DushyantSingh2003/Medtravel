@@ -171,6 +171,13 @@ export class MastersService {
         const field = adapter.definition.fields.some((f) => f.name === 'slug') ? 'slug' : 'code';
         throw fieldError(HttpStatus.CONFLICT, field, `This ${field} is already used`);
       }
+      if (prismaCode(error) === 'P2003') {
+        throw fieldError(
+          HttpStatus.UNPROCESSABLE_ENTITY,
+          'id',
+          'A record this one points to no longer exists',
+        );
+      }
       if (prismaCode(error) === 'P2025') throw new NotFoundException('Not found');
       throw error;
     }

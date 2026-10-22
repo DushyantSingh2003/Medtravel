@@ -236,7 +236,7 @@ export interface MasterDefinition {
   /** Fields (besides `name`) that have a translated variant. */
   translatedFields: readonly string[];
   fields: readonly MasterField[];
-  /** Fields the list may be sorted by (`name` and `createdAt` are always allowed). */
+  /** Fields the list may be sorted by. Nullable columns are left out: a cursor cannot page across NULLs. */
   sortFields: readonly string[];
 }
 
@@ -295,7 +295,7 @@ export const MASTER_DEFINITIONS = {
     keyKind: 'uuid',
     softDelete: true,
     translatedFields: ['summary'],
-    sortFields: ['name', 'slug', 'createdAt', 'updatedAt', 'typicalStayDays'],
+    sortFields: ['name', 'slug', 'createdAt', 'updatedAt'],
     fields: [
       { name: 'slug', type: 'text' },
       { name: 'name', type: 'text' },

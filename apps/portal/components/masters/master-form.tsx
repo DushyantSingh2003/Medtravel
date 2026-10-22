@@ -33,7 +33,7 @@ import {
   toPayload,
   type MasterFormValues,
 } from './master-form-values';
-import { useMasterOptions } from './use-master-options';
+import { useMasterOptions, type MasterOption } from './use-master-options';
 
 interface MasterFormProps {
   resource: MasterResource;
@@ -57,6 +57,11 @@ export function MasterForm({ resource, row, onSaved, onCancel }: MasterFormProps
   const update = useUpdateMaster();
   const specialities = useMasterOptions('specialities', resource === 'treatments');
   const countries = useMasterOptions('countries', resource === 'cities');
+  /** The active choices, plus the one the row already has even if it has since been deactivated. */
+  const withCurrent = (options: MasterOption[] | undefined, current: MasterOption | undefined) =>
+    current && !options?.some((option) => option.value === current.value)
+      ? [...(options ?? []), current]
+      : (options ?? []);
 
   // The form holds text; the schema judges what the request would carry, so that is what it is given.
   // One cast, here: Zod's input type is per resource, while the form works with any resource's values.
@@ -84,27 +89,37 @@ export function MasterForm({ resource, row, onSaved, onCancel }: MasterFormProps
     setFormError(null);
     const payload = toPayload(resource, form.getValues(), editing);
     try {
-      const saved = row
-        ? await update.mutateAsync({
-            resource,
-            id: row.id,
-            data: changedFields(resource, row, payload),
-          })
-        : await create.mutateAsync({ resource, data: payload });
-      onSaved(saved.data);
+      if (row) {
+        const changes = changedFields(resource, row, payload);
+        // Nothing changed: there is nothing to save, and no audit row to write for it.
+        if (Object.keys(changes).length === 0) return onCancel();
+        const updated = await update.mutateAsync({ resource, id: row.id, data: changes });
+        return onSaved(updated.data);
+      }
+      const created = await create.mutateAsync({ resource, data: payload });
+      onSaved(created.data);
     } catch (error) {
       const problems = fieldProblems(error);
-      const onFields = problems.filter((problem) => problem.path !== '');
+      // Only fields on this form can show an error; the rest (a conflict on the record itself) is told in the alert.
+      const known = new Set([
+        ...Object.keys(form.getValues()),
+        'translations.ar.name',
+        'translations.ar.summary',
+      ]);
+      const onFields = problems.filter((problem) => known.has(problem.path));
       for (const problem of onFields) {
         form.setError(problem.path as never, { type: 'server', message: problem.message });
       }
+      const elsewhere = problems.filter((problem) => !known.has(problem.path));
       const status = statusOf(error);
       setFormError(
         status === 403
           ? t('form.forbidden')
-          : onFields.length > 0
-            ? t('form.fixErrors')
-            : t('form.saveFailed'),
+          : elsewhere.length > 0
+            ? elsewhere.map((problem) => problem.message).join(' ')
+            : onFields.length > 0
+              ? t('form.fixErrors')
+              : t('form.saveFailed'),
       );
     }
   });
@@ -141,12 +156,25 @@ export function MasterForm({ resource, row, onSaved, onCancel }: MasterFormProps
             key={field.name}
             {...common}
             {...pickList}
-            options={specialities.data ?? []}
+            options={withCurrent(
+              specialities.data,
+              row?.speciality
+                ? { value: row.speciality.id, label: row.speciality.name }
+                : undefined,
+            )}
           />
         );
       case 'country':
         return (
-          <FormCombobox key={field.name} {...common} {...pickList} options={countries.data ?? []} />
+          <FormCombobox
+            key={field.name}
+            {...common}
+            {...pickList}
+            options={withCurrent(
+              countries.data,
+              row?.countryCode ? { value: row.countryCode, label: row.countryCode } : undefined,
+            )}
+          />
         );
       case 'documentKind':
         return (

@@ -1,6 +1,6 @@
 import type { MasterRowDto } from '@medtravel/api-client';
 import type { MasterResource } from '@medtravel/contracts';
-import { Badge } from '@medtravel/ui';
+import { Badge, Button } from '@medtravel/ui';
 import type { ColumnDef } from '@tanstack/react-table';
 
 /** Translate a key of the `masters` messages. */
@@ -43,7 +43,6 @@ const EXTRA_COLUMNS: Record<MasterResource, Extra[]> = {
     {
       id: 'typicalStayDays',
       header: 'stay',
-      sortable: true,
       cell: (row, t) =>
         row.typicalStayDays == null ? '' : t('stayDays', { count: row.typicalStayDays }),
     },
@@ -93,13 +92,13 @@ export function masterColumns({
         return (
           <div className="flex flex-col">
             {onOpen ? (
-              <button
-                type="button"
+              <Button
+                variant="link"
+                className="h-auto justify-start p-0 text-start font-medium"
                 onClick={() => onOpen(row.original)}
-                className="text-start font-medium text-primary underline-offset-4 hover:underline focus-visible:underline"
               >
                 {name}
-              </button>
+              </Button>
             ) : (
               <span className="font-medium">{name}</span>
             )}
