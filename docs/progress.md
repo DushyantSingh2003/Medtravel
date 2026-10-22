@@ -168,6 +168,9 @@ Tasks: 116 in the plan. Done: S-01 to S-06.
 
 ### Deferred from S-06
 
+- **Verified on GitHub:** `ci.yml` run 8 on `develop` (commit 2f3e298) passed all 7 jobs: lint/typecheck/unit tests,
+  API e2e, build + Playwright (website, portal shell and gallery: 164 tests), and the four image builds and
+  boots (the portal image's `/ar` smoke check included).
 - **Real sign-in.** The portal login is a stub: `ENABLE_STUB_AUTH=true` lets anyone pick any of the
   eleven roles. It is off unless that variable is set (`apps/portal/.env.example` and the CI browser job
   set it; an existing `apps/portal/.env` needs the line added). F-03 replaces it; the guards
@@ -187,7 +190,6 @@ Tasks: 116 in the plan. Done: S-01 to S-06.
 - The Arabic for the menus, page descriptions, login and error pages is a machine draft
   (`packages/i18n/REVIEW.md`).
 - Website menus are plain links to index pages; mega-menus that list treatments and hospitals need CMS content.
-- The CI job now runs the portal and website shell tests on every push; the first GitHub result is recorded here once it has run.
 
 ### Deferred from S-05
 
