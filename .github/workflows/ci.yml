@@ -91,6 +91,8 @@ jobs:
       # The API imports the compiled workspace packages, so build the ones it depends on first.
       - run: pnpm turbo run build --filter=@medtravel/api...
       - run: pnpm --filter @medtravel/api test:e2e
+      # Applies the migrations to an empty throwaway database and checks the schema with real SQL.
+      - run: pnpm --filter @medtravel/db test:e2e
 
   build:
     name: Build all apps and browser tests

@@ -4,7 +4,7 @@ Tick a task here when it is finished and `pnpm check` is green. The task queue t
 build loop is `loop/cloud-state.json`; this file is the human-readable view and also records
 what each task deferred.
 
-Tasks: 116 in the plan. Done: S-01 to S-06.
+Tasks: 116 in the plan. Done: S-01 to S-06, F-01.
 
 ### Phase 0 — Scaffold (week 1)
 
@@ -17,7 +17,7 @@ Tasks: 116 in the plan. Done: S-01 to S-06.
 
 ### Phase 1A — Foundation (weeks 2–4)
 
-- [ ] **F-01** Database schema
+- [x] **F-01** Database schema
 - [ ] **F-02** Master data module (the reference pattern)
 - [ ] **F-03** Authentication
 - [ ] **F-04** Roles, permissions and data scoping
@@ -165,6 +165,22 @@ Tasks: 116 in the plan. Done: S-01 to S-06.
 - [ ] **G-08** Advanced analytics
 
 ## Notes and deferred work
+
+### Deferred from F-01
+
+- **Not yet verified on GitHub:** the new database tests run in the API e2e job (`pnpm --filter @medtravel/db test:e2e`
+  against the Postgres service container); the first result is recorded here once it has run.
+- Money columns are `BigInt` (ADR 002). Prisma returns them as `bigint`; the API layer (F-02 onward) must
+  serialise them as strings.
+- `AuditEvent` is append-only through triggers a table owner could drop: in production the application role must
+  not own the tables (deployment task).
+- `Patient.passportNumber` is in the search vector as the task asks (clear text); see `docs/questions.md`.
+- The migration enables `pg_trgm` and `unaccent` itself (trusted extensions, PostgreSQL 13+). On a managed
+  database whose owner role cannot create extensions, create them once by hand before `migrate deploy`.
+- Bank and payout details and passport numbers are plain columns the application is expected to encrypt (F-03/F-06);
+  nothing in the schema does it. Passport search needs the value readable (or a blind index).
+- The Arabic names in the seed (countries, cities, treatments, ...) are machine drafts (`packages/i18n/REVIEW.md`).
+- Seed covers master data only; one user per role, hospitals, doctors and cases come with F-11.
 
 ### Deferred from S-06
 

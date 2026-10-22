@@ -37,3 +37,9 @@ Appended by build tasks. Format: `- [<TASK-ID>] <question> — assumed: <what wa
 - [S-06] Currency switcher scope — assumed: USD, EUR, INR, AED stored in a `mt_currency` cookie; nothing reads it until prices are shown (F-09 and the cost calculator).
 - [S-06] Logo and favicon — assumed: a placeholder mark (blue square, white cross, amber arc) drawn for this task; replace with the real brand.
 
+- [F-01] Money column width — the task says `Int`; used `BigInt` instead, because UZS, IQD and NGN prices exceed 32 bits (ADR 002). Say so if `Int` was intended.
+- [F-01] Patient passport number is in the patient search vector, as the task asks — this keeps it in clear text in a searchable column. Alternative: a blind index (hash) so staff search by exact passport number only. Which do you want?
+- [F-01] Entities beyond the task's list — assumed: added `StaffProfile`, `HospitalStaff`, `Accreditation`, `CaseAttendant`, `CaseStageHistory`, `DocumentShare`, `CommissionRule`, `MessageAttachment`, `StayHospitalDistance`, `NumberSequence` and the translation tables, because PRD sections 5 to 9 need them.
+- [F-01] How hospitals get at patient documents — assumed: through `DocumentShare` rows (per document and hospital, revocable, tied to a `Consent`), never a flag on the document.
+- [F-01] Generated versus trigger-maintained search columns — assumed: triggers, because Prisma tries to drop the default of a generated column in every later migration.
+- [F-01] Seed scope — assumed: master data with Arabic names now; users, hospitals and cases in F-11.
