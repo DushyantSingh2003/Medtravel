@@ -13,6 +13,7 @@ import { hmacHex, randomToken, safeEqual, sha256Hex } from '../modules/auth/cryp
 import { deviceLabel } from './device-label.js';
 
 const ACCESS = 'access';
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** A refresh token presented again this soon after it was rotated is two tabs racing, not a theft. */
 const ROTATION_GRACE_MS = 10_000;
 const DAY_MS = 86_400_000;
@@ -163,7 +164,7 @@ export class SessionService {
    */
   async refresh(cookie: string): Promise<RefreshOutcome> {
     const [sessionId, secret, extra] = cookie.split('.');
-    if (!sessionId || !secret || extra !== undefined) return { ok: false };
+    if (!sessionId || !UUID.test(sessionId) || !secret || extra !== undefined) return { ok: false };
     const session = await this.prisma.session.findUnique({
       where: { id: sessionId },
       select: {

@@ -311,7 +311,7 @@ export class AuthService {
       : undefined;
     if (!sessionId && refreshCookie) {
       const [id, secret] = refreshCookie.split('.');
-      if (id && secret) {
+      if (id && /^[0-9a-f-]{36}$/i.test(id) && secret) {
         const session = await this.prisma.session.findUnique({
           where: { id },
           select: { id: true, tokenHash: true },

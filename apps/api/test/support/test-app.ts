@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomInt } from 'node:crypto';
 import { Test } from '@nestjs/testing';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { createPrismaClient, type PrismaClient } from '@medtravel/db';
@@ -146,7 +146,9 @@ export async function createTestApp(
       url,
       headers: { ...(cookieHeader ? { cookie: cookieHeader } : {}), ...request.headers },
       ...(request.body === undefined ? {} : { payload: request.body as object }),
-      ...(request.ip ? { remoteAddress: request.ip } : {}),
+      // Each call comes from its own address unless the test says otherwise, so the per-address rate limit of one
+      // test never spills into another.
+      remoteAddress: request.ip ?? `10.${randomInt(256)}.${randomInt(256)}.${randomInt(1, 255)}`,
     });
     const setCookieHeaders = [response.headers['set-cookie'] ?? []].flat().map(String);
     const cookies = Object.fromEntries(
