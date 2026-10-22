@@ -6,3 +6,4 @@ coverage
 pnpm-lock.yaml
 packages/api-client/generated
 packages/db/generated
+docs/data-model.md

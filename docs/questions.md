@@ -37,3 +37,8 @@ Appended by build tasks. Format: `- [<TASK-ID>] <question> — assumed: <what wa
 - [S-06] Currency switcher scope — assumed: USD, EUR, INR, AED stored in a `mt_currency` cookie; nothing reads it until prices are shown (F-09 and the cost calculator).
 - [S-06] Logo and favicon — assumed: a placeholder mark (blue square, white cross, amber arc) drawn for this task; replace with the real brand.
 
+- [F-01] Money as `Int` is capped at 21.4 million major units per column — assumed: acceptable for any single payment, quote or line; totals are summed in the application; widen to `BigInt` if a case can exceed it (ADR 002).
+- [F-01] Entities beyond the task's list — assumed: added `StaffProfile`, `HospitalStaff`, `Accreditation`, `CaseAttendant`, `CaseStageHistory`, `DocumentShare`, `CommissionRule`, `MessageAttachment`, `StayHospitalDistance`, `NumberSequence` and the translation tables, because PRD sections 5 to 9 need them.
+- [F-01] How hospitals get at patient documents — assumed: through `DocumentShare` rows (per document and hospital, revocable, tied to a `Consent`), never a flag on the document.
+- [F-01] Generated versus trigger-maintained search columns — assumed: triggers, because Prisma tries to drop the default of a generated column in every later migration.
+- [F-01] Seed scope — assumed: master data with Arabic names now; users, hospitals and cases in F-11.
