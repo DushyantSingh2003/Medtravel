@@ -98,6 +98,20 @@ jobs:
     name: Build all apps and browser tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    services:
+      # The API serves the master data screens the browser tests use.
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: medtravel
+          POSTGRES_PASSWORD: medtravel
+          POSTGRES_DB: medtravel
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U medtravel -d medtravel"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
     env:
       NEXT_PUBLIC_API_URL: http://localhost:3001
       # The website hides its WhatsApp button without a number; the browser tests expect it.
@@ -124,12 +138,18 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
+      - name: Migrate and seed the database
+        run: |
+          pnpm --filter @medtravel/db db:deploy
+          pnpm --filter @medtravel/db db:seed
 
       # `pnpm check` has passed while an app failed to start before, so boot the built apps and
       # hit them instead of trusting the build alone.
       - name: Start API, website and portal
         run: |
-          (cd apps/api && PORT=3001 NODE_ENV=production node dist/main.js > "$RUNNER_TEMP/api.log" 2>&1 &)
+          # The stub sign-in is refused when NODE_ENV=production, so the API runs as "test" here. The portal is
+          # on another port, so it must be an allowed origin.
+          (cd apps/api && PORT=3001 NODE_ENV=test ENABLE_STUB_AUTH=true CORS_ORIGINS=http://localhost:3000,http://localhost:3002 node dist/main.js > "$RUNNER_TEMP/api.log" 2>&1 &)
           (cd apps/web && npx next start --port 3000 > "$RUNNER_TEMP/web.log" 2>&1 &)
           # The component gallery, its mock S3 endpoint and the stub login are off in production unless enabled.
           (cd apps/portal && ENABLE_UI_GALLERY=true ENABLE_STUB_AUTH=true npx next start --port 3002 > "$RUNNER_TEMP/portal.log" 2>&1 &)

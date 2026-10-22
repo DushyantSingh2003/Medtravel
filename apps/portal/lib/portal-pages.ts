@@ -172,7 +172,7 @@ export const PORTAL_DEFINITIONS: Record<Portal, PortalDefinition> = {
     pages: [
       { key: 'overview', icon: 'LayoutDashboard', priority: 'P0', section: 'admin' },
       { key: 'users', icon: 'Users', priority: 'P0', section: 'admin' },
-      { key: 'master-data', icon: 'Database', priority: 'P0', section: 'admin' },
+      { key: 'masters', icon: 'Database', priority: 'P0', section: 'admin' },
       { key: 'hospital-approvals', icon: 'Building2', priority: 'P0', section: 'admin' },
       { key: 'agent-approvals', icon: 'UserCheck', priority: 'P0', section: 'admin' },
       { key: 'cms', icon: 'PenSquare', priority: 'P0', section: 'admin' },

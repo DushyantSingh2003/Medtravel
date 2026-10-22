@@ -17,6 +17,7 @@
     "@medtravel/contracts": "workspace:*",
     "@medtravel/i18n": "workspace:*",
     "@medtravel/ui": "workspace:*",
+    "@tanstack/react-query": "^5.104.1",
     "@tanstack/react-table": "^8.21.3",
     "lucide-react": "^1.54.0",
     "next": "16.4.0",

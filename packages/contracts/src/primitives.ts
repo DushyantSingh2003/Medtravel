@@ -22,7 +22,26 @@ export const isRtlLocale = (locale: Locale): boolean => RTL_LOCALES.includes(loc
 export const idSchema = z.string().min(1, 'id is required');
 export type Id = z.infer<typeof idSchema>;
 
-/** Page-based pagination, used by every list endpoint. */
+/**
+ * Cursor pagination, used by every list endpoint. The cursor is opaque: pass back the `nextCursor` of the
+ * previous page, never build one.
+ */
+export const cursorQuerySchema = z.object({
+  cursor: z.string().min(1).max(512).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(25),
+});
+export type CursorQuery = z.infer<typeof cursorQuerySchema>;
+
+/** Shape every cursor-paginated list endpoint returns. `total` counts all rows matching the filters. */
+export const cursorPageSchema = <T extends z.ZodTypeAny>(item: T) =>
+  z.object({
+    items: z.array(item),
+    nextCursor: z.string().max(512).nullable(),
+    total: z.number().int().min(0),
+  });
+export type CursorPage<T> = { items: T[]; nextCursor: string | null; total: number };
+
+/** Page-based pagination. Superseded by cursor pagination for new endpoints (CLAUDE.md). */
 export const paginationQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),

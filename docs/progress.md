@@ -4,7 +4,7 @@ Tick a task here when it is finished and `pnpm check` is green. The task queue t
 build loop is `loop/cloud-state.json`; this file is the human-readable view and also records
 what each task deferred.
 
-Tasks: 116 in the plan. Done: S-01 to S-06, F-01.
+Tasks: 116 in the plan. Done: S-01 to S-06, F-01, F-02.
 
 ### Phase 0 — Scaffold (week 1)
 
@@ -18,7 +18,7 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01.
 ### Phase 1A — Foundation (weeks 2–4)
 
 - [x] **F-01** Database schema
-- [ ] **F-02** Master data module (the reference pattern)
+- [x] **F-02** Master data module (the reference pattern)
 - [ ] **F-03** Authentication
 - [ ] **F-04** Roles, permissions and data scoping
 - [ ] **F-05** Audit log and domain events
@@ -166,10 +166,37 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01.
 
 ## Notes and deferred work
 
+### Deferred from F-02
+
+- **Not yet verified on GitHub:** the browser job now needs a Postgres service, the migrate and seed step, and
+  an API started with the stub sign-in; the first CI result is recorded here once it has run.
+- The stub sign-in (`ENABLE_STUB_AUTH`, API and portal) stands in for F-03; `can()` in `packages/contracts` is an
+  interim matrix (F-04). Neither may stay on a deployed environment.
+- An existing `apps/api/.env` needs `ENABLE_STUB_AUTH=true` added by hand to use the admin screens locally
+  (`.env` files are never edited by the build).
+- API error messages are English; the admin form shows them as they are on the field. Localised API errors are
+  not done.
+- The public website still reads nothing from the master data API (needs a public, cached read endpoint, with the
+  CMS and the cost calculator).
+- No restore for countries, languages and currencies (they cannot be deleted, only deactivated), and no bulk
+  actions or import/export beyond the table's CSV export of the visible page.
+- Optimistic updates are not used: after a change the list is refetched (`invalidateQueries`), which was fast enough and
+  keeps the cursor pages honest.
+- The Arabic seed names are machine drafts: 245 country names come from CLDR (reliable), the 25 specialities,
+  60 treatments, 15 cities, document types and lost reasons were drafted by hand (`packages/i18n/REVIEW.md`).
+
+- From the F-02 review, not done: (1) saving translations replaces all of a row's translations, which is only safe
+  while Arabic is the one translated language; make it per locale before a third language is added. (2) Validation
+  messages in `packages/contracts` are English, so Arabic users see them on fields. (3) The seed re-adds a machine
+  Arabic name that an admin cleared. (4) Seed country names depend on the Node ICU version. (5) `trustProxy: true`
+  trusts any forwarded IP in the audit trail; set the real hop count at deployment. (6) Updates read the row
+  without a lock, so two simultaneous edits can record a stale `before`.
+- Sorting by a nullable column (typical stay) was removed: a cursor cannot page across NULLs.
+
 ### Deferred from F-01
 
-- **Not yet verified on GitHub:** the new database tests run in the API e2e job (`pnpm --filter @medtravel/db test:e2e`
-  against the Postgres service container); the first result is recorded here once it has run.
+- **Verified on GitHub:** `ci.yml` run 11 on `develop` (commit 5ba538a) passed, including the database tests in the
+  API e2e job (`pnpm --filter @medtravel/db test:e2e` against the Postgres service container).
 - Money columns are `BigInt` (ADR 002). Prisma returns them as `bigint`; the API layer (F-02 onward) must
   serialise them as strings.
 - `AuditEvent` is append-only through triggers a table owner could drop: in production the application role must

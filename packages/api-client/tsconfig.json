@@ -1,6 +1,6 @@
 {
   "extends": "@medtravel/config/tsconfig/react-lib.json",
-  "compilerOptions": { "outDir": "./dist", "rootDir": "./src", "types": ["node"] },
-  "include": ["src/**/*.ts", "src/**/*.tsx"],
-  "exclude": ["node_modules", "dist", "generated", "src/**/*.spec.tsx"]
+  "compilerOptions": { "outDir": "./dist", "rootDir": ".", "types": ["node"] },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "generated/**/*.ts"],
+  "exclude": ["node_modules", "dist", "src/**/*.spec.ts", "src/**/*.spec.tsx"]
 }

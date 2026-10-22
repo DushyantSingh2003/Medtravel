@@ -20,7 +20,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "e2e": "pnpm --filter @medtravel/e2e e2e",
-    "api:generate": "pnpm --filter @medtravel/api openapi:export && pnpm --filter @medtravel/api-client generate",
+    "api:generate": "turbo run build --filter=@medtravel/api-client",
     "db:migrate": "pnpm --filter @medtravel/db db:migrate",
     "db:seed": "pnpm --filter @medtravel/db db:seed",
     "db:studio": "pnpm --filter @medtravel/db db:studio",

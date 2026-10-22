@@ -36,8 +36,15 @@ export function FormInput<V extends FieldValues, N extends FieldPath<V>>({
   type,
   placeholder,
   autoComplete,
+  dir,
   ...base
-}: Base<V, N> & { type?: string; placeholder?: string; autoComplete?: string }) {
+}: Base<V, N> & {
+  type?: string;
+  placeholder?: string;
+  autoComplete?: string;
+  /** Text direction of what is typed; use `rtl` for a field that holds Arabic. */
+  dir?: 'ltr' | 'rtl' | 'auto';
+}) {
   return (
     <FormField {...base}>
       {({ field, control }) => (
@@ -48,6 +55,7 @@ export function FormInput<V extends FieldValues, N extends FieldPath<V>>({
           type={type}
           placeholder={placeholder}
           autoComplete={autoComplete}
+          dir={dir}
         />
       )}
     </FormField>
@@ -57,8 +65,9 @@ export function FormInput<V extends FieldValues, N extends FieldPath<V>>({
 export function FormTextarea<V extends FieldValues, N extends FieldPath<V>>({
   placeholder,
   rows,
+  dir,
   ...base
-}: Base<V, N> & { placeholder?: string; rows?: number }) {
+}: Base<V, N> & { placeholder?: string; rows?: number; dir?: 'ltr' | 'rtl' | 'auto' }) {
   return (
     <FormField {...base}>
       {({ field, control }) => (
@@ -68,6 +77,7 @@ export function FormTextarea<V extends FieldValues, N extends FieldPath<V>>({
           value={field.value ?? ''}
           placeholder={placeholder}
           rows={rows}
+          dir={dir}
         />
       )}
     </FormField>

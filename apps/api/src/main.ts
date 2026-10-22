@@ -26,15 +26,20 @@ async function bootstrap(): Promise<void> {
 
   app.enableCors({
     origin: env.CORS_ORIGINS,
+    // The default allows only GET, HEAD and POST, which would make the browser refuse every PATCH and DELETE.
+    methods: ['GET', 'HEAD', 'POST', 'PATCH', 'DELETE'],
     // Sessions are httpOnly cookies, so the browser must be allowed to send them.
     credentials: true,
   });
 
   app.enableShutdownHooks();
 
-  SwaggerModule.setup('docs', app, buildOpenApiDocument(app), {
-    swaggerOptions: { persistAuthorization: true },
-  });
+  // The API description and the "try it" page are for development and CI; a deployed API does not publish them.
+  if (env.NODE_ENV !== 'production') {
+    SwaggerModule.setup('docs', app, buildOpenApiDocument(app), {
+      swaggerOptions: { persistAuthorization: true },
+    });
+  }
 
   // 0.0.0.0 so the container is reachable from the host.
   await app.listen({ port: env.PORT, host: '0.0.0.0' });
