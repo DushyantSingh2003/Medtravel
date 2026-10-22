@@ -52,7 +52,15 @@ const DOMAINS: { title: string; blurb: string; models: string[] }[] = [
     title: 'Users and access',
     blurb:
       'One `User` per login. What a user is linked to depends on the role: a Patient, an agent organisation, a hospital, or our own staff.',
-    models: ['User', 'Session', 'StaffProfile', 'AgentUser', 'HospitalStaff'],
+    models: [
+      'User',
+      'Session',
+      'AuthChallenge',
+      'BackupCode',
+      'StaffProfile',
+      'AgentUser',
+      'HospitalStaff',
+    ],
   },
   {
     title: 'Patients and consent',

@@ -2,13 +2,14 @@ import { ForbiddenException, type ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { describe, expect, it } from 'vitest';
 import type { Role } from '@medtravel/contracts';
-import { Can, Public } from './decorators.js';
+import { Authenticated, Can, Public } from './decorators.js';
 import { PermissionsGuard } from './permissions.guard.js';
 
 class Routes {
   @Can('delete', 'MasterData') guarded(): void {}
   undeclared(): void {}
   @Public() open(): void {}
+  @Authenticated() anyone(): void {}
 }
 
 const contextFor = (handler: () => void, role?: Role): ExecutionContext =>
@@ -16,7 +17,9 @@ const contextFor = (handler: () => void, role?: Role): ExecutionContext =>
     getHandler: () => handler,
     getClass: () => Routes,
     switchToHttp: () => ({
-      getRequest: () => ({ actor: role ? { userId: null, role } : undefined }),
+      getRequest: () => ({
+        actor: role ? { userId: 'u', role, sessionId: 's', scopeCaseId: null } : undefined,
+      }),
     }),
   }) as unknown as ExecutionContext;
 
@@ -34,7 +37,7 @@ describe('PermissionsGuard', () => {
     );
   });
 
-  it('fails closed on a route that declares no permission', () => {
+  it('fails closed on a route that declares nothing, even for the super admin', () => {
     expect(() => guard.canActivate(contextFor(routes.undeclared, 'super_admin'))).toThrow(
       ForbiddenException,
     );
@@ -42,5 +45,10 @@ describe('PermissionsGuard', () => {
 
   it('lets public routes through without an actor', () => {
     expect(guard.canActivate(contextFor(routes.open))).toBe(true);
+  });
+
+  it('lets any signed-in user through an authenticated route, but nobody who is not signed in', () => {
+    expect(guard.canActivate(contextFor(routes.anyone, 'patient'))).toBe(true);
+    expect(() => guard.canActivate(contextFor(routes.anyone))).toThrow(ForbiddenException);
   });
 });

@@ -16,6 +16,10 @@ const urlString = (message: string) =>
  * variable fails the process immediately with a readable message instead of surfacing as an
  * undefined deep inside a request.
  */
+/** Development-only defaults so a fresh checkout runs; production refuses them. */
+const DEV_TOKEN_SECRET = 'dev-only-token-secret-change-me-0123456789abcdef';
+const DEV_ENCRYPTION_KEY = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+
 export const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -32,23 +36,48 @@ export const envSchema = z
           .map((origin) => origin.trim())
           .filter(Boolean),
       ),
-    /**
-     * Development sign-in until F-03: the role is read from the `x-stub-role` header or the portal's stub cookie.
-     * Anyone can claim any role, so it is off unless exactly "true", and the API refuses to boot with it on in production.
-     */
-    ENABLE_STUB_AUTH: z
+    /** Signs access tokens, sign-in challenges and hashes backup and sign-in codes. Long and random in production. */
+    AUTH_TOKEN_SECRET: z
+      .string()
+      .min(32, 'AUTH_TOKEN_SECRET needs at least 32 characters')
+      .default(DEV_TOKEN_SECRET),
+    /** 32 bytes as 64 hex characters: encrypts TOTP secrets in the database. */
+    AUTH_ENCRYPTION_KEY: z
+      .string()
+      .regex(/^[0-9a-f]{64}$/i, 'AUTH_ENCRYPTION_KEY must be 64 hex characters (32 bytes)')
+      .default(DEV_ENCRYPTION_KEY),
+    /** Where the portal lives: the links in emails point here. */
+    PORTAL_URL: urlString('PORTAL_URL must be a URL').default('http://localhost:3002'),
+    /** Cookie domain, e.g. `.medtravel.example` when the portal and the API are on sibling subdomains. Unset locally. */
+    COOKIE_DOMAIN: z.string().optional(),
+    /** How many reverse proxies (load balancers) sit in front of the API; 0 locally. The client address is read from the right. */
+    TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
+    /** `capture` keeps mail in memory (development, tests); `smtp` sends it. */
+    EMAIL_TRANSPORT: z.enum(['capture', 'smtp']).default('capture'),
+    SMTP_HOST: z.string().default('localhost'),
+    SMTP_PORT: z.coerce.number().int().default(1025),
+    EMAIL_FROM: z.string().default('MedTravel <noreply@medtravel.local>'),
+    /** Skip the mandatory second factor for users who have not enrolled. Development only; refused elsewhere. */
+    AUTH_DEV_SKIP_2FA: z
       .string()
       .optional()
       .transform((value) => value === 'true'),
   })
-  .refine(
-    (env) => !env.ENABLE_STUB_AUTH || env.NODE_ENV === 'development' || env.NODE_ENV === 'test',
-    {
-      path: ['ENABLE_STUB_AUTH'],
-      message:
-        'The stub sign-in must never be enabled in production (only NODE_ENV=development or test)',
-    },
-  );
+  .superRefine((env, ctx) => {
+    const issue = (path: string, message: string) =>
+      ctx.addIssue({ code: 'custom', path: [path], message });
+    if (env.AUTH_DEV_SKIP_2FA && env.NODE_ENV !== 'development') {
+      issue('AUTH_DEV_SKIP_2FA', 'Skipping 2FA is only allowed when NODE_ENV=development');
+    }
+    if (env.NODE_ENV === 'production') {
+      if (env.AUTH_TOKEN_SECRET === DEV_TOKEN_SECRET)
+        issue('AUTH_TOKEN_SECRET', 'Set a real AUTH_TOKEN_SECRET in production');
+      if (env.AUTH_ENCRYPTION_KEY === DEV_ENCRYPTION_KEY)
+        issue('AUTH_ENCRYPTION_KEY', 'Set a real AUTH_ENCRYPTION_KEY in production');
+      if (env.EMAIL_TRANSPORT === 'capture')
+        issue('EMAIL_TRANSPORT', 'Mail must be sent (EMAIL_TRANSPORT=smtp) in production');
+    }
+  });
 
 export type Env = z.infer<typeof envSchema>;
 

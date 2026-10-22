@@ -11,6 +11,7 @@ import type { Env } from '../config/env.schema.js';
  */
 export const REDACTED_PATHS = [
   'req.headers.authorization',
+  'req.headers["x-csrf-token"]',
   'req.headers.cookie',
   'req.headers["set-cookie"]',
   'res.headers["set-cookie"]',
@@ -19,6 +20,9 @@ export const REDACTED_PATHS = [
   'req.body.newPassword',
   'req.body.otp',
   'req.body.token',
+  'req.body.challengeToken',
+  'req.body.code',
+  'req.body.identifier',
   'req.body.refreshToken',
   'req.body.email',
   'req.body.phone',

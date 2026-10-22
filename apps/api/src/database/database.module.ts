@@ -1,5 +1,5 @@
 import { Global, Inject, Injectable, Module, type OnApplicationShutdown } from '@nestjs/common';
-import { createPrismaClient, type PrismaClient } from '@medtravel/db';
+import { createPrismaClient, type Prisma, type PrismaClient } from '@medtravel/db';
 import { ENV } from '../config/config.module.js';
 import type { Env } from '../config/env.schema.js';
 
@@ -7,19 +7,7 @@ import type { Env } from '../config/env.schema.js';
 export const PRISMA = Symbol('PRISMA');
 
 /** A client or the transaction client handed to `$transaction` callbacks: services accept either. */
-export type Db = Pick<
-  PrismaClient,
-  | 'country'
-  | 'language'
-  | 'currency'
-  | 'speciality'
-  | 'treatment'
-  | 'city'
-  | 'documentType'
-  | 'lostReason'
-  | 'auditEvent'
-  | 'outboxEvent'
->;
+export type Db = Prisma.TransactionClient;
 
 @Injectable()
 class DatabaseShutdown implements OnApplicationShutdown {
