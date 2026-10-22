@@ -99,7 +99,14 @@ export function SiteHeader({
       </div>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="start" closeLabel={labels.closeMenu}>
+        <SheetContent
+          side="start"
+          closeLabel={labels.closeMenu}
+          // Any link or button-link in the panel (the logo and the call to action too) closes it.
+          onClick={(event) => {
+            if ((event.target as HTMLElement).closest('a')) setOpen(false);
+          }}
+        >
           <SheetTitle className="flex h-10 items-center">{brand}</SheetTitle>
           <SheetDescription className="sr-only">{labels.navigation}</SheetDescription>
           <nav aria-label={labels.navigation} className="flex-1 overflow-y-auto">

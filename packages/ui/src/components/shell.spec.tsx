@@ -65,12 +65,9 @@ describe('AppShell', () => {
   it('collapses to icons, keeps the names for screen readers, and remembers the choice', async () => {
     const { unmount } = render(shell());
     const toggle = screen.getByRole('button', { name: 'Collapse sidebar' });
-    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(toggle).not.toHaveAttribute('aria-expanded');
     await userEvent.click(toggle);
-    expect(screen.getByRole('button', { name: 'Expand sidebar' })).toHaveAttribute(
-      'aria-expanded',
-      'false',
-    );
+    expect(screen.getByRole('button', { name: 'Expand sidebar' })).toBeInTheDocument();
     // The link is still named, only visually hidden.
     expect(screen.getByRole('link', { name: 'Cases' })).toBeInTheDocument();
     expect(window.localStorage.getItem('test:shell')).toBe('1');
@@ -89,6 +86,8 @@ describe('AppShell', () => {
     });
     render(shell());
     await userEvent.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
+    // The choice still takes effect, kept in memory.
+    expect(await screen.findByRole('button', { name: 'Expand sidebar' })).toBeInTheDocument();
     getItem.mockRestore();
     setItem.mockRestore();
   });
@@ -99,6 +98,14 @@ describe('AppShell', () => {
     const dialog = await screen.findByRole('dialog');
     const link = within(dialog).getByRole('link', { name: 'Overview' });
     fireEvent.click(link);
+    await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('closes the panel when the logo is used, not only the menu links', async () => {
+    render(shell({ brand: <a href="/home">MedTravel home</a> }));
+    await userEvent.click(screen.getByRole('button', { name: 'Open menu' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('link', { name: 'MedTravel home' }));
     await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
@@ -255,6 +262,22 @@ describe('SiteHeader and SiteFooter', () => {
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByRole('link', { name: 'Treatments' })).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'Get a quote' })).toBeInTheDocument();
+  });
+
+  it('closes the panel when the call to action inside it is used', async () => {
+    render(
+      <SiteHeader
+        brand="x"
+        nav={nav}
+        actions={null}
+        mobileActions={<a href="/quote">Get a quote</a>}
+        labels={headerLabels}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Open menu' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('link', { name: 'Get a quote' }));
+    await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
   it('renders footer columns, legal links and the copyright line', () => {

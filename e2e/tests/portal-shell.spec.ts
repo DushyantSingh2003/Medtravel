@@ -325,6 +325,18 @@ test.describe('phone (360 px)', () => {
       await expect(dialog).toBeHidden();
     });
 
+    test(`${locale}: the panel closes after using the logo`, async ({ page }) => {
+      await signInAs(page, 'case_manager', locale);
+      await page.goto(`/${locale}/ops/leads`);
+      await page
+        .getByRole('button', { name: locale === 'en' ? 'Open menu' : 'فتح القائمة' })
+        .click();
+      const dialog = page.getByRole('dialog');
+      await dialog.locator(`a[href$="/ops"]`).first().click();
+      await expect(page).toHaveURL(new RegExp(`/${locale}/ops$`));
+      await expect(dialog).toBeHidden();
+    });
+
     for (const { portal, role } of PORTAL_TOURS) {
       test(`${locale}: the ${portal} home fits the screen without sideways scrolling`, async ({
         page,
@@ -376,5 +388,51 @@ test.describe('accessibility', () => {
         await scan('not found');
       });
     }
+  }
+});
+
+test.describe('accessibility of every portal and of the shell controls', () => {
+  const scan = async (page: Page, label: string) => {
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+    expect(results.violations.map((v) => `${label}: ${v.id} (${v.nodes.length})`)).toEqual([]);
+  };
+
+  for (const locale of LOCALES) {
+    test(`${locale}: all five portal homes have no WCAG A/AA violations`, async ({ page }) => {
+      for (const { portal, role } of PORTAL_TOURS) {
+        await signInAs(page, role, locale);
+        await scan(page, portal);
+        await page.context().clearCookies();
+      }
+    });
+
+    test(`${locale}: the collapsed sidebar, the open menus and the phone menu have none either`, async ({
+      page,
+    }) => {
+      await signInAs(page, 'case_manager', locale);
+      await page.getByRole('button', { name: /Collapse sidebar|طيّ الشريط الجانبي/ }).click();
+      await scan(page, 'collapsed sidebar');
+      await page.getByRole('button', { name: /Account menu|قائمة الحساب/ }).click();
+      await scan(page, 'user menu');
+      await page.keyboard.press('Escape');
+      await page.getByRole('button', { name: /Notifications|الإشعارات/ }).click();
+      await scan(page, 'notifications');
+      await page.keyboard.press('Escape');
+
+      await page.setViewportSize({ width: 360, height: 740 });
+      await page.getByRole('button', { name: /Open menu|فتح القائمة/ }).click();
+      await scan(page, 'phone menu');
+    });
+
+    test(`${locale}: landmarks have unique names (breadcrumb versus main navigation)`, async ({
+      page,
+    }) => {
+      await signInAs(page, 'case_manager', locale);
+      await page.goto(`/${locale}/ops/leads`);
+      const results = await new AxeBuilder({ page }).withRules(['landmark-unique']).analyze();
+      expect(results.violations.map((v) => v.id)).toEqual([]);
+    });
   }
 });

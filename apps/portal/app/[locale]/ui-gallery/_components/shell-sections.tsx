@@ -15,8 +15,26 @@ import type { Locale } from '@medtravel/contracts';
 import { LOCALE_LABELS } from '@medtravel/i18n';
 import { Briefcase, Coins, LayoutDashboard, LogOut, MessageSquare, UserCog } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { createContext, useContext, useState, type ComponentProps } from 'react';
 import { Section } from './section';
+
+const SelectDemoPage = createContext<(id: string) => void>(() => {});
+
+/** Demo navigation link: picks a page in the demo instead of leaving the gallery. Module-level so it keeps its identity. */
+function DemoLink({ href, onClick, ...props }: ComponentProps<'a'>) {
+  const select = useContext(SelectDemoPage);
+  return (
+    <a
+      {...props}
+      href={href}
+      onClick={(event) => {
+        event.preventDefault();
+        select(String(href).slice(1));
+        onClick?.(event);
+      }}
+    />
+  );
+}
 
 const CURRENCIES = ['USD', 'EUR', 'INR', 'AED'].map((value) => ({ value, label: value }));
 
@@ -79,78 +97,70 @@ export function ShellSections({ locale }: { locale: Locale }) {
         description={t('descriptions.appShell')}
       >
         <div className="h-[28rem] overflow-hidden rounded-xl border">
-          <AppShell
-            contained
-            storageKey="gallery:app-shell"
-            brand={brand}
-            brandCompact={<BrandMark />}
-            activeId={active}
-            sections={[
-              {
-                id: 'main',
-                label: t('shellDemo.section'),
-                items: [
-                  {
-                    id: 'dashboard',
-                    label: t('shellDemo.dashboard'),
-                    href: '#dashboard',
-                    icon: <LayoutDashboard aria-hidden="true" />,
-                  },
-                  {
-                    id: 'cases',
-                    label: t('shellDemo.cases'),
-                    href: '#cases',
-                    icon: <Briefcase aria-hidden="true" />,
-                  },
-                  {
-                    id: 'messages',
-                    label: t('shellDemo.messages'),
-                    href: '#messages',
-                    icon: <MessageSquare aria-hidden="true" />,
-                  },
-                ],
-              },
-            ]}
-            linkComponent={({ href, onClick, ...props }: React.ComponentProps<'a'>) => (
-              <a
-                {...props}
-                href={href}
-                onClick={(event) => {
-                  event.preventDefault();
-                  setActive(String(href).slice(1));
-                  onClick?.(event);
-                }}
-              />
-            )}
-            labels={{
-              skipToContent: root('shell.skipToContent'),
-              navigation: t('shellDemo.navigation'),
-              openMenu: root('shell.openMenu'),
-              closeMenu: root('shell.closeMenu'),
-              collapse: root('shell.collapse'),
-              expand: root('shell.expand'),
-            }}
-            topBar={
-              <div className="ms-auto flex items-center gap-1">
-                <NotificationsMenu
-                  items={notifications}
-                  label={root('shell.notifications')}
-                  emptyLabel={root('shell.notificationsEmpty')}
-                  unreadLabel={(count) => t('shellDemo.unread', { count })}
-                />
-                <UserMenu
-                  name="Asha Verma"
-                  description={root('roles.case_manager')}
-                  label={root('shell.userMenu')}
-                  heading={root('shell.signedInAs')}
-                  items={userMenuItems}
-                />
-              </div>
-            }
-          >
-            <h3 className="text-lg font-semibold">{t(`shellDemo.${active}`)}</h3>
-            <p className="text-sm text-muted-foreground">{t('shellDemo.body')}</p>
-          </AppShell>
+          <SelectDemoPage.Provider value={setActive}>
+            <AppShell
+              contained
+              storageKey="gallery:app-shell"
+              brand={brand}
+              brandCompact={<BrandMark />}
+              activeId={active}
+              sections={[
+                {
+                  id: 'main',
+                  label: t('shellDemo.section'),
+                  items: [
+                    {
+                      id: 'dashboard',
+                      label: t('shellDemo.dashboard'),
+                      href: '#dashboard',
+                      icon: <LayoutDashboard aria-hidden="true" />,
+                    },
+                    {
+                      id: 'cases',
+                      label: t('shellDemo.cases'),
+                      href: '#cases',
+                      icon: <Briefcase aria-hidden="true" />,
+                    },
+                    {
+                      id: 'messages',
+                      label: t('shellDemo.messages'),
+                      href: '#messages',
+                      icon: <MessageSquare aria-hidden="true" />,
+                    },
+                  ],
+                },
+              ]}
+              linkComponent={DemoLink}
+              labels={{
+                skipToContent: root('shell.skipToContent'),
+                navigation: t('shellDemo.navigation'),
+                openMenu: root('shell.openMenu'),
+                closeMenu: root('shell.closeMenu'),
+                collapse: root('shell.collapse'),
+                expand: root('shell.expand'),
+              }}
+              topBar={
+                <div className="ms-auto flex items-center gap-1">
+                  <NotificationsMenu
+                    items={notifications}
+                    label={root('shell.notifications')}
+                    emptyLabel={root('shell.notificationsEmpty')}
+                    unreadLabel={(count) => t('shellDemo.unread', { count })}
+                  />
+                  <UserMenu
+                    name="Asha Verma"
+                    description={root('roles.case_manager')}
+                    label={root('shell.userMenu')}
+                    heading={root('shell.signedInAs')}
+                    items={userMenuItems}
+                  />
+                </div>
+              }
+            >
+              <h3 className="text-lg font-semibold">{t(`shellDemo.${active}`)}</h3>
+              <p className="text-sm text-muted-foreground">{t('shellDemo.body')}</p>
+            </AppShell>
+          </SelectDemoPage.Provider>
         </div>
       </Section>
 

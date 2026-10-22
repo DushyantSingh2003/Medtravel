@@ -100,6 +100,8 @@ jobs:
       NEXT_PUBLIC_API_URL: http://localhost:3001
       # The website hides its WhatsApp button without a number; the browser tests expect it.
       NEXT_PUBLIC_WHATSAPP_NUMBER: '919999900000'
+      # robots.txt only allows crawling when the site knows its own address.
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
       DATABASE_URL: postgresql://medtravel:medtravel@localhost:5432/medtravel?schema=public
       REDIS_URL: redis://localhost:6379
     steps:

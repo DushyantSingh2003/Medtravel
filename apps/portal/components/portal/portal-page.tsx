@@ -38,7 +38,7 @@ export async function PortalPage({ portal, params }: PortalPageProps & { portal:
         title={isCase ? t('placeholder.caseId', { id: route.caseId }) : title}
         description={t(`pages.${portal}.${page.key}`)}
         breadcrumbs={{
-          label: t('shell.navigation'),
+          label: t('shell.breadcrumb'),
           linkComponent: Link,
           items: [
             { label: t(`portals.${portal}`), href: `/${portal}` },

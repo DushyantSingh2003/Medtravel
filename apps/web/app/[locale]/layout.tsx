@@ -10,6 +10,9 @@ import { SiteHeaderBar } from '../../components/site/site-header-bar';
 import { siteUrl, whatsappLink } from '../../lib/site-config';
 import '../globals.css';
 
+/** Open Graph wants language_TERRITORY. */
+const OG_LOCALES = { en: 'en_US', ar: 'ar_AE' } as const;
+
 export async function generateMetadata({
   params,
 }: {
@@ -27,7 +30,7 @@ export async function generateMetadata({
     openGraph: {
       type: 'website',
       siteName: name,
-      locale,
+      locale: OG_LOCALES[locale],
       title: `${name} — ${t('home.title')}`,
       description: t('site.description'),
     },

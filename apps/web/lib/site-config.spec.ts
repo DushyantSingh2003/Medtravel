@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { languageAlternates, siteUrl, whatsappLink } from './site-config';
+import {
+  isSiteUrlConfigured,
+  languageAlternates,
+  pageAlternates,
+  siteUrl,
+  whatsappLink,
+} from './site-config';
 
 describe('whatsappLink', () => {
   it('builds a wa.me link from digits, ignoring formatting', () => {
@@ -32,6 +38,31 @@ describe('siteUrl', () => {
     expect(siteUrl().origin).toBe('https://medtravel.example');
     vi.stubEnv('NEXT_PUBLIC_SITE_URL', '');
     expect(siteUrl().origin).toBe('http://localhost:3000');
+  });
+});
+
+describe('isSiteUrlConfigured and siteUrl errors', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('counts an empty value (the Docker build default) as not configured', () => {
+    expect(isSiteUrlConfigured('')).toBe(false);
+    expect(isSiteUrlConfigured(undefined)).toBe(false);
+    expect(isSiteUrlConfigured('https://medtravel.example')).toBe(true);
+  });
+
+  it('explains a value that is not a full URL', () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'medtravel.example');
+    expect(() => siteUrl()).toThrow(/full URL/);
+  });
+});
+
+describe('pageAlternates', () => {
+  it('gives the page its own canonical address, each language, and an English default', () => {
+    expect(pageAlternates('ar', '/treatments')).toEqual({
+      canonical: '/ar/treatments',
+      languages: { en: '/en/treatments', ar: '/ar/treatments', 'x-default': '/en/treatments' },
+    });
+    expect(pageAlternates('en', '').canonical).toBe('/en');
   });
 });
 

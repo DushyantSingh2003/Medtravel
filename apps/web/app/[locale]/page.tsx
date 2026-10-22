@@ -4,11 +4,16 @@ import type { Metadata } from 'next';
 import { Button } from '@medtravel/ui';
 import { isLocale } from '@medtravel/i18n';
 import { Link } from '../../i18n/navigation';
-import { languageAlternates } from '../../lib/site-config';
+import { pageAlternates } from '../../lib/site-config';
 
-export const generateMetadata = (): Metadata => ({
-  alternates: { languages: languageAlternates('') },
-});
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return { alternates: pageAlternates(locale, '') };
+}
 
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;

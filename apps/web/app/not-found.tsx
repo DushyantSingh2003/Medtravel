@@ -26,9 +26,11 @@ export default function NotFound() {
         <main className="mx-auto flex min-h-dvh max-w-xl flex-col justify-center gap-10 px-4">
           {(['en', 'ar'] as const).map((locale) => {
             const m = errorsOf(locale);
+            // One page-level heading, in the first language; the second language is a sub-heading.
+            const Heading = locale === 'en' ? 'h1' : 'h2';
             return (
               <section key={locale} lang={locale} dir={directionOf(locale)} className="space-y-3">
-                <h1 className="text-2xl font-semibold">{m.notFoundTitle}</h1>
+                <Heading className="text-2xl font-semibold">{m.notFoundTitle}</Heading>
                 <p className="text-sm text-muted-foreground">{m.notFoundBody}</p>
                 <Link
                   href={`/${locale}`}

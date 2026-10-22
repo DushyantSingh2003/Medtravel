@@ -24,9 +24,11 @@ export default function GlobalError({
         <main className="mx-auto flex min-h-dvh max-w-xl flex-col justify-center gap-8 px-4">
           {(['en', 'ar'] as const).map((locale) => {
             const m = errorsOf(locale);
+            // One page-level heading, in the first language; the second language is a sub-heading.
+            const Heading = locale === 'en' ? 'h1' : 'h2';
             return (
               <section key={locale} lang={locale} dir={directionOf(locale)} className="space-y-3">
-                <h1 className="text-xl font-semibold">{m.title}</h1>
+                <Heading className="text-xl font-semibold">{m.title}</Heading>
                 <p className="text-sm text-muted-foreground">{m.body}</p>
                 <button
                   type="button"

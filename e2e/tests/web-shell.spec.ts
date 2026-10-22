@@ -124,7 +124,8 @@ test.describe('footer and WhatsApp', () => {
       for (const slug of LEGAL) {
         await expect(footer.locator(`a[href="/${locale}/${slug}"]`).first()).toBeVisible();
       }
-      await expect(footer).toContainText(`© ${new Date().getFullYear()}`);
+      // The year is the one the site was built in, so only its shape is checked.
+      await expect(footer).toContainText(/©\s*\d{4}/);
     });
   }
 
@@ -199,6 +200,23 @@ test.describe('phone (360 px)', () => {
       await expect(dialog).toBeHidden();
     });
 
+    test(`${locale}: the panel closes after the call to action and after the logo, not only the menu links`, async ({
+      page,
+    }) => {
+      await page.goto(`/${locale}/about`);
+      const open = () =>
+        page.getByRole('button', { name: locale === 'en' ? 'Open menu' : 'فتح القائمة' }).click();
+      await open();
+      const dialog = page.getByRole('dialog');
+      await dialog.locator('a[href$="/quote"]').click();
+      await expect(page).toHaveURL(new RegExp(`/${locale}/quote$`));
+      await expect(dialog).toBeHidden();
+      await open();
+      await dialog.locator('a[href$="/' + locale + '"]').click();
+      await expect(page).toHaveURL(new RegExp(`/${locale}$`));
+      await expect(dialog).toBeHidden();
+    });
+
     test(`${locale}: the home page, a placeholder and the 404 page fit the screen`, async ({
       page,
     }) => {
@@ -223,10 +241,8 @@ test.describe('not found', () => {
     ]) {
       const response = await page.goto(path);
       expect(response?.status(), path).toBe(404);
-      await expect(page.getByRole('heading', { level: 1 })).toHaveText([
-        'Page not found',
-        'الصفحة غير موجودة',
-      ]);
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText('Page not found');
+      await expect(page.getByRole('heading', { level: 2 })).toHaveText('الصفحة غير موجودة');
     }
     await page.getByRole('link', { name: 'Go to the home page' }).click();
     await expect(page).toHaveURL(/\/en$/);

@@ -53,7 +53,8 @@ describe('portal screen registry', () => {
   it('covers the screens the PRD names for each portal', () => {
     const keysOf = (portal: (typeof PORTALS)[number]) =>
       PORTAL_DEFINITIONS[portal].pages.map((page) => page.key);
-    // PRD 5.2 patient portal: 14 features. 6 coordinator: 17. 7 hospital: 12. 8 agent: 9. 9 admin: 9 + 9 + 5.
+    // PRD features per portal (5.2: 14, 6: 17, 7: 12, 8: 9, 9: 9 + 9 + 5), plus an overview page for every
+    // portal whose PRD section has no dashboard of its own (all but the patient portal).
     expect(keysOf('patient')).toHaveLength(14);
     expect(keysOf('ops')).toHaveLength(18);
     expect(keysOf('hospital')).toHaveLength(13);

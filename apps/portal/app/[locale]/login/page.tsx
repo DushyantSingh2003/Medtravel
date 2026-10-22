@@ -20,13 +20,13 @@ export async function generateMetadata({
   return { title: t('title'), robots: { index: false, follow: false } };
 }
 
+/** Reads the session and runtime configuration, so it must not be prerendered at build time. */
+export const dynamic = 'force-dynamic';
+
 /**
  * Stub sign-in: pick a role, land in that role's portal. Real sign-in (email or phone OTP) arrives
  * with F-03; until then this page only works when ENABLE_STUB_AUTH=true.
  */
-/** Reads the session and runtime configuration, so it must not be prerendered at build time. */
-export const dynamic = 'force-dynamic';
-
 export default async function LoginPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();

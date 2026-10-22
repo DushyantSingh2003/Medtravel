@@ -6,6 +6,7 @@ import { cn } from '../lib/cn';
 import { useStoredFlag } from '../lib/use-stored-flag';
 import { Button } from './button';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from './sheet';
+import { Direction } from 'radix-ui';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip';
 
 export interface NavItem {
@@ -60,12 +61,14 @@ function NavLinks({
   collapsed,
   linkComponent: LinkComponent,
   onNavigate,
+  dir,
 }: {
   sections: NavSection[];
   activeId?: string;
   collapsed: boolean;
   linkComponent: ElementType;
   onNavigate?: () => void;
+  dir: 'ltr' | 'rtl';
 }) {
   return (
     <div className="space-y-4">
@@ -104,7 +107,9 @@ function NavLinks({
                   {collapsed ? (
                     <Tooltip>
                       <TooltipTrigger asChild>{link}</TooltipTrigger>
-                      <TooltipContent side="right">{item.label}</TooltipContent>
+                      <TooltipContent side={dir === 'rtl' ? 'left' : 'right'}>
+                        {item.label}
+                      </TooltipContent>
                     </Tooltip>
                   ) : (
                     link
@@ -138,6 +143,7 @@ export function AppShell({
   const [collapsed, setCollapsed] = useStoredFlag(storageKey);
   const [menuOpen, setMenuOpen] = useState(false);
   const mainId = `${useId()}-main`;
+  const dir = Direction.useDirection();
   const toggle = () => setCollapsed(!collapsed);
   // Embedded in a page (the gallery) the shell must not add page-level landmarks of its own.
   const Aside = contained ? 'div' : 'aside';
@@ -177,6 +183,7 @@ export function AppShell({
               sections={sections}
               activeId={activeId}
               collapsed={collapsed}
+              dir={dir}
               linkComponent={linkComponent}
             />
           </nav>
@@ -185,7 +192,6 @@ export function AppShell({
               variant="ghost"
               size="sm"
               onClick={toggle}
-              aria-expanded={!collapsed}
               aria-label={collapsed ? labels.expand : labels.collapse}
               className={cn('w-full', collapsed ? 'justify-center' : 'justify-start')}
             >
@@ -202,7 +208,15 @@ export function AppShell({
         </Aside>
 
         <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-          <SheetContent side="start" closeLabel={labels.closeMenu} className="gap-3 p-3">
+          <SheetContent
+            side="start"
+            closeLabel={labels.closeMenu}
+            className="gap-3 p-3"
+            // Any link in the panel (the logo included) leaves the page, so the panel closes.
+            onClick={(event) => {
+              if ((event.target as HTMLElement).closest('a')) setMenuOpen(false);
+            }}
+          >
             <SheetTitle className="flex h-10 items-center px-2">{brand}</SheetTitle>
             <SheetDescription className="sr-only">{labels.navigation}</SheetDescription>
             <nav aria-label={labels.navigation} className="-mx-1 flex-1 overflow-y-auto px-1">
@@ -210,6 +224,7 @@ export function AppShell({
                 sections={sections}
                 activeId={activeId}
                 collapsed={false}
+                dir={dir}
                 linkComponent={linkComponent}
                 onNavigate={() => setMenuOpen(false)}
               />
