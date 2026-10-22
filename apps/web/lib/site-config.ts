@@ -45,3 +45,6 @@ export function pageAlternates(locale: string, path: string) {
     languages: { ...languageAlternates(path), 'x-default': `/${DEFAULT_LOCALE}${path}` },
   };
 }
+
+/** Open Graph wants language_TERRITORY. */
+export const OG_LOCALES = { en: 'en_US', ar: 'ar_AE' } as const;

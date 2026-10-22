@@ -45,7 +45,8 @@ export function UserMenu({
   linkComponent: LinkComponent = 'a',
 }: UserMenuProps) {
   return (
-    <DropdownMenu>
+    // Non-modal: a small account menu does not need the rest of the page hidden from assistive technology.
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger
         data-slot="user-menu"
         className="rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"

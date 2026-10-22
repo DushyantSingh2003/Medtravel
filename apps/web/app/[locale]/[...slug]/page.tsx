@@ -4,7 +4,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { Link } from '../../../i18n/navigation';
-import { pageAlternates } from '../../../lib/site-config';
+import { OG_LOCALES, pageAlternates } from '../../../lib/site-config';
 import { SITE_PAGES, isSitePage } from '../../../lib/site-pages';
 
 type Props = { params: Promise<{ locale: string; slug: string[] }> };
@@ -29,7 +29,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description,
     alternates: pageAlternates(locale, `/${page}`),
     // Social previews show this page's own title, not the home page's.
-    openGraph: { title, description, url: `/${locale}/${page}` },
+    // Replaces the layout's openGraph as a whole, so the site-wide fields are repeated.
+    openGraph: {
+      type: 'website',
+      siteName: t('common.appName'),
+      locale: OG_LOCALES[locale],
+      title,
+      description,
+      url: `/${locale}/${page}`,
+    },
   };
 }
 

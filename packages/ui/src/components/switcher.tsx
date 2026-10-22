@@ -44,7 +44,7 @@ export function Switcher({
 }: SwitcherProps) {
   const current = options.find((option) => option.value === value);
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
