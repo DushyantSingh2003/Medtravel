@@ -49,10 +49,12 @@
       "note": "App shells: portal shell with 79 placeholder screens, stub login, public site header/footer, 404/error/loading, SEO; 164 browser tests green"
     },
     "F-01": {
-      "status": "in-progress",
+      "status": "done",
       "attempts": 1,
       "claimedAt": "2026-10-22T16:11:58.432Z",
-      "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e"
+      "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e",
+      "finishedAt": "2026-10-22T16:42:35.500Z",
+      "note": "Database schema: 75 models, one migration, constraints, search, seed, docs"
     }
   },
   "approvals": [],
@@ -69,6 +71,7 @@
     "2026-10-10T05:52:51.795Z finish S-05 done",
     "2026-10-22T08:30:41.687Z claim S-06 attempt 1",
     "2026-10-22T09:18:36.217Z finish S-06 done",
-    "2026-10-22T16:11:58.438Z claim F-01 attempt 1"
+    "2026-10-22T16:11:58.438Z claim F-01 attempt 1",
+    "2026-10-22T16:42:35.500Z finish F-01 done"
   ]
 }
