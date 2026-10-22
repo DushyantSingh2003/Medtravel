@@ -147,7 +147,7 @@ test.describe('click through every placeholder page', () => {
         expect(new Set(targets.map((t) => t.href)).size).toBe(screens);
 
         for (const target of targets) {
-          await links.filter({ hasText: target.text }).first().click();
+          await page.locator(`[data-slot=app-shell] aside nav a[href="${target.href}"]`).click();
           await expect(page).toHaveURL(new RegExp(`${target.href}$`));
           await expect(page.getByRole('heading', { level: 1 })).toHaveText(target.text);
           await expect(page.getByRole('main').getByRole('heading', { level: 2 })).toBeVisible();

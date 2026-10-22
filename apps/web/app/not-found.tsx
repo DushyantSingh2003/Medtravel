@@ -1,8 +1,15 @@
 import { directionOf, loadMessages, type Locale } from '@medtravel/i18n';
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import './globals.css';
 
 type ErrorMessages = { notFoundTitle: string; notFoundBody: string; home: string };
+
+/** A page needs a title (WCAG 2.4.2); both languages, since the language is not known here. */
+export const metadata: Metadata = {
+  title: `${(loadMessages('en')['errors'] as ErrorMessages).notFoundTitle} · ${(loadMessages('ar')['errors'] as ErrorMessages).notFoundTitle}`,
+  robots: { index: false },
+};
 
 const errorsOf = (locale: Locale): ErrorMessages => loadMessages(locale)['errors'] as ErrorMessages;
 
