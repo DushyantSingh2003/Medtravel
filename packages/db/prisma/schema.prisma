@@ -82,6 +82,21 @@ enum CaseStatus {
   cancelled
 }
 
+/// A normal sign-in, or a magic link limited to one case.
+enum SessionKind {
+  user
+  magic_link
+}
+
+/// What a one-time secret in `AuthChallenge` is for.
+enum AuthChallengeKind {
+  email_verification
+  password_reset
+  login_code
+  invitation
+  magic_link
+}
+
 /// Login state of a user.
 enum UserStatus {
   invited
@@ -744,9 +759,19 @@ model User {
   status              UserStatus         @default(invited)
   passwordHash        String?
   twoFactorEnabled    Boolean            @default(false)
+  /// TOTP secret, encrypted by the application (AES-256-GCM); never readable from the database alone.
   twoFactorSecret     String?
+  emailVerifiedAt     DateTime?          @db.Timestamptz(3)
+  phoneVerifiedAt     DateTime?          @db.Timestamptz(3)
+  passwordChangedAt   DateTime?          @db.Timestamptz(3)
+  /// Consecutive failed password or code attempts; five lock the account for a while.
+  failedLoginCount    Int                @default(0)
+  lockedUntil         DateTime?          @db.Timestamptz(3)
   lastLoginAt         DateTime?          @db.Timestamptz(3)
   sessions            Session[]
+  authChallenges      AuthChallenge[]    @relation("ChallengeUser")
+  createdChallenges   AuthChallenge[]    @relation("ChallengeCreator")
+  backupCodes         BackupCode[]
   staffProfile        StaffProfile?
   managedStaff        StaffProfile[]     @relation("StaffManager")
   agentUser           AgentUser?
@@ -782,19 +807,69 @@ model User {
 }
 
 /// A signed-in browser or device. Only a hash of the token is stored.
+/// One sign-in on one device. `tokenHash` is the hash of the current refresh token; it rotates on every refresh and the
+/// previous hash is kept so that a replayed (stolen) refresh token revokes the whole session.
 model Session {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tokenHash  String    @unique
-  userAgent  String?
-  ip         String?   @db.VarChar(45)
-  expiresAt  DateTime  @db.Timestamptz(3)
-  revokedAt  DateTime? @db.Timestamptz(3)
-  lastUsedAt DateTime? @db.Timestamptz(3)
-  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
-  userId     String    @db.Uuid
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                  String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  kind                SessionKind @default(user)
+  tokenHash           String      @unique
+  previousTokenHash   String?     @unique
+  rotatedAt           DateTime?   @db.Timestamptz(3)
+  userAgent           String?
+  deviceLabel         String?     @db.VarChar(120)
+  ip                  String?     @db.VarChar(45)
+  /// Set once the second factor was proven in this session; staff, hospital and admin sessions are limited until then.
+  twoFactorVerifiedAt DateTime?   @db.Timestamptz(3)
+  expiresAt           DateTime    @db.Timestamptz(3)
+  revokedAt           DateTime?   @db.Timestamptz(3)
+  lastUsedAt          DateTime?   @db.Timestamptz(3)
+  createdAt           DateTime    @default(now()) @db.Timestamptz(3)
+  userId              String      @db.Uuid
+  user                User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// A magic-link session sees this one case and nothing else.
+  scopeCaseId         String?     @db.Uuid
+  scopeCase           Case?       @relation(fields: [scopeCaseId], references: [id], onDelete: Cascade)
 
   @@index([expiresAt])
+  @@index([userId])
+  @@index([scopeCaseId])
+}
+
+/// A one-time secret sent to a person: email verification, password reset, a sign-in code, an invitation or a magic link.
+/// Only hashes are stored; the token or code itself exists in the email and nowhere else.
+model AuthChallenge {
+  id          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  kind        AuthChallengeKind
+  /// Lower-cased email address or phone number the secret was sent to.
+  target      String?
+  tokenHash   String?           @unique
+  codeHash    String?
+  attempts    Int               @default(0)
+  /// What the secret allows: for an invitation the role, name and who it belongs to; for a magic link the case.
+  meta        Json?
+  expiresAt   DateTime          @db.Timestamptz(3)
+  consumedAt  DateTime?         @db.Timestamptz(3)
+  createdAt   DateTime          @default(now()) @db.Timestamptz(3)
+  userId      String?           @db.Uuid
+  user        User?             @relation("ChallengeUser", fields: [userId], references: [id], onDelete: Cascade)
+  createdById String?           @db.Uuid
+  createdBy   User?             @relation("ChallengeCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([kind, target])
+  @@index([userId, kind])
+  @@index([createdById])
+  @@index([expiresAt])
+}
+
+/// A single-use recovery code for a user who lost their authenticator app. Stored hashed.
+model BackupCode {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codeHash  String
+  usedAt    DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  userId    String    @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
 }
 
@@ -954,6 +1029,7 @@ model Consent {
 /// The central entity: one patient, one treatment episode. The stage changes only through CaseStageService (F-10).
 model Case {
   id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessions           Session[]
   caseNo             String             @unique
   stage              CaseStage          @default(enquiry)
   status             CaseStatus         @default(new)

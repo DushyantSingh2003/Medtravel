@@ -30,3 +30,10 @@ reviewed, move it to "Reviewed" with the reviewer's name and the date.
 ## Reviewed
 
 _None yet._
+
+## F-03 (authentication)
+
+The whole `auth.*` namespace (sign-in, one-time code, two-step verification, backup codes, password reset, sign-up,
+invitation, magic link, account security) and `shell.accountSecurity` are machine-drafted Arabic. Worth a native
+speaker's eye: "two-step verification" (التحقق بخطوتين), "backup codes" (رموز احتياطية) and the generic wrong-credentials
+message, which must stay deliberately vague.

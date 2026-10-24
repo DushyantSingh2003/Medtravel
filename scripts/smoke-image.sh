@@ -34,10 +34,15 @@ log_contains() {
 }
 trap cleanup EXIT
 
+# Production refuses the development secrets and the in-memory mail transport, so the smoke test supplies throwaway values.
 env_args=(
   -e DATABASE_URL=postgresql://medtravel:medtravel@localhost:5432/medtravel
   -e REDIS_URL=redis://localhost:6379
   -e NODE_ENV=production
+  -e "AUTH_TOKEN_SECRET=$(openssl rand -base64 48)"
+  -e "AUTH_ENCRYPTION_KEY=$(openssl rand -hex 32)"
+  -e EMAIL_TRANSPORT=smtp
+  -e TRUST_PROXY_HOPS=1
 )
 docker run -d --name "$name" --network host "${env_args[@]}" "$image" > /dev/null
 
@@ -59,7 +64,10 @@ case "$app" in
   api)
     wait_for http://localhost:3001/health
     curl -fsS http://localhost:3001/health | grep -q '"status":"ok"' || fail "/health did not report ok"
-    curl -fsS -o /dev/null http://localhost:3001/docs || fail "/docs is not served"
+    # The API description is for development and CI; a production image must not publish it.
+    [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3001/docs)" = "404" ] || fail "/docs is served in production"
+    # Nothing but the health probe answers without signing in.
+    [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3001/masters/countries)" = "401" ] || fail "a data route answered without a sign-in"
     ;;
   web | portal)
     wait_for http://localhost:3000/en

@@ -66,26 +66,15 @@ afterAll(async () => {
 });
 
 describe('who may call the masters API', () => {
-  it('answers 401 without a sign-in, or with a role that does not exist', async () => {
+  it('answers 401 without a sign-in, or with a token that is not valid', async () => {
     expect((await t.call(null, 'GET', '/masters/countries')).status).toBe(401);
-    const unknownRole = await t.app.inject({
-      method: 'GET',
-      url: '/masters/countries',
-      headers: { 'x-stub-role': 'root' },
+    const forged = await t.raw('GET', '/masters/countries', {
+      headers: { authorization: 'Bearer not.a.token' },
     });
-    expect(unknownRole.statusCode).toBe(401);
+    expect(forged.status).toBe(401);
     expect(
       (await t.call(null, 'POST', '/masters/countries', { code: 'ZZ', name: 'Zed' })).status,
     ).toBe(401);
-  });
-
-  it('accepts the portal stub cookie as well as the header', async () => {
-    const res = await t.app.inject({
-      method: 'GET',
-      url: '/masters/countries',
-      headers: { cookie: 'a=b; mt_stub_session=case_manager' },
-    });
-    expect(res.statusCode).toBe(200);
   });
 
   it('keeps the health probe public', async () => {

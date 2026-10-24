@@ -4,7 +4,10 @@ import { ApiError, apiFetcher } from './fetcher';
 const respond = (body: string | null, status = 200) =>
   vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(body, { status }));
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 describe('apiFetcher', () => {
   it('resolves to the parsed body with the status and headers', async () => {
@@ -40,5 +43,70 @@ describe('apiFetcher', () => {
       status: 502,
       body: '<html>Bad gateway</html>',
     });
+  });
+
+  describe('an expired access token', () => {
+    const answers = (...responses: Response[]) => {
+      const spy = vi.spyOn(globalThis, 'fetch');
+      for (const response of responses) spy.mockResolvedValueOnce(response);
+      return spy;
+    };
+
+    const expired = () => new Response('{"code":"session_expired"}', { status: 401 });
+
+    it('is refreshed once and the call repeated', async () => {
+      const spy = answers(
+        expired(),
+        new Response('{}', { status: 200 }),
+        new Response('{"ok":true}', { status: 200 }),
+      );
+      const result = await apiFetcher('/masters/countries');
+      expect(result.data).toEqual({ ok: true });
+      expect(spy.mock.calls.map(([url]) => new URL(String(url)).pathname)).toEqual([
+        '/masters/countries',
+        '/auth/refresh',
+        '/masters/countries',
+      ]);
+    });
+
+    it('is shared by calls that fail at the same moment', async () => {
+      const spy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+        const path = new URL(String(input)).pathname;
+        if (path === '/auth/refresh') return new Response('{}', { status: 200 });
+        const refreshed = spy.mock.calls.some(
+          ([url]) => new URL(String(url)).pathname === '/auth/refresh',
+        );
+        return refreshed ? new Response('{}', { status: 200 }) : expired();
+      });
+      await Promise.all([apiFetcher('/a'), apiFetcher('/b'), apiFetcher('/c')]);
+      expect(
+        spy.mock.calls.filter(([url]) => new URL(String(url)).pathname === '/auth/refresh'),
+      ).toHaveLength(1);
+    });
+
+    it('is reported as 401 when the refresh fails too', async () => {
+      answers(expired(), new Response('{}', { status: 401 }));
+      await expect(apiFetcher('/masters/countries')).rejects.toMatchObject({ status: 401 });
+    });
+
+    it.each(['/auth/login', '/auth/password/change', '/auth/2fa/enable', '/auth/2fa/disable'])(
+      'is not retried for a wrong password or code on %s',
+      async (path) => {
+        const spy = answers(new Response('{"message":"Incorrect"}', { status: 401 }));
+        await expect(apiFetcher(path, { method: 'POST' })).rejects.toMatchObject({ status: 401 });
+        expect(spy).toHaveBeenCalledTimes(1);
+      },
+    );
+  });
+
+  it('sends the CSRF cookie back in a header on changes, but not on reads', async () => {
+    vi.stubGlobal('document', { cookie: 'a=b; mt_csrf=abc123; c=d' });
+    const spy = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response('{}'));
+    await apiFetcher('/masters/treatments', { method: 'POST' });
+    await apiFetcher('/masters/treatments', { method: 'GET' });
+    const [post, get] = spy.mock.calls.map(([, init]) => new Headers(init?.headers));
+    expect(post?.get('x-csrf-token')).toBe('abc123');
+    expect(get?.get('x-csrf-token')).toBeNull();
+    vi.unstubAllGlobals();
   });
 });

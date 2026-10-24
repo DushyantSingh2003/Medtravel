@@ -89,6 +89,7 @@ describe('schema.prisma enums', () => {
           'translationLocale',
           'permissionAction',
           'permissionSubject',
+          'identifier',
         ].includes(base)
       )
         continue;
@@ -107,6 +108,8 @@ describe('schema.prisma conventions', () => {
       'ProcessedWebhook',
       'User',
       'Session',
+      'AuthChallenge',
+      'BackupCode',
       'Patient',
       'Attendant',
       'Case',
@@ -247,6 +250,8 @@ describe('schema.prisma conventions', () => {
       'Currency',
       'FxRate',
       'Session',
+      'AuthChallenge',
+      'BackupCode',
       'CaseStageHistory',
       'MedicalSummary',
       'QuoteLine',

@@ -38,19 +38,61 @@ describe('loadEnv', () => {
     );
   });
 
-  it('keeps the stub sign-in off unless it is exactly "true"', () => {
-    expect(loadEnv(valid as NodeJS.ProcessEnv).ENABLE_STUB_AUTH).toBe(false);
-    expect(loadEnv({ ...valid, ENABLE_STUB_AUTH: '1' } as NodeJS.ProcessEnv).ENABLE_STUB_AUTH).toBe(
-      false,
+  it('runs a fresh checkout with development secrets, and refuses them in production', () => {
+    expect(loadEnv(valid as NodeJS.ProcessEnv).EMAIL_TRANSPORT).toBe('capture');
+    expect(() => loadEnv({ ...valid, NODE_ENV: 'production' } as NodeJS.ProcessEnv)).toThrow(
+      /AUTH_TOKEN_SECRET/,
     );
-    expect(
-      loadEnv({ ...valid, ENABLE_STUB_AUTH: 'true' } as NodeJS.ProcessEnv).ENABLE_STUB_AUTH,
-    ).toBe(true);
+    const production = {
+      ...valid,
+      NODE_ENV: 'production',
+      AUTH_TOKEN_SECRET: 'x'.repeat(48),
+      AUTH_ENCRYPTION_KEY: 'ab'.repeat(32),
+      EMAIL_TRANSPORT: 'smtp',
+      TRUST_PROXY_HOPS: '1',
+    };
+    expect(loadEnv(production as NodeJS.ProcessEnv).NODE_ENV).toBe('production');
+    expect(() =>
+      loadEnv({ ...production, EMAIL_TRANSPORT: 'capture' } as NodeJS.ProcessEnv),
+    ).toThrow(/EMAIL_TRANSPORT/);
+    expect(() => loadEnv({ ...production, TRUST_PROXY_HOPS: '0' } as NodeJS.ProcessEnv)).toThrow(
+      /TRUST_PROXY_HOPS/,
+    );
   });
 
-  it('refuses to boot with the stub sign-in in production', () => {
+  it('rejects a malformed encryption key and a short token secret', () => {
+    expect(() => loadEnv({ ...valid, AUTH_ENCRYPTION_KEY: 'abc' } as NodeJS.ProcessEnv)).toThrow(
+      /AUTH_ENCRYPTION_KEY/,
+    );
+    expect(() => loadEnv({ ...valid, AUTH_TOKEN_SECRET: 'short' } as NodeJS.ProcessEnv)).toThrow(
+      /AUTH_TOKEN_SECRET/,
+    );
+  });
+
+  it('allows skipping 2FA only in development', () => {
+    expect(
+      loadEnv({ ...valid, NODE_ENV: 'development', AUTH_DEV_SKIP_2FA: 'true' } as NodeJS.ProcessEnv)
+        .AUTH_DEV_SKIP_2FA,
+    ).toBe(true);
     expect(() =>
-      loadEnv({ ...valid, NODE_ENV: 'production', ENABLE_STUB_AUTH: 'true' } as NodeJS.ProcessEnv),
-    ).toThrow(/stub sign-in/);
+      loadEnv({ ...valid, NODE_ENV: 'test', AUTH_DEV_SKIP_2FA: 'true' } as NodeJS.ProcessEnv),
+    ).toThrow(/AUTH_DEV_SKIP_2FA/);
+  });
+
+  it('refuses relaxed rate limits in production', () => {
+    expect(
+      loadEnv({ ...valid, NODE_ENV: 'test', AUTH_RATE_LIMIT_MULTIPLIER: '50' } as NodeJS.ProcessEnv)
+        .AUTH_RATE_LIMIT_MULTIPLIER,
+    ).toBe(50);
+    expect(() =>
+      loadEnv({
+        ...valid,
+        NODE_ENV: 'production',
+        AUTH_TOKEN_SECRET: 'x'.repeat(48),
+        AUTH_ENCRYPTION_KEY: 'ab'.repeat(32),
+        EMAIL_TRANSPORT: 'smtp',
+        AUTH_RATE_LIMIT_MULTIPLIER: '50',
+      } as NodeJS.ProcessEnv),
+    ).toThrow(/AUTH_RATE_LIMIT_MULTIPLIER/);
   });
 });

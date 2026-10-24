@@ -680,7 +680,8 @@
     "signedInAs": "Signed in as",
     "signOut": "Sign out",
     "breadcrumb": "Breadcrumb",
-    "unread": "{count, plural, one {# unread} other {# unread}}"
+    "unread": "{count, plural, one {# unread} other {# unread}}",
+    "accountSecurity": "Account security"
   },
   "roles": {
     "patient": "Patient",
@@ -713,14 +714,6 @@
     "caseId": "Case {id}",
     "openSampleCase": "Open a sample case",
     "backToCases": "Back to cases"
-  },
-  "login": {
-    "title": "Sign in",
-    "stubIntro": "Real sign-in arrives with the authentication task. Until then, choose a role to look around.",
-    "stubWarning": "Development only. This page is switched off on deployed environments.",
-    "continueAs": "Continue as {role}",
-    "unavailable": "Sign-in is not available yet.",
-    "rolesLabel": "Roles"
   },
   "errors": {
     "title": "Something went wrong",
@@ -1008,6 +1001,170 @@
       "emptyDescription": "Nothing matches. Clear the search or the filters, or add a new one.",
       "errorTitle": "Could not load the list",
       "errorDescription": "Check your connection, then try again."
+    }
+  },
+  "auth": {
+    "common": {
+      "email": "Email address",
+      "password": "Password",
+      "name": "Full name",
+      "code": "6-digit code",
+      "back": "Back to sign in",
+      "or": "or",
+      "required": "required",
+      "loading": "Please wait",
+      "networkError": "Could not reach the server. Check your connection and try again.",
+      "tooMany": "Too many attempts. Wait a minute and try again.",
+      "serverError": "Something went wrong. Try again.",
+      "fixErrors": "Fix the highlighted fields and try again."
+    },
+    "login": {
+      "title": "Sign in",
+      "description": "Use your email address and password.",
+      "submit": "Sign in",
+      "invalid": "Incorrect email, password or code.",
+      "locked": "Too many failed attempts. The account is locked for a few minutes.",
+      "withCode": "Sign in with a code instead",
+      "forgot": "Forgot your password?",
+      "register": "Create a patient account",
+      "resuming": "Signing you in…"
+    },
+    "loginCode": {
+      "title": "Sign in with a code",
+      "description": "We send a 6-digit code to your email address or phone. For patients, attendants and agents.",
+      "identifier": "Email address or phone number",
+      "identifierHint": "For a phone number, include the country code, like +96812345678.",
+      "send": "Send me a code",
+      "sent": "If that address can sign in this way, we sent a code to {identifier}. It works for 10 minutes.",
+      "verify": "Sign in",
+      "resend": "Send another code",
+      "different": "Use a different address",
+      "invalid": "That code is wrong or has expired.",
+      "staffNote": "Staff, hospital and admin users sign in with a password."
+    },
+    "twoFactor": {
+      "title": "Two-step verification",
+      "description": "Enter the 6-digit code from your authenticator app.",
+      "backupDescription": "Enter one of your backup codes. Each works once.",
+      "code": "Code from the app",
+      "backupCode": "Backup code",
+      "useBackup": "Use a backup code instead",
+      "useApp": "Use the authenticator app instead",
+      "verify": "Verify",
+      "invalid": "That code is not right.",
+      "expired": "That sign-in took too long. Sign in again.",
+      "backToLogin": "Back to sign in"
+    },
+    "twoFactorSetup": {
+      "title": "Set up two-step verification",
+      "intro": "Your role needs a second step when you sign in. Nothing else works until it is set up.",
+      "scan": "Scan this QR code with an authenticator app such as Google Authenticator, Microsoft Authenticator or 1Password.",
+      "qrAlt": "QR code for your authenticator app",
+      "manual": "Cannot scan? Enter this key by hand:",
+      "code": "Code from the app",
+      "enable": "Turn on",
+      "starting": "Preparing…",
+      "invalid": "That code is not right. Check the time on your phone and try again.",
+      "backupTitle": "Save your backup codes",
+      "backupBody": "If you lose your phone, each of these codes signs you in once. They are shown only now.",
+      "copy": "Copy codes",
+      "copied": "Copied",
+      "download": "Download",
+      "saved": "I have saved my codes",
+      "continue": "Continue",
+      "signOut": "Sign out",
+      "failed": "Could not start the set-up. Try again."
+    },
+    "forgot": {
+      "title": "Reset your password",
+      "description": "Enter your email address and we will send you a link.",
+      "submit": "Send the link",
+      "sent": "If that address has an account, we sent a link to choose a new password. It works for 60 minutes."
+    },
+    "reset": {
+      "title": "Choose a new password",
+      "password": "New password",
+      "hint": "At least 10 characters, with a letter and a digit.",
+      "submit": "Change password",
+      "done": "Your password was changed and every device was signed out.",
+      "signIn": "Sign in",
+      "invalid": "This link is not valid any more. Ask for a new one.",
+      "ask": "Ask for a new link"
+    },
+    "register": {
+      "title": "Create your account",
+      "description": "For patients. Hospitals, staff and agents are invited.",
+      "submit": "Create account",
+      "sent": "Almost done. We sent a link to {email} to confirm your address. After that, you can sign in.",
+      "haveAccount": "Already have an account? Sign in"
+    },
+    "invitation": {
+      "title": "Accept your invitation",
+      "intro": "{name}, you are invited to MedTravel as {role}.",
+      "password": "Choose a password",
+      "submit": "Accept the invitation",
+      "done": "All set. Sign in with {email} and the password you chose.",
+      "invalid": "This invitation is not valid any more. Ask the person who invited you to send a new one."
+    },
+    "verifyEmail": {
+      "title": "Confirm your email address",
+      "working": "Confirming…",
+      "done": "Your email address is confirmed.",
+      "invalid": "This link is not valid any more. Sign in and ask for a new one.",
+      "continue": "Continue"
+    },
+    "magic": {
+      "title": "Opening your case",
+      "working": "Opening the case…",
+      "invalid": "This link has expired or was already used. Ask the hospital desk to send a new one."
+    },
+    "security": {
+      "title": "Account security",
+      "description": "Where you are signed in, your second step and your password.",
+      "sessions": {
+        "title": "Devices",
+        "description": "Everywhere this account is signed in.",
+        "current": "This device",
+        "unknown": "Unknown device",
+        "lastActive": "Last active {time}",
+        "signOut": "Sign out",
+        "signOutOthers": "Sign out all other devices",
+        "signedOut": "Signed out.",
+        "empty": "No other devices.",
+        "error": "Could not load your devices."
+      },
+      "twoFactor": {
+        "title": "Two-step verification",
+        "on": "On",
+        "off": "Off",
+        "required": "Required for your role. You cannot turn it off.",
+        "optional": "Optional for your role.",
+        "setUp": "Set up",
+        "disable": "Turn off",
+        "disableHint": "Enter your password and a code from the app to turn it off.",
+        "regenerate": "Get new backup codes",
+        "regenerateHint": "Enter a code from the app. The old backup codes stop working.",
+        "code": "Code from the app",
+        "confirm": "Confirm",
+        "turnedOff": "Two-step verification is off.",
+        "newCodes": "Your new backup codes",
+        "invalid": "That password or code is not right."
+      },
+      "password": {
+        "title": "Password",
+        "current": "Current password",
+        "new": "New password",
+        "change": "Change password",
+        "changed": "Password changed. Your other devices were signed out.",
+        "invalid": "Your current password is not right."
+      },
+      "email": {
+        "title": "Email address",
+        "verified": "Confirmed",
+        "unverified": "Not confirmed yet",
+        "resend": "Send the link again",
+        "sent": "We sent the link."
+      }
     }
   }
 }

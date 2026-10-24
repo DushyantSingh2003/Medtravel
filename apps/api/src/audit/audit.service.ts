@@ -21,8 +21,8 @@ export class AuditService {
   async record(db: Db, context: RequestContext, entry: AuditEntry): Promise<void> {
     await db.auditEvent.create({
       data: {
-        actorId: context.actor.userId,
-        actorRole: context.actor.role,
+        actorId: context.actor?.userId ?? null,
+        actorRole: context.actor?.role ?? null,
         action: entry.action,
         entityType: entry.entityType,
         entityId: entry.entityId,

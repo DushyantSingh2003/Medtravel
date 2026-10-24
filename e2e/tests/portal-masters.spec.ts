@@ -1,19 +1,14 @@
 import { AxeBuilder } from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { signInAs } from './support/auth.js';
 
 /**
  * Master data acceptance (F-02): an admin adds a treatment in English and Arabic and it appears in the list at
  * once; the other tables list, edit, deactivate, delete and restore; a role that may only read cannot change anything.
  *
- * Needs the portal started with ENABLE_STUB_AUTH=true and the API with ENABLE_STUB_AUTH=true against a migrated
- * and seeded database (see playwright.config.ts). The portal must have been built with NEXT_PUBLIC_API_URL set to the API.
+ * Needs the API and the portal running against a database migrated and seeded with the development users (SEED_DEV_USERS=true, SEED_DEV_2FA=true),
+ * see playwright.config.ts. The portal must have been built with NEXT_PUBLIC_API_URL set to the API.
  */
-
-async function signInAs(page: Page, role: string, locale: 'en' | 'ar' = 'en') {
-  await page.goto(`/${locale}/login`);
-  await page.locator(`button[name=role][value=${role}]`).click();
-  await page.waitForSelector('[data-slot=app-shell]');
-}
 
 /** A slug that has not been used by an earlier run of this suite against the same database. */
 const unique = (prefix: string) =>

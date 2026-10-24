@@ -5,13 +5,19 @@ import { SwaggerModule } from '@nestjs/swagger';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module.js';
 import { ENV } from './config/config.module.js';
-import type { Env } from './config/env.schema.js';
+import { loadEnv, type Env } from './config/env.schema.js';
 import { buildOpenApiDocument } from './openapi.js';
 
 async function bootstrap(): Promise<void> {
+  // Read before the app exists: how many proxies to trust decides how the client address is worked out, which the
+  // rate limiter and the audit trail rely on. `true` would trust anything a client puts in X-Forwarded-For.
+  const { TRUST_PROXY_HOPS } = loadEnv();
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter({ trustProxy: true, bodyLimit: 10 * 1024 * 1024 }),
+    new FastifyAdapter({
+      trustProxy: (_address: string, hop: number) => hop < TRUST_PROXY_HOPS,
+      bodyLimit: 10 * 1024 * 1024,
+    }),
     { bufferLogs: true },
   );
 

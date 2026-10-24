@@ -1,11 +1,12 @@
 import { AxeBuilder } from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { signInAs } from './support/auth.js';
 
 /**
  * Portal shell acceptance (S-06): sign in with the stub login, land in the portal that belongs to the
  * role, and click through every placeholder page of every portal, in English and Arabic.
  *
- * Needs the portal running with ENABLE_STUB_AUTH=true (see playwright.config.ts).
+ * Needs the API and portal running against a database seeded with SEED_DEV_USERS=true SEED_DEV_2FA=true (see portal-auth.spec.ts).
  */
 
 const ROLE_PORTALS = [
@@ -33,12 +34,6 @@ const PORTAL_TOURS = [
 
 const LOCALES = ['en', 'ar'] as const;
 
-async function signInAs(page: Page, role: string, locale: 'en' | 'ar' = 'en') {
-  await page.goto(`/${locale}/login`);
-  await page.locator(`button[name=role][value=${role}]`).click();
-  await page.waitForSelector('[data-slot=app-shell]');
-}
-
 /** Page errors and console errors, collected so a test can assert the page was clean. */
 function watchErrors(page: Page): string[] {
   const errors: string[] = [];
@@ -63,20 +58,16 @@ test.describe('sign-in and redirects', () => {
     await expect(page).toHaveURL(/\/en\/login$/);
   });
 
-  test('the login page offers all eleven roles, grouped by portal', async ({ page }) => {
+  test('the login page asks for an email address and a password, and offers the other ways in', async ({
+    page,
+  }) => {
     await page.goto('/en/login');
     await expect(page.getByRole('heading', { level: 1, name: 'Sign in' })).toBeVisible();
-    await expect(page.locator('button[name=role]')).toHaveCount(11);
-    for (const name of [
-      'Patient portal',
-      'Coordinator portal',
-      'Hospital portal',
-      'Agent portal',
-      'Admin portal',
-    ]) {
-      await expect(page.getByRole('heading', { level: 2, name })).toBeVisible();
-    }
-    await expect(page.getByRole('note')).toContainText('Development only');
+    await expect(page.locator('input[type=email]')).toBeVisible();
+    await expect(page.locator('input[type=password]')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Forgot your password?' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Sign in with a code instead' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Create a patient account' })).toBeVisible();
   });
 
   for (const [role, portal] of ROLE_PORTALS) {
@@ -119,7 +110,7 @@ test.describe('sign-in and redirects', () => {
 
   test('a forged or stale session cookie is treated as signed out', async ({ page, context }) => {
     await context.addCookies([
-      { name: 'mt_stub_session', value: 'root', url: 'http://localhost:3002' },
+      { name: 'mt_at', value: 'forged.token', url: 'http://localhost:3002' },
     ]);
     await page.goto('/en/admin');
     await expect(page).toHaveURL(/\/en\/login$/);

@@ -6,6 +6,16 @@ import { z } from 'zod';
  * statuses in `case-stages.ts`.
  */
 
+/** A normal sign-in, or a magic link limited to one case. */
+export const SESSION_KINDS = ['user', 'magic_link'] as const;
+export const sessionKindSchema = z.enum(SESSION_KINDS);
+export type SessionKind = z.infer<typeof sessionKindSchema>;
+
+/** What a one-time secret in `AuthChallenge` is for. */
+export const AUTH_CHALLENGE_KINDS = ['email_verification', 'password_reset', 'login_code', 'invitation', 'magic_link'] as const;
+export const authChallengeKindSchema = z.enum(AUTH_CHALLENGE_KINDS);
+export type AuthChallengeKind = z.infer<typeof authChallengeKindSchema>;
+
 /** Login state of a user. */
 export const USER_STATUSES = ['invited', 'active', 'suspended', 'deactivated'] as const;
 export const userStatusSchema = z.enum(USER_STATUSES);

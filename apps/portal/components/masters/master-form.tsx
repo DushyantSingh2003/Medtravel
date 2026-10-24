@@ -24,7 +24,7 @@ import { useTranslations } from 'next-intl';
 import { useId, useMemo, useState } from 'react';
 import { useForm, type FieldValues, type Resolver, type ResolverOptions } from 'react-hook-form';
 import type { ZodType } from 'zod';
-import { fieldProblems, statusOf } from './master-api-errors';
+import { fieldProblems, statusOf } from '../../lib/api-errors';
 import {
   changedFields,
   fieldsOf,

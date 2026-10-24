@@ -1,5 +1,6 @@
 import { RequestMethod } from '@nestjs/common';
 import type { Params } from 'nestjs-pino';
+import { stdSerializers } from 'pino';
 import type { Env } from '../config/env.schema.js';
 
 /**
@@ -11,6 +12,7 @@ import type { Env } from '../config/env.schema.js';
  */
 export const REDACTED_PATHS = [
   'req.headers.authorization',
+  'req.headers["x-csrf-token"]',
   'req.headers.cookie',
   'req.headers["set-cookie"]',
   'res.headers["set-cookie"]',
@@ -19,6 +21,9 @@ export const REDACTED_PATHS = [
   'req.body.newPassword',
   'req.body.otp',
   'req.body.token',
+  'req.body.challengeToken',
+  'req.body.code',
+  'req.body.identifier',
   'req.body.refreshToken',
   'req.body.email',
   'req.body.phone',
@@ -32,6 +37,13 @@ export const REDACTED_PATHS = [
   '*.passportNumber',
 ];
 
+/** Hides one-time tokens in a request address (`/auth/invitations/<token>`, `?token=`). */
+export function scrubUrl(url: string): string {
+  return url
+    .replace(/(\/auth\/invitations\/)[^/?#]+/, '$1[redacted]')
+    .replace(/([?&]token=)[^&#]*/g, '$1[redacted]');
+}
+
 /** pino configuration: pretty and chatty locally, JSON for CloudWatch in production. */
 export function loggerOptions(env: Env): Params {
   const pretty = env.NODE_ENV === 'development';
@@ -41,6 +53,13 @@ export function loggerOptions(env: Env): Params {
     pinoHttp: {
       level: env.LOG_LEVEL,
       redact: { paths: REDACTED_PATHS, censor: '[redacted]' },
+      serializers: {
+        // Invitation and link tokens travel in the address; a log reader must not be able to use them.
+        req: (request: Record<string, unknown>) => ({
+          ...stdSerializers.req(request as never),
+          url: scrubUrl(String(request['url'] ?? '')),
+        }),
+      },
       ...(pretty ? { transport: { target: 'pino-pretty', options: { singleLine: true } } } : {}),
     },
   };

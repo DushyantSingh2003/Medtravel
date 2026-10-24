@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { REDACTED_PATHS, loggerOptions } from './logger.options.js';
+import { REDACTED_PATHS, loggerOptions, scrubUrl } from './logger.options.js';
 import type { Env } from '../config/env.schema.js';
 
 const env = (overrides: Partial<Env> = {}): Env =>
@@ -26,5 +26,13 @@ describe('loggerOptions', () => {
 
   it('pretty-prints in development', () => {
     expect(loggerOptions(env({ NODE_ENV: 'development' })).pinoHttp).toHaveProperty('transport');
+  });
+});
+
+describe('scrubUrl', () => {
+  it('hides invitation and link tokens in a request address', () => {
+    expect(scrubUrl('/auth/invitations/abc123_-XYZ')).toBe('/auth/invitations/[redacted]');
+    expect(scrubUrl('/x?token=secret&a=1')).toBe('/x?token=[redacted]&a=1');
+    expect(scrubUrl('/masters/countries?q=in')).toBe('/masters/countries?q=in');
   });
 });

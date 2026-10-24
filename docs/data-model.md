@@ -2,7 +2,7 @@
 
 > Generated from `packages/db/prisma/schema.prisma` by `pnpm --filter @medtravel/db docs:model`. Do not edit by hand: a test fails when this file is out of date.
 
-The database holds **75 tables** and **48 enums** (PRD section 11). The central entity is the **Case**: one patient, one treatment episode, and everything else hangs off it.
+The database holds **77 tables** and **50 enums** (PRD section 11). The central entity is the **Case**: one patient, one treatment episode, and everything else hangs off it.
 
 ## Overview
 
@@ -98,8 +98,10 @@ One `User` per login. What a user is linked to depends on the role: a Patient, a
 
 | Entity | What it is | Belongs to | Has | Notes |
 | --- | --- | --- | --- | --- |
-| **User** | One row per login. Linked to a Patient, Agent (AgentUser), HospitalStaff or StaffProfile by role. |  | Session (sessions), StaffProfile (managedStaff), Case (ownedCases), Case (reviewedCases), CaseStageHistory (stageChanges), MedicalSummary (medicalSummaries), Document (uploadedDocuments), DocumentShare (documentShares), CaseNote (caseNotes), HospitalStaff (hospitalStaffs), OpinionRequest (sentOpinionRequests), Opinion (submittedOpinions), Quote (acceptedQuotes), Quote (createdQuotes), Refund (requestedRefunds), Refund (approvedRefunds), Task (assignedTasks), Task (createdTasks), Message (sentMessages), Notification (notifications), Incident (reportedIncidents), Incident (assignedIncidents), Incident (escalatedIncidents), StaffProfile (staffProfile), AgentUser (agentUser), Patient (patient), Attendant (attendant), Interpreter (interpreter) | soft delete |
-| **Session** | A signed-in browser or device. Only a hash of the token is stored. | User (user) |  |  |
+| **User** | One row per login. Linked to a Patient, Agent (AgentUser), HospitalStaff or StaffProfile by role. |  | Session (sessions), AuthChallenge (authChallenges), AuthChallenge (createdChallenges), BackupCode (backupCodes), StaffProfile (managedStaff), Case (ownedCases), Case (reviewedCases), CaseStageHistory (stageChanges), MedicalSummary (medicalSummaries), Document (uploadedDocuments), DocumentShare (documentShares), CaseNote (caseNotes), HospitalStaff (hospitalStaffs), OpinionRequest (sentOpinionRequests), Opinion (submittedOpinions), Quote (acceptedQuotes), Quote (createdQuotes), Refund (requestedRefunds), Refund (approvedRefunds), Task (assignedTasks), Task (createdTasks), Message (sentMessages), Notification (notifications), Incident (reportedIncidents), Incident (assignedIncidents), Incident (escalatedIncidents), StaffProfile (staffProfile), AgentUser (agentUser), Patient (patient), Attendant (attendant), Interpreter (interpreter) | soft delete |
+| **Session** | A signed-in browser or device. Only a hash of the token is stored. One sign-in on one device. `tokenHash` is the hash of the current refresh token; it rotates on every refresh and the previous hash is kept so that a replayed (stolen) refresh token revokes the whole session. | User (user), Case (scopeCase, optional) |  |  |
+| **AuthChallenge** | A one-time secret sent to a person: email verification, password reset, a sign-in code, an invitation or a magic link. Only hashes are stored; the token or code itself exists in the email and nowhere else. | User (user, optional), User (createdBy, optional) |  |  |
+| **BackupCode** | A single-use recovery code for a user who lost their authenticator app. Stored hashed. | User (user) |  |  |
 | **StaffProfile** | Our own staff (case managers, reviewers, ground coordinators, interpreters, finance): city, languages and round-robin state. | User (user), City (city, optional), User (manager, optional) |  | soft delete |
 | **AgentUser** | A login belonging to an agent organisation (sub-users). | User (user), Agent (agent) |  | soft delete |
 | **HospitalStaff** | A hospital login: international desk staff or a doctor. | User (user), Hospital (hospital), HospitalBranch (branch, optional), Doctor (doctor, optional) |  | soft delete; unique: userId + hospitalId |
@@ -121,7 +123,7 @@ The central entity: one patient, one treatment episode. Everything else hangs of
 
 | Entity | What it is | Belongs to | Has | Notes |
 | --- | --- | --- | --- | --- |
-| **Case** | The central entity: one patient, one treatment episode. The stage changes only through CaseStageService (F-10). | Patient (patient), Treatment (treatment, optional), City (preferredCity, optional), Country (country, optional), Agent (agent, optional), User (owner, optional), User (reviewer, optional), Hospital (hospital, optional), LostReason (lostReason, optional) | CaseAttendant (caseAttendants), Consent (consents), CaseStageHistory (stageHistory), MedicalSummary (medicalSummaries), Document (documents), CaseNote (caseNotes), Admission (admissions), OpinionRequest (opinionRequests), Quote (quotes), Invoice (invoices), InvoiceLine (invoiceLines), Payment (payments), VisaApplication (visaApplications), Booking (bookings), Commission (commissions), Task (tasks), Conversation (conversations), Notification (notifications), Incident (incidents), CaseIntake (caseIntake), Feedback (feedback) | soft delete; money in minor units |
+| **Case** | The central entity: one patient, one treatment episode. The stage changes only through CaseStageService (F-10). | Patient (patient), Treatment (treatment, optional), City (preferredCity, optional), Country (country, optional), Agent (agent, optional), User (owner, optional), User (reviewer, optional), Hospital (hospital, optional), LostReason (lostReason, optional) | Session (sessions), CaseAttendant (caseAttendants), Consent (consents), CaseStageHistory (stageHistory), MedicalSummary (medicalSummaries), Document (documents), CaseNote (caseNotes), Admission (admissions), OpinionRequest (opinionRequests), Quote (quotes), Invoice (invoices), InvoiceLine (invoiceLines), Payment (payments), VisaApplication (visaApplications), Booking (bookings), Commission (commissions), Task (tasks), Conversation (conversations), Notification (notifications), Incident (incidents), CaseIntake (caseIntake), Feedback (feedback) | soft delete; money in minor units |
 | **CaseIntake** | What the patient told us about their condition. Medical text: kept off the Case row so an agent's or a list query never carries it by accident. | Case (case) |  | soft delete |
 | **CaseNote** | A staff-only note on a case (Case 360 notes). Never shown to patients, hospitals or agents; messages to those people live in Message. | Case (case), User (author, optional) |  | soft delete |
 | **CaseStageHistory** | Every stage change of a case, who made it and when. | Case (case), User (actor, optional) |  |  |
@@ -229,6 +231,8 @@ Audit trail, the event outbox and the counters behind human-readable numbers.
 | **Role** | `patient`, `attendant`, `agent`, `case_manager`, `ground_coordinator`, `interpreter`, `medical_reviewer`, `hospital_desk`, `doctor`, `finance`, `super_admin` |
 | **CaseStage** | `enquiry`, `qualification`, `medical_review`, `hospital_opinions`, `quote_decision`, `booking_deposit`, `visa`, `travel_planning`, `arrival`, `treatment`, `discharge_return`, `follow_up`, `lost`, `on_hold`, `cancelled` |
 | **CaseStatus** | `new`, `qualifying`, `in_medical_review`, `awaiting_opinions`, `quote_sent`, `won`, `visa_in_process`, `travel_booked`, `arrived`, `in_treatment`, `discharged`, `returned_home`, `follow_up`, `closed`, `lost`, `on_hold`, `cancelled` |
+| **SessionKind** | `user`, `magic_link` |
+| **AuthChallengeKind** | `email_verification`, `password_reset`, `login_code`, `invitation`, `magic_link` |
 | **UserStatus** | `invited`, `active`, `suspended`, `deactivated` |
 | **Gender** | `female`, `male`, `other`, `undisclosed` |
 | **Urgency** | `routine`, `soon`, `urgent`, `emergency` |

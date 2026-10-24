@@ -8,6 +8,7 @@ import { DOCUMENT_TYPES } from './seed-data/document-types.ts';
 import { LANGUAGES } from './seed-data/languages.ts';
 import { LOST_REASONS } from './seed-data/lost-reasons.ts';
 import { SPECIALITIES } from './seed-data/specialities.ts';
+import { seedDevUsers } from './seed-data/dev-users.ts';
 import { TREATMENTS } from './seed-data/treatments.ts';
 
 /**
@@ -121,6 +122,11 @@ async function main(): Promise<void> {
   const prisma = createPrismaClient({ connectionString });
   try {
     await seedMasters(prisma);
+    if (process.env['SEED_DEV_USERS'] === 'true') {
+      console.warn(
+        `Seed: ${await seedDevUsers(prisma)} development users ready (docs/dev-users.md).`,
+      );
+    }
     const [countries, treatments] = await Promise.all([
       prisma.country.count(),
       prisma.treatment.count(),
