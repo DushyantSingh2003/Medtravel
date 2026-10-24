@@ -1,6 +1,6 @@
 import { ApiError } from '@medtravel/api-client';
 import { describe, expect, it } from 'vitest';
-import { fieldProblems, statusOf } from './master-api-errors';
+import { fieldProblems, statusOf } from './api-errors';
 
 describe('fieldProblems', () => {
   it('reads the per-field errors of a validation or conflict answer', () => {

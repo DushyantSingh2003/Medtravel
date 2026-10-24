@@ -3,6 +3,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { ApiQueryProvider } from '@medtravel/api-client';
 import { UiProvider } from '@medtravel/ui';
 import { LOCALES, directionOf, isLocale } from '@medtravel/i18n';
 import '../globals.css';
@@ -49,7 +50,7 @@ export default async function LocaleLayout({
             dir={directionOf(locale)}
             labels={{ notifications: t('notifications'), closeToast: t('closeToast') }}
           >
-            {children}
+            <ApiQueryProvider>{children}</ApiQueryProvider>
           </UiProvider>
         </NextIntlClientProvider>
       </body>

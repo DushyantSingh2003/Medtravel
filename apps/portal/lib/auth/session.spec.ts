@@ -1,14 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const cookieStore = new Map<string, string>();
-const setSpy = vi.fn((name: string, value: string) => void cookieStore.set(name, value));
 
 vi.mock('next/headers', () => ({
   cookies: async () => ({
-    get: (name: string) =>
-      cookieStore.has(name) ? { name, value: cookieStore.get(name) } : undefined,
-    set: setSpy,
-    delete: (name: string) => cookieStore.delete(name),
+    has: (name: string) => cookieStore.has(name),
+    toString: () => [...cookieStore].map(([k, v]) => `${k}=${v}`).join('; '),
   }),
 }));
 
@@ -19,82 +16,87 @@ vi.mock('../../i18n/navigation', () => ({
   },
 }));
 
-const loadSession = () => import('./session');
+const user = (over: Record<string, unknown> = {}) => ({
+  id: '3f2b1c3e-0a7d-4f0e-9a52-1d2b7a6c9e10',
+  name: 'Dev',
+  email: 'dev@example.com',
+  role: 'case_manager',
+  language: 'en',
+  emailVerified: true,
+  twoFactorEnabled: true,
+  twoFactorRequired: true,
+  access: 'full',
+  scopeCaseId: null,
+  ...over,
+});
 
-describe('stub session', () => {
+const answer = (status: number, body: unknown = {}) =>
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify(body), { status }));
+
+const load = () => import('./session');
+
+describe('session', () => {
   beforeEach(() => {
     cookieStore.clear();
-    setSpy.mockClear();
     vi.resetModules();
   });
-  afterEach(() => vi.unstubAllEnvs());
+  afterEach(() => vi.restoreAllMocks());
 
-  describe('with the flag unset (every deployed environment)', () => {
-    beforeEach(() => vi.stubEnv('ENABLE_STUB_AUTH', ''));
-
-    it('ignores even a valid session cookie', async () => {
-      cookieStore.set('mt_stub_session', 'super_admin');
-      const { getSession } = await loadSession();
-      expect(await getSession()).toBeNull();
-    });
-
-    it('refuses to create a session', async () => {
-      const { createSession } = await loadSession();
-      await expect(createSession('super_admin')).rejects.toThrow('switched off');
-      expect(setSpy).not.toHaveBeenCalled();
-    });
-
-    it('sends every portal request to the login page, whatever cookie it carries', async () => {
-      cookieStore.set('mt_stub_session', 'super_admin');
-      const { requirePortalSession } = await loadSession();
-      for (const portal of ['patient', 'ops', 'hospital', 'agent', 'admin'] as const) {
-        await expect(requirePortalSession('en', portal)).rejects.toThrow('REDIRECT en /login');
-      }
-    });
+  it('is null without an access cookie, and then asks nobody', async () => {
+    const spy = answer(200, user());
+    const { getSession } = await load();
+    expect(await getSession()).toBeNull();
+    expect(spy).not.toHaveBeenCalled();
   });
 
-  describe('with the flag on (development and CI)', () => {
-    beforeEach(() => vi.stubEnv('ENABLE_STUB_AUTH', 'true'));
+  it('asks the API who it is, forwarding the cookies, and works out the portal from the role', async () => {
+    cookieStore.set('mt_at', 'token');
+    cookieStore.set('mt_csrf', 'x');
+    const spy = answer(200, user({ role: 'doctor' }));
+    const { getSession } = await load();
+    expect(await getSession()).toMatchObject({ role: 'doctor', portal: 'hospital' });
+    const [url, init] = spy.mock.calls[0] ?? [];
+    expect(String(url)).toBe('http://localhost:3001/auth/me');
+    expect((init?.headers as Record<string, string>)['cookie']).toBe('mt_at=token; mt_csrf=x');
+  });
 
-    it('reads the role and its portal from the cookie', async () => {
-      cookieStore.set('mt_stub_session', 'doctor');
-      const { getSession } = await loadSession();
-      expect(await getSession()).toEqual({ role: 'doctor', portal: 'hospital' });
-    });
-
-    it('treats a missing or unknown cookie as signed out', async () => {
-      const { getSession } = await loadSession();
-      expect(await getSession()).toBeNull();
+  it('is null when the API says the session is over, answers nonsense, or is down', async () => {
+    cookieStore.set('mt_at', 'token');
+    for (const respond of [() => answer(401), () => answer(200, { role: 'root' }), () => vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('down'))]) {
+      vi.restoreAllMocks();
       vi.resetModules();
-      cookieStore.set('mt_stub_session', 'root');
-      const again = await loadSession();
-      expect(await again.getSession()).toBeNull();
-    });
+      respond();
+      const { getSession } = await load();
+      expect(await getSession()).toBeNull();
+    }
+  });
 
-    it('creates an httpOnly, same-site session cookie holding only the role', async () => {
-      const { createSession } = await loadSession();
-      await createSession('finance');
-      expect(setSpy).toHaveBeenCalledWith(
-        'mt_stub_session',
-        'finance',
-        expect.objectContaining({ httpOnly: true, sameSite: 'lax', path: '/' }),
-      );
-    });
+  it('sends signed-out visitors to the login page from every portal', async () => {
+    const { requirePortalSession } = await load();
+    for (const portal of ['patient', 'ops', 'hospital', 'agent', 'admin'] as const) {
+      await expect(requirePortalSession('en', portal)).rejects.toThrow('REDIRECT en /login');
+    }
+  });
 
-    it('lets a user into their own portal and sends everyone else to theirs', async () => {
-      cookieStore.set('mt_stub_session', 'case_manager');
-      const { requirePortalSession } = await loadSession();
-      await expect(requirePortalSession('en', 'ops')).resolves.toEqual({
-        role: 'case_manager',
-        portal: 'ops',
-      });
-      await expect(requirePortalSession('ar', 'admin')).rejects.toThrow('REDIRECT ar /ops');
-      await expect(requirePortalSession('en', 'patient')).rejects.toThrow('REDIRECT en /ops');
-    });
+  it('sends a user to their own portal, and a limited session to the two-factor set-up', async () => {
+    cookieStore.set('mt_at', 'token');
+    answer(200, user({ role: 'case_manager' }));
+    let { requirePortalSession } = await load();
+    await expect(requirePortalSession('en', 'admin')).rejects.toThrow('REDIRECT en /ops');
+    await expect(requirePortalSession('en', 'ops')).resolves.toMatchObject({ portal: 'ops' });
 
-    it('sends a signed-out visitor to the login page in their language', async () => {
-      const { requirePortalSession } = await loadSession();
-      await expect(requirePortalSession('ar', 'ops')).rejects.toThrow('REDIRECT ar /login');
-    });
+    vi.restoreAllMocks();
+    vi.resetModules();
+    answer(200, user({ access: 'two_factor_setup' }));
+    ({ requirePortalSession } = await load());
+    await expect(requirePortalSession('en', 'ops')).rejects.toThrow('REDIRECT en /two-factor/setup');
+  });
+
+  it('keeps the account pages for full sessions, and the set-up page for any', async () => {
+    cookieStore.set('mt_at', 'token');
+    answer(200, user({ access: 'two_factor_setup' }));
+    const { requireAccountSession, requireAnySession } = await load();
+    await expect(requireAccountSession('ar')).rejects.toThrow('REDIRECT ar /two-factor/setup');
+    await expect(requireAnySession('ar')).resolves.toMatchObject({ role: 'case_manager' });
   });
 });

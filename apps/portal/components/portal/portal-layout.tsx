@@ -1,5 +1,4 @@
 import type { Portal } from '@medtravel/contracts';
-import { ApiQueryProvider } from '@medtravel/api-client';
 import { isLocale } from '@medtravel/i18n';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
@@ -20,11 +19,9 @@ export async function PortalLayout({ portal, children, params }: LayoutProps & {
   setRequestLocale(locale);
   const session = await requirePortalSession(locale, portal);
   return (
-    <ApiQueryProvider>
-      <PortalShell portal={portal} role={session.role}>
-        {children}
-      </PortalShell>
-    </ApiQueryProvider>
+    <PortalShell portal={portal} role={session.role}>
+      {children}
+    </PortalShell>
   );
 }
 

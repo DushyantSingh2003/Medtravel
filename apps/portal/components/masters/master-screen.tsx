@@ -48,7 +48,7 @@ import type { SortingState } from '@tanstack/react-table';
 import { MoreHorizontal, Plus } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useEffect, useMemo, useState } from 'react';
-import { fieldProblems } from './master-api-errors';
+import { fieldProblems } from '../../lib/api-errors';
 import { masterColumns, state, type MastersT } from './master-columns';
 import { MasterForm } from './master-form';
 import { useMasterOptions } from './use-master-options';
