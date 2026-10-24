@@ -1,4 +1,9 @@
-import { authMetadata, renderAuthPage, tokenOf, type AuthPageProps } from '../../../components/auth/auth-page';
+import {
+  authMetadata,
+  renderAuthPage,
+  tokenOf,
+  type AuthPageProps,
+} from '../../../components/auth/auth-page';
 import { MagicLink } from '../../../components/auth/link-actions';
 
 export const dynamic = 'force-dynamic';

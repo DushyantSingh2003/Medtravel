@@ -52,7 +52,15 @@ export function SecurityPanel({ user }: { user: AuthUser }) {
   );
 }
 
-function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+function Section({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
   return (
     <Card>
       <CardHeader>
@@ -73,10 +81,16 @@ function EmailSection({ user }: { user: AuthUser }) {
     <Section title={t('title')}>
       <p className="flex flex-wrap items-center gap-2 text-sm">
         <bdi dir="ltr">{user.email}</bdi>
-        <Badge variant={user.emailVerified ? 'success' : 'warning'}>{user.emailVerified ? t('verified') : t('unverified')}</Badge>
+        <Badge variant={user.emailVerified ? 'success' : 'warning'}>
+          {user.emailVerified ? t('verified') : t('unverified')}
+        </Badge>
       </p>
       {!user.emailVerified ? (
-        <Button variant="outline" loading={resend.isPending} onClick={() => resend.mutate(undefined, { onSuccess: () => toast.success(t('sent')) })}>
+        <Button
+          variant="outline"
+          loading={resend.isPending}
+          onClick={() => resend.mutate(undefined, { onSuccess: () => toast.success(t('sent')) })}
+        >
           {t('resend')}
         </Button>
       ) : null}
@@ -91,14 +105,23 @@ function SessionsSection() {
   const list = useListSessions();
   const revoke = useRevokeSession();
   const others = useLogoutOtherSessions();
-  const formatDate = useMemo(() => new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: 'medium', timeStyle: 'short' }), [locale]);
+  const formatDate = useMemo(
+    () => new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: 'medium', timeStyle: 'short' }),
+    [locale],
+  );
   const refresh = () => queryClient.invalidateQueries({ queryKey: getListSessionsQueryKey() });
   const items = list.data?.data.items ?? [];
 
   return (
     <Section title={t('title')} description={t('description')}>
-      {list.isPending ? <Skeleton role="status" aria-label={t('title')} className="h-20 w-full" /> : null}
-      {list.isError ? <p role="alert" className="text-sm text-destructive">{t('error')}</p> : null}
+      {list.isPending ? (
+        <Skeleton role="status" aria-label={t('title')} className="h-20 w-full" />
+      ) : null}
+      {list.isError ? (
+        <p role="alert" className="text-sm text-destructive">
+          {t('error')}
+        </p>
+      ) : null}
       <ul className="divide-y divide-border">
         {items.map((session) => (
           <li key={session.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
@@ -109,14 +132,26 @@ function SessionsSection() {
               </p>
               <p className="text-muted-foreground">
                 {session.ip ? <bdi dir="ltr">{session.ip}</bdi> : null}
-                {session.lastUsedAt ? ` · ${t("lastActive", { time: formatDate.format(new Date(session.lastUsedAt)) })}` : ""}
+                {session.lastUsedAt
+                  ? ` · ${t('lastActive', { time: formatDate.format(new Date(session.lastUsedAt)) })}`
+                  : ''}
               </p>
             </div>
             {!session.current ? (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => revoke.mutate({ id: session.id }, { onSuccess: () => { toast.success(t('signedOut')); void refresh(); } })}
+                onClick={() =>
+                  revoke.mutate(
+                    { id: session.id },
+                    {
+                      onSuccess: () => {
+                        toast.success(t('signedOut'));
+                        void refresh();
+                      },
+                    },
+                  )
+                }
               >
                 {t('signOut')}
               </Button>
@@ -125,7 +160,18 @@ function SessionsSection() {
         ))}
       </ul>
       {items.length > 1 ? (
-        <Button variant="outline" loading={others.isPending} onClick={() => others.mutate(undefined, { onSuccess: () => { toast.success(t('signedOut')); void refresh(); } })}>
+        <Button
+          variant="outline"
+          loading={others.isPending}
+          onClick={() =>
+            others.mutate(undefined, {
+              onSuccess: () => {
+                toast.success(t('signedOut'));
+                void refresh();
+              },
+            })
+          }
+        >
           {t('signOutOthers')}
         </Button>
       ) : null}
@@ -144,8 +190,14 @@ function TwoFactorSection({ user }: { user: AuthUser }) {
   const [codes, setCodes] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const regenerateForm = useForm<z.input<typeof twoFactorEnableSchema>>({ resolver: zodResolver(twoFactorEnableSchema), defaultValues: { code: '' } });
-  const disableForm = useForm<z.input<typeof twoFactorDisableSchema>>({ resolver: zodResolver(twoFactorDisableSchema), defaultValues: { password: '', code: '' } });
+  const regenerateForm = useForm<z.input<typeof twoFactorEnableSchema>>({
+    resolver: zodResolver(twoFactorEnableSchema),
+    defaultValues: { code: '' },
+  });
+  const disableForm = useForm<z.input<typeof twoFactorDisableSchema>>({
+    resolver: zodResolver(twoFactorDisableSchema),
+    defaultValues: { password: '', code: '' },
+  });
 
   const submitRegenerate = regenerateForm.handleSubmit(async (values) => {
     setError(null);
@@ -170,9 +222,14 @@ function TwoFactorSection({ user }: { user: AuthUser }) {
   });
 
   return (
-    <Section title={t('title')} description={user.twoFactorRequired ? t('required') : t('optional')}>
+    <Section
+      title={t('title')}
+      description={user.twoFactorRequired ? t('required') : t('optional')}
+    >
       <p className="flex items-center gap-2 text-sm">
-        <Badge variant={user.twoFactorEnabled ? 'success' : 'muted'}>{user.twoFactorEnabled ? t('on') : t('off')}</Badge>
+        <Badge variant={user.twoFactorEnabled ? 'success' : 'muted'}>
+          {user.twoFactorEnabled ? t('on') : t('off')}
+        </Badge>
       </p>
       {!user.twoFactorEnabled ? (
         <Button asChild variant="outline">
@@ -181,25 +238,61 @@ function TwoFactorSection({ user }: { user: AuthUser }) {
       ) : null}
       {user.twoFactorEnabled && mode === 'none' && !codes ? (
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => setMode('regenerate')}>{t('regenerate')}</Button>
-          {!user.twoFactorRequired ? <Button variant="outline" onClick={() => setMode('disable')}>{t('disable')}</Button> : null}
+          <Button variant="outline" onClick={() => setMode('regenerate')}>
+            {t('regenerate')}
+          </Button>
+          {!user.twoFactorRequired ? (
+            <Button variant="outline" onClick={() => setMode('disable')}>
+              {t('disable')}
+            </Button>
+          ) : null}
         </div>
       ) : null}
       {mode === 'regenerate' ? (
         <form onSubmit={submitRegenerate} noValidate className="space-y-3">
           <p className="text-sm text-muted-foreground">{t('regenerateHint')}</p>
-          <FormInput control={regenerateForm.control} name="code" label={t('code')} autoComplete="one-time-code" dir="ltr" />
-          {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
-          <Button type="submit" loading={regenerateForm.formState.isSubmitting}>{t('confirm')}</Button>
+          <FormInput
+            control={regenerateForm.control}
+            name="code"
+            label={t('code')}
+            autoComplete="one-time-code"
+            dir="ltr"
+          />
+          {error ? (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          ) : null}
+          <Button type="submit" loading={regenerateForm.formState.isSubmitting}>
+            {t('confirm')}
+          </Button>
         </form>
       ) : null}
       {mode === 'disable' ? (
         <form onSubmit={submitDisable} noValidate className="space-y-3">
           <p className="text-sm text-muted-foreground">{t('disableHint')}</p>
-          <FormInput control={disableForm.control} name="password" label={common('password')} type="password" autoComplete="current-password" />
-          <FormInput control={disableForm.control} name="code" label={t('code')} autoComplete="one-time-code" dir="ltr" />
-          {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
-          <Button type="submit" variant="destructive" loading={disableForm.formState.isSubmitting}>{t('disable')}</Button>
+          <FormInput
+            control={disableForm.control}
+            name="password"
+            label={common('password')}
+            type="password"
+            autoComplete="current-password"
+          />
+          <FormInput
+            control={disableForm.control}
+            name="code"
+            label={t('code')}
+            autoComplete="one-time-code"
+            dir="ltr"
+          />
+          {error ? (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          ) : null}
+          <Button type="submit" variant="destructive" loading={disableForm.formState.isSubmitting}>
+            {t('disable')}
+          </Button>
         </form>
       ) : null}
       {codes ? (
@@ -208,7 +301,11 @@ function TwoFactorSection({ user }: { user: AuthUser }) {
           title={t('newCodes')}
           description={t('regenerateHint')}
           confirmLabel={t('confirm')}
-          footer={<Button variant="outline" onClick={() => setCodes(null)}>{t('confirm')}</Button>}
+          footer={
+            <Button variant="outline" onClick={() => setCodes(null)}>
+              {t('confirm')}
+            </Button>
+          }
         />
       ) : null}
     </Section>
@@ -220,7 +317,10 @@ function PasswordSection() {
   const message = useAuthMessage();
   const change = useChangePassword();
   const [error, setError] = useState<string | null>(null);
-  const form = useForm<z.input<typeof changePasswordSchema>>({ resolver: zodResolver(changePasswordSchema), defaultValues: { currentPassword: '', newPassword: '' } });
+  const form = useForm<z.input<typeof changePasswordSchema>>({
+    resolver: zodResolver(changePasswordSchema),
+    defaultValues: { currentPassword: '', newPassword: '' },
+  });
   const queryClient = useQueryClient();
 
   const submit = form.handleSubmit(async (values) => {
@@ -237,10 +337,28 @@ function PasswordSection() {
   return (
     <Section title={t('title')}>
       <form onSubmit={submit} noValidate className="space-y-3">
-        <FormInput control={form.control} name="currentPassword" label={t('current')} type="password" autoComplete="current-password" />
-        <FormInput control={form.control} name="newPassword" label={t('new')} type="password" autoComplete="new-password" />
-        {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
-        <Button type="submit" loading={form.formState.isSubmitting}>{t('change')}</Button>
+        <FormInput
+          control={form.control}
+          name="currentPassword"
+          label={t('current')}
+          type="password"
+          autoComplete="current-password"
+        />
+        <FormInput
+          control={form.control}
+          name="newPassword"
+          label={t('new')}
+          type="password"
+          autoComplete="new-password"
+        />
+        {error ? (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        ) : null}
+        <Button type="submit" loading={form.formState.isSubmitting}>
+          {t('change')}
+        </Button>
       </form>
     </Section>
   );

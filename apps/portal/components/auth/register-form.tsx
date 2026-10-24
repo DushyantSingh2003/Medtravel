@@ -21,7 +21,10 @@ export function RegisterForm() {
   const register = useRegister();
   const [email, setEmail] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const form = useForm<Values>({ resolver: zodResolver(registerSchema), defaultValues: { name: '', email: '', password: '', language: locale === 'ar' ? 'ar' : 'en' } });
+  const form = useForm<Values>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: { name: '', email: '', password: '', language: locale === 'ar' ? 'ar' : 'en' },
+  });
 
   const submit = form.handleSubmit(async (values) => {
     setError(null);
@@ -36,17 +39,48 @@ export function RegisterForm() {
   if (email) {
     return (
       <>
-        <p role="status" className="text-sm">{t('register.sent', { email })}</p>
+        <p role="status" className="text-sm">
+          {t('register.sent', { email })}
+        </p>
         <AuthLink href="/login">{t('login.submit')}</AuthLink>
       </>
     );
   }
   return (
     <form onSubmit={submit} noValidate className="space-y-4">
-      <FormInput control={form.control} name="name" label={t('common.name')} autoComplete="name" required requiredLabel={t('common.required')} />
-      <FormInput control={form.control} name="email" label={t('common.email')} type="email" autoComplete="username" dir="ltr" required requiredLabel={t('common.required')} />
-      <FormInput control={form.control} name="password" label={t('common.password')} description={t('reset.hint')} type="password" autoComplete="new-password" required requiredLabel={t('common.required')} />
-      {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
+      <FormInput
+        control={form.control}
+        name="name"
+        label={t('common.name')}
+        autoComplete="name"
+        required
+        requiredLabel={t('common.required')}
+      />
+      <FormInput
+        control={form.control}
+        name="email"
+        label={t('common.email')}
+        type="email"
+        autoComplete="username"
+        dir="ltr"
+        required
+        requiredLabel={t('common.required')}
+      />
+      <FormInput
+        control={form.control}
+        name="password"
+        label={t('common.password')}
+        description={t('reset.hint')}
+        type="password"
+        autoComplete="new-password"
+        required
+        requiredLabel={t('common.required')}
+      />
+      {error ? (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
       <Button type="submit" className="w-full" loading={form.formState.isSubmitting}>
         {t('register.submit')}
       </Button>

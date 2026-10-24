@@ -52,6 +52,8 @@ export const envSchema = z
     COOKIE_DOMAIN: z.string().optional(),
     /** How many reverse proxies (load balancers) sit in front of the API; 0 locally. The client address is read from the right. */
     TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
+    /** Multiplies every rate limit (sign-in, codes, resets). Only above 1 for browser test runs; refused in production. */
+    AUTH_RATE_LIMIT_MULTIPLIER: z.coerce.number().int().min(1).max(1000).default(1),
     /** `capture` keeps mail in memory (development, tests); `smtp` sends it. */
     EMAIL_TRANSPORT: z.enum(['capture', 'smtp']).default('capture'),
     SMTP_HOST: z.string().default('localhost'),
@@ -66,6 +68,9 @@ export const envSchema = z
   .superRefine((env, ctx) => {
     const issue = (path: string, message: string) =>
       ctx.addIssue({ code: 'custom', path: [path], message });
+    if (env.AUTH_RATE_LIMIT_MULTIPLIER > 1 && env.NODE_ENV === 'production') {
+      issue('AUTH_RATE_LIMIT_MULTIPLIER', 'Relaxing the rate limits is not allowed in production');
+    }
     if (env.AUTH_DEV_SKIP_2FA && env.NODE_ENV !== 'development') {
       issue('AUTH_DEV_SKIP_2FA', 'Skipping 2FA is only allowed when NODE_ENV=development');
     }

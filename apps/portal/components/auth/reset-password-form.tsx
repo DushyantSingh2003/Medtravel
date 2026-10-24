@@ -26,7 +26,9 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
   if (!token) {
     return (
       <>
-        <p role="alert" className="text-sm text-destructive">{t('reset.invalid')}</p>
+        <p role="alert" className="text-sm text-destructive">
+          {t('reset.invalid')}
+        </p>
         <AuthLink href="/forgot-password">{t('reset.ask')}</AuthLink>
       </>
     );
@@ -34,7 +36,9 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
   if (done) {
     return (
       <>
-        <p role="status" className="text-sm">{t('reset.done')}</p>
+        <p role="status" className="text-sm">
+          {t('reset.done')}
+        </p>
         <AuthLink href="/login">{t('reset.signIn')}</AuthLink>
       </>
     );
@@ -51,8 +55,21 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
   });
   return (
     <form onSubmit={submit} noValidate className="space-y-4">
-      <FormInput control={form.control} name="password" label={t('reset.password')} description={t('reset.hint')} type="password" autoComplete="new-password" required requiredLabel={t('common.required')} />
-      {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
+      <FormInput
+        control={form.control}
+        name="password"
+        label={t('reset.password')}
+        description={t('reset.hint')}
+        type="password"
+        autoComplete="new-password"
+        required
+        requiredLabel={t('common.required')}
+      />
+      {error ? (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
       <Button type="submit" className="w-full" loading={form.formState.isSubmitting}>
         {t('reset.submit')}
       </Button>

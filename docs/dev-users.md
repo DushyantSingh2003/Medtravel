@@ -29,6 +29,7 @@ set-up page and nothing else works until you finish it.
 - **Locally**, set `AUTH_DEV_SKIP_2FA=true` in `apps/api/.env` (it is in `apps/api/.env.example`) and run the API with
   `NODE_ENV=development`: users who have not enrolled sign in without the second factor. The API refuses this flag in
   any other environment.
+- **`SEED_DEV_2FA=true`** (used by CI) enrols every role that must use a second factor with the same fixed secret, so the browser tests can sign in as any of them with the enforcement switched on. `staff-setup@dev.medtravel.test` is never enrolled.
 - **`admin-2fa@dev.medtravel.test`** has 2FA switched on with the fixed secret `KRSXG5CTMVRXEZLUKN2XAZLSKRSXG5CT`.
   Add it to an authenticator app (or compute the code with `otplib`) to try the challenge step. The browser tests do.
 

@@ -25,11 +25,19 @@ export function VerifyEmail({ token }: { token: string | null }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  if (state === 'working') return <Skeleton role="status" aria-label={t('verifyEmail.working')} className="h-12 w-full" />;
-  if (state === 'invalid') return <p role="alert" className="text-sm text-destructive">{t('verifyEmail.invalid')}</p>;
+  if (state === 'working')
+    return <Skeleton role="status" aria-label={t('verifyEmail.working')} className="h-12 w-full" />;
+  if (state === 'invalid')
+    return (
+      <p role="alert" className="text-sm text-destructive">
+        {t('verifyEmail.invalid')}
+      </p>
+    );
   return (
     <>
-      <p role="status" className="text-sm">{t('verifyEmail.done')}</p>
+      <p role="status" className="text-sm">
+        {t('verifyEmail.done')}
+      </p>
       <Button className="w-full" onClick={() => router.replace('/')}>
         {t('verifyEmail.continue')}
       </Button>
@@ -60,6 +68,11 @@ export function MagicLink({ token }: { token: string | null }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  if (invalid) return <p role="alert" className="text-sm text-destructive">{t('magic.invalid')}</p>;
+  if (invalid)
+    return (
+      <p role="alert" className="text-sm text-destructive">
+        {t('magic.invalid')}
+      </p>
+    );
   return <Skeleton role="status" aria-label={t('magic.working')} className="h-12 w-full" />;
 }

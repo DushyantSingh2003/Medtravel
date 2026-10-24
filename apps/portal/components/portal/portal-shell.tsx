@@ -13,9 +13,10 @@ import {
   toast,
   type NavSection,
 } from '@medtravel/ui';
-import { LogOut, Search } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { LogOut, Search, ShieldCheck } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
-import { useTransition, type FormEvent, type ReactNode } from 'react';
+import { type FormEvent, type ReactNode } from 'react';
 import { Link, usePathname, useRouter } from '../../i18n/navigation';
 import { PAGE_ICONS } from '../../lib/portal-icons';
 import { PORTAL_DEFINITIONS } from '../../lib/portal-pages';
@@ -40,7 +41,9 @@ export function PortalShell({
   const locale = useLocale() as Locale;
   const pathname = usePathname();
   const router = useRouter();
-  const [signingOut, startSignOut] = useTransition();
+  const logout = useLogout();
+  const queryClient = useQueryClient();
+  const signingOut = logout.isPending;
 
   const definition = PORTAL_DEFINITIONS[portal];
   const sections: NavSection[] = definition.sections.map((section) => ({
@@ -133,10 +136,24 @@ export function PortalShell({
               linkComponent={Link}
               items={[
                 {
+                  id: 'account-security',
+                  label: t('shell.accountSecurity'),
+                  icon: <ShieldCheck aria-hidden="true" />,
+                  href: '/account/security',
+                },
+                {
                   id: 'sign-out',
                   label: t('shell.signOut'),
                   icon: <LogOut aria-hidden="true" />,
-                  onSelect: () => startSignOut(() => signOut(locale)),
+                  // Whatever happens to the request, this browser is done: forget what was cached for the user and go to sign-in.
+                  onSelect: () =>
+                    logout.mutate(undefined, {
+                      onSettled: () => {
+                        queryClient.clear();
+                        router.replace('/login');
+                        router.refresh();
+                      },
+                    }),
                 },
               ]}
             />

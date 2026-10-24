@@ -1,6 +1,10 @@
 import { getTranslations } from 'next-intl/server';
 import { AuthLink } from '../../../components/auth/auth-links';
-import { authMetadata, renderAuthPage, type AuthPageProps } from '../../../components/auth/auth-page';
+import {
+  authMetadata,
+  renderAuthPage,
+  type AuthPageProps,
+} from '../../../components/auth/auth-page';
 import { RegisterForm } from '../../../components/auth/register-form';
 
 export const dynamic = 'force-dynamic';

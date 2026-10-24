@@ -141,18 +141,19 @@ jobs:
       - name: Migrate and seed the database
         run: |
           pnpm --filter @medtravel/db db:deploy
-          pnpm --filter @medtravel/db db:seed
+          SEED_DEV_USERS=true SEED_DEV_2FA=true pnpm --filter @medtravel/db db:seed
 
       # `pnpm check` has passed while an app failed to start before, so boot the built apps and
       # hit them instead of trusting the build alone.
       - name: Start API, website and portal
         run: |
-          # The stub sign-in is refused when NODE_ENV=production, so the API runs as "test" here. The portal is
-          # on another port, so it must be an allowed origin.
-          (cd apps/api && PORT=3001 NODE_ENV=test ENABLE_STUB_AUTH=true CORS_ORIGINS=http://localhost:3000,http://localhost:3002 node dist/main.js > "$RUNNER_TEMP/api.log" 2>&1 &)
+          # Production refuses the development secrets, so the API runs as "test" here (two-step verification still
+          # enforced). The portal is on another port, so it must be an allowed origin. The browser tests sign in
+          # as the same few users many times, hence the relaxed rate limits.
+          (cd apps/api && PORT=3001 NODE_ENV=test AUTH_RATE_LIMIT_MULTIPLIER=100 CORS_ORIGINS=http://localhost:3000,http://localhost:3002 node dist/main.js > "$RUNNER_TEMP/api.log" 2>&1 &)
           (cd apps/web && npx next start --port 3000 > "$RUNNER_TEMP/web.log" 2>&1 &)
-          # The component gallery, its mock S3 endpoint and the stub login are off in production unless enabled.
-          (cd apps/portal && ENABLE_UI_GALLERY=true ENABLE_STUB_AUTH=true npx next start --port 3002 > "$RUNNER_TEMP/portal.log" 2>&1 &)
+          # The component gallery and its mock S3 endpoint are off in production unless enabled.
+          (cd apps/portal && ENABLE_UI_GALLERY=true npx next start --port 3002 > "$RUNNER_TEMP/portal.log" 2>&1 &)
           for url in http://localhost:3001/health http://localhost:3000/en http://localhost:3002/en/ui-gallery; do
             for i in $(seq 1 30); do
               curl -fsS -o /dev/null "$url" && break
@@ -162,7 +163,7 @@ jobs:
           done
           curl -fsS http://localhost:3001/docs -o /dev/null
       - run: pnpm --filter @medtravel/e2e exec playwright install --with-deps chromium
-      - name: Playwright tests (website, portal shell and component gallery)
+      - name: Playwright tests (website, portal sign-in, master data and component gallery)
         run: pnpm e2e
         env:
           WEB_BASE_URL: http://localhost:3000

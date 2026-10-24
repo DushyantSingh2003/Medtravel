@@ -50,7 +50,8 @@ export const homeOf = (session: Session): string =>
 export async function requirePortalSession(locale: Locale, portal: Portal): Promise<Session> {
   const session = await getSession();
   if (!session) return redirect({ href: '/login', locale });
-  if (session.user.access === 'two_factor_setup') return redirect({ href: '/two-factor/setup', locale });
+  if (session.user.access === 'two_factor_setup')
+    return redirect({ href: '/two-factor/setup', locale });
   if (session.portal !== portal) return redirect({ href: `/${session.portal}`, locale });
   return session;
 }
@@ -59,7 +60,8 @@ export async function requirePortalSession(locale: Locale, portal: Portal): Prom
 export async function requireAccountSession(locale: Locale): Promise<Session> {
   const session = await getSession();
   if (!session) return redirect({ href: '/login', locale });
-  if (session.user.access === 'two_factor_setup') return redirect({ href: '/two-factor/setup', locale });
+  if (session.user.access === 'two_factor_setup')
+    return redirect({ href: '/two-factor/setup', locale });
   return session;
 }
 

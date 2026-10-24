@@ -54,11 +54,11 @@ export interface SessionTokens {
 export class SessionCookies {
   constructor(@Inject(ENV) private readonly env: Env) {}
 
-  private options(maxAgeSeconds: number, httpOnly: boolean, path = '/'): CookieOptions {
+  private options(maxAgeSeconds: number, httpOnly: boolean): CookieOptions {
     return {
       maxAgeSeconds,
       httpOnly,
-      path,
+      path: '/',
       secure: this.env.NODE_ENV === 'production',
       domain: this.env.COOKIE_DOMAIN,
     };
@@ -71,11 +71,11 @@ export class SessionCookies {
         tokens.accessToken,
         this.options(tokens.accessMaxAgeSeconds, true),
       ),
-      // The refresh token travels only to the endpoints that use it.
+      // Path "/" because the portal's middleware, on this host's other port, swaps it for a new access cookie.
       serializeCookie(
         REFRESH_COOKIE,
         tokens.refreshToken,
-        this.options(tokens.refreshMaxAgeSeconds, true, '/auth'),
+        this.options(tokens.refreshMaxAgeSeconds, true),
       ),
       serializeCookie(
         CSRF_COOKIE,

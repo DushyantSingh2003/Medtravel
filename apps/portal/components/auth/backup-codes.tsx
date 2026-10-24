@@ -38,7 +38,10 @@ export function BackupCodes({
         {title}
       </h2>
       <p className="text-sm text-muted-foreground">{description}</p>
-      <ul dir="ltr" className="grid grid-cols-2 gap-2 rounded-md border border-border bg-muted p-3 font-mono text-sm">
+      <ul
+        dir="ltr"
+        className="grid grid-cols-2 gap-2 rounded-md border border-border bg-muted p-3 font-mono text-sm"
+      >
         {codes.map((code) => (
           <li key={code}>{code}</li>
         ))}
@@ -58,7 +61,12 @@ export function BackupCodes({
         </Button>
       </div>
       <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={saved} onChange={(event) => setSaved(event.target.checked)} className="size-4" />
+        <input
+          type="checkbox"
+          checked={saved}
+          onChange={(event) => setSaved(event.target.checked)}
+          className="size-4"
+        />
         {confirmLabel}
       </label>
       <div aria-disabled={!saved} className={saved ? undefined : 'pointer-events-none opacity-50'}>

@@ -21,7 +21,10 @@ export function LoginForm() {
   const message = useAuthMessage();
   const login = useLogin();
   const [error, setError] = useState<string | null>(null);
-  const form = useForm<Values>({ resolver: zodResolver(loginSchema), defaultValues: { email: '', password: '' } });
+  const form = useForm<Values>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  });
 
   const submit = form.handleSubmit(async (values) => {
     setError(null);
@@ -41,8 +44,25 @@ export function LoginForm() {
 
   return (
     <form onSubmit={submit} noValidate className="space-y-4">
-      <FormInput control={form.control} name="email" label={t('common.email')} type="email" autoComplete="username" dir="ltr" required requiredLabel={t('common.required')} />
-      <FormInput control={form.control} name="password" label={t('common.password')} type="password" autoComplete="current-password" required requiredLabel={t('common.required')} />
+      <FormInput
+        control={form.control}
+        name="email"
+        label={t('common.email')}
+        type="email"
+        autoComplete="username"
+        dir="ltr"
+        required
+        requiredLabel={t('common.required')}
+      />
+      <FormInput
+        control={form.control}
+        name="password"
+        label={t('common.password')}
+        type="password"
+        autoComplete="current-password"
+        required
+        requiredLabel={t('common.required')}
+      />
       {error ? (
         <p role="alert" className="text-sm text-destructive">
           {error}

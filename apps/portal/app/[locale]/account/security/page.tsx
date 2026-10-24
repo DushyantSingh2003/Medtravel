@@ -23,7 +23,11 @@ export default async function Page({ params }: Props) {
   if (!isLocale(locale)) notFound();
   setRequestLocale(locale);
   const session = await requireAccountSession(locale);
-  const [t, shell, portals] = await Promise.all([getTranslations('auth.security'), getTranslations('shell'), getTranslations('portals')]);
+  const [t, shell, portals] = await Promise.all([
+    getTranslations('auth.security'),
+    getTranslations('shell'),
+    getTranslations('portals'),
+  ]);
   return (
     <div className="space-y-6">
       <PageHeader
@@ -32,7 +36,10 @@ export default async function Page({ params }: Props) {
         breadcrumbs={{
           label: shell('breadcrumb'),
           linkComponent: Link,
-          items: [{ label: portals(session.portal), href: `/${session.portal}` }, { label: t('title') }],
+          items: [
+            { label: portals(session.portal), href: `/${session.portal}` },
+            { label: t('title') },
+          ],
         }}
       />
       <SecurityPanel user={session.user} />

@@ -1,6 +1,10 @@
 import { getTranslations } from 'next-intl/server';
 import { AuthLink } from '../../../components/auth/auth-links';
-import { authMetadata, renderAuthPage, type AuthPageProps } from '../../../components/auth/auth-page';
+import {
+  authMetadata,
+  renderAuthPage,
+  type AuthPageProps,
+} from '../../../components/auth/auth-page';
 import { LoginForm } from '../../../components/auth/login-form';
 
 /** Reads the session, so it must be rendered per request. */

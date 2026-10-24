@@ -1,5 +1,9 @@
 import { BackToLogin } from '../../../components/auth/auth-links';
-import { authMetadata, renderAuthPage, type AuthPageProps } from '../../../components/auth/auth-page';
+import {
+  authMetadata,
+  renderAuthPage,
+  type AuthPageProps,
+} from '../../../components/auth/auth-page';
 import { ForgotPasswordForm } from '../../../components/auth/forgot-password-form';
 
 export const dynamic = 'force-dynamic';

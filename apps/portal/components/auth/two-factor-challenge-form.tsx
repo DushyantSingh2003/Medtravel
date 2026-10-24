@@ -5,7 +5,7 @@ import { backupCodeSchema, sixDigitCodeSchema } from '@medtravel/contracts';
 import { Button, FormInput } from '@medtravel/ui';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
-import { useEffect, useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useRouter } from '../../i18n/navigation';
@@ -25,18 +25,24 @@ export function TwoFactorChallengeForm() {
   const challenge = useAnswerTwoFactorChallenge();
   const [backup, setBackup] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [token, setToken] = useState<string | null | undefined>(undefined);
-  const form = useForm<Values>({ resolver: zodResolver(backup ? backupSchema : appSchema), defaultValues: { code: '' } });
-
-  useEffect(() => {
-    setToken(sessionStorage.getItem(CHALLENGE_STORAGE_KEY));
-  }, []);
+  // undefined while rendering on the server (no storage there), then the token, or null when there is none.
+  const token = useSyncExternalStore(
+    () => () => undefined,
+    () => sessionStorage.getItem(CHALLENGE_STORAGE_KEY),
+    () => undefined,
+  );
+  const form = useForm<Values>({
+    resolver: zodResolver(backup ? backupSchema : appSchema),
+    defaultValues: { code: '' },
+  });
 
   const submit = form.handleSubmit(async (values) => {
     if (!token) return;
     setError(null);
     try {
-      const { data } = await challenge.mutateAsync({ data: { challengeToken: token, code: values.code.trim() } });
+      const { data } = await challenge.mutateAsync({
+        data: { challengeToken: token, code: values.code.trim() },
+      });
       sessionStorage.removeItem(CHALLENGE_STORAGE_KEY);
       if (data.user) {
         router.replace(destinationOf(data.user));
@@ -50,14 +56,18 @@ export function TwoFactorChallengeForm() {
   if (token === null) {
     return (
       <>
-        <p role="alert" className="text-sm text-destructive">{t('twoFactor.expired')}</p>
+        <p role="alert" className="text-sm text-destructive">
+          {t('twoFactor.expired')}
+        </p>
         <AuthLink href="/login">{t('twoFactor.backToLogin')}</AuthLink>
       </>
     );
   }
   return (
     <form onSubmit={submit} noValidate className="space-y-4">
-      <p className="text-sm text-muted-foreground">{backup ? t('twoFactor.backupDescription') : t('twoFactor.description')}</p>
+      <p className="text-sm text-muted-foreground">
+        {backup ? t('twoFactor.backupDescription') : t('twoFactor.description')}
+      </p>
       <FormInput
         control={form.control}
         name="code"
@@ -67,11 +77,24 @@ export function TwoFactorChallengeForm() {
         required
         requiredLabel={t('common.required')}
       />
-      {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
-      <Button type="submit" className="w-full" loading={form.formState.isSubmitting} disabled={token === undefined}>
+      {error ? (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
+      <Button
+        type="submit"
+        className="w-full"
+        loading={form.formState.isSubmitting}
+        disabled={token === undefined}
+      >
         {t('twoFactor.verify')}
       </Button>
-      <Button type="button" variant="link" className="h-auto p-0" onClick={() => {
+      <Button
+        type="button"
+        variant="link"
+        className="h-auto p-0"
+        onClick={() => {
           setBackup((value) => !value);
           form.reset({ code: '' });
           setError(null);

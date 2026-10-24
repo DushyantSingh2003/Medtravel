@@ -1,4 +1,9 @@
-import { authMetadata, renderAuthPage, tokenOf, type AuthPageProps } from '../../../components/auth/auth-page';
+import {
+  authMetadata,
+  renderAuthPage,
+  tokenOf,
+  type AuthPageProps,
+} from '../../../components/auth/auth-page';
 import { ResetPasswordForm } from '../../../components/auth/reset-password-form';
 
 export const dynamic = 'force-dynamic';

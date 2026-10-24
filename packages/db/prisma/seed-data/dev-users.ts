@@ -1,6 +1,6 @@
 import { createCipheriv, randomBytes } from 'node:crypto';
 import { hash } from '@node-rs/argon2';
-import { ROLES, type Role } from '@medtravel/contracts';
+import { ROLES, requiresTwoFactor, type Role } from '@medtravel/contracts';
 import type { PrismaClient } from '../../src/client.ts';
 
 /**
@@ -10,6 +10,9 @@ import type { PrismaClient } from '../../src/client.ts';
 export const DEV_PASSWORD = 'Dev@12345';
 export const DEV_DOMAIN = 'dev.medtravel.test';
 export const devEmail = (role: Role): string => `${role.replace(/_/g, '-')}@${DEV_DOMAIN}`;
+
+/** A staff user who has never set up two-factor, to try the forced set-up page (it is only forced when the skip flag is off). */
+export const DEV_UNENROLLED_EMAIL = `staff-setup@${DEV_DOMAIN}`;
 
 /** A user whose second factor is already on, with a fixed secret, so browser tests can compute the codes. */
 export const DEV_TWO_FACTOR_EMAIL = `admin-2fa@${DEV_DOMAIN}`;
@@ -77,8 +80,24 @@ export async function seedDevUsers(prisma: PrismaClient): Promise<number> {
     return user.id;
   };
 
+  // With SEED_DEV_2FA=true (CI) every role that must use a second factor gets one, with the shared secret below, so browser
+  // tests can sign in as them with the enforcement switched on. Locally they stay un-enrolled and AUTH_DEV_SKIP_2FA applies.
+  const encrypted = encryptSecret(
+    process.env['AUTH_ENCRYPTION_KEY'] ?? DEV_ENCRYPTION_KEY,
+    DEV_TWO_FACTOR_SECRET,
+  );
+  const enrolAll = process.env['SEED_DEV_2FA'] === 'true';
   const ids = new Map<Role, string>();
-  for (const role of ROLES) ids.set(role, await create(devEmail(role), role));
+  for (const role of ROLES) {
+    ids.set(
+      role,
+      await create(
+        devEmail(role),
+        role,
+        enrolAll && requiresTwoFactor(role) ? { twoFactorSecret: encrypted } : {},
+      ),
+    );
+  }
 
   const patientUser = ids.get('patient');
   if (patientUser && !(await prisma.patient.findUnique({ where: { userId: patientUser } }))) {
@@ -125,5 +144,11 @@ export async function seedDevUsers(prisma: PrismaClient): Promise<number> {
       DEV_TWO_FACTOR_SECRET,
     ),
   });
-  return ROLES.length + 1;
+  const unenrolledId = await create(DEV_UNENROLLED_EMAIL, 'case_manager');
+  await prisma.staffProfile.upsert({
+    where: { userId: unenrolledId },
+    update: {},
+    create: { userId: unenrolledId },
+  });
+  return ROLES.length + 2;
 }

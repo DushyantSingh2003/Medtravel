@@ -28,7 +28,11 @@ export async function authMetadata(
   const { locale } = await params;
   if (!isLocale(locale)) return {};
   const t = await getTranslations({ locale, namespace: 'auth' });
-  return { title: t(titleKey), robots: { index: false, follow: false }, ...(carriesToken ? { referrer: 'no-referrer' as const } : {}) };
+  return {
+    title: t(titleKey),
+    robots: { index: false, follow: false },
+    ...(carriesToken ? { referrer: 'no-referrer' as const } : {}),
+  };
 }
 
 /**

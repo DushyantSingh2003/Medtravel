@@ -74,4 +74,21 @@ describe('loadEnv', () => {
       loadEnv({ ...valid, NODE_ENV: 'test', AUTH_DEV_SKIP_2FA: 'true' } as NodeJS.ProcessEnv),
     ).toThrow(/AUTH_DEV_SKIP_2FA/);
   });
+
+  it('refuses relaxed rate limits in production', () => {
+    expect(
+      loadEnv({ ...valid, NODE_ENV: 'test', AUTH_RATE_LIMIT_MULTIPLIER: '50' } as NodeJS.ProcessEnv)
+        .AUTH_RATE_LIMIT_MULTIPLIER,
+    ).toBe(50);
+    expect(() =>
+      loadEnv({
+        ...valid,
+        NODE_ENV: 'production',
+        AUTH_TOKEN_SECRET: 'x'.repeat(48),
+        AUTH_ENCRYPTION_KEY: 'ab'.repeat(32),
+        EMAIL_TRANSPORT: 'smtp',
+        AUTH_RATE_LIMIT_MULTIPLIER: '50',
+      } as NodeJS.ProcessEnv),
+    ).toThrow(/AUTH_RATE_LIMIT_MULTIPLIER/);
+  });
 });

@@ -1,4 +1,6 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { ENV } from '../config/config.module.js';
+import type { Env } from '../config/env.schema.js';
 
 interface Window {
   count: number;
@@ -13,6 +15,8 @@ interface Window {
 export class RateLimiter {
   private readonly windows = new Map<string, Window>();
 
+  constructor(@Inject(ENV) private readonly env: Pick<Env, 'AUTH_RATE_LIMIT_MULTIPLIER'>) {}
+
   /** Counts one hit on `key`; throws 429 once more than `limit` hits fall in a `windowSeconds` window. */
   consume(key: string, limit: number, windowSeconds: number, nowMs = Date.now()): void {
     if (this.windows.size > 50_000) this.sweep(nowMs);
@@ -22,7 +26,7 @@ export class RateLimiter {
       return;
     }
     current.count += 1;
-    if (current.count > limit) {
+    if (current.count > limit * this.env.AUTH_RATE_LIMIT_MULTIPLIER) {
       const retryAfterSeconds = Math.max(1, Math.ceil((current.resetsAt - nowMs) / 1000));
       throw new HttpException(
         {

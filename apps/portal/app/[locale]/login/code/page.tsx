@@ -1,5 +1,9 @@
 import { BackToLogin } from '../../../../components/auth/auth-links';
-import { authMetadata, renderAuthPage, type AuthPageProps } from '../../../../components/auth/auth-page';
+import {
+  authMetadata,
+  renderAuthPage,
+  type AuthPageProps,
+} from '../../../../components/auth/auth-page';
 import { LoginCodeForm } from '../../../../components/auth/login-code-form';
 
 export const dynamic = 'force-dynamic';

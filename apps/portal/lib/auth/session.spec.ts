@@ -31,7 +31,9 @@ const user = (over: Record<string, unknown> = {}) => ({
 });
 
 const answer = (status: number, body: unknown = {}) =>
-  vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify(body), { status }));
+  vi
+    .spyOn(globalThis, 'fetch')
+    .mockImplementation(async () => new Response(JSON.stringify(body), { status }));
 
 const load = () => import('./session');
 
@@ -62,7 +64,11 @@ describe('session', () => {
 
   it('is null when the API says the session is over, answers nonsense, or is down', async () => {
     cookieStore.set('mt_at', 'token');
-    for (const respond of [() => answer(401), () => answer(200, { role: 'root' }), () => vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('down'))]) {
+    for (const respond of [
+      () => answer(401),
+      () => answer(200, { role: 'root' }),
+      () => vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('down')),
+    ]) {
       vi.restoreAllMocks();
       vi.resetModules();
       respond();
@@ -89,7 +95,9 @@ describe('session', () => {
     vi.resetModules();
     answer(200, user({ access: 'two_factor_setup' }));
     ({ requirePortalSession } = await load());
-    await expect(requirePortalSession('en', 'ops')).rejects.toThrow('REDIRECT en /two-factor/setup');
+    await expect(requirePortalSession('en', 'ops')).rejects.toThrow(
+      'REDIRECT en /two-factor/setup',
+    );
   });
 
   it('keeps the account pages for full sessions, and the set-up page for any', async () => {

@@ -11,8 +11,8 @@ const launchOptions = executablePath ? { launchOptions: { executablePath } } : {
  * End-to-end tests run against already-running apps (locally `pnpm dev`, in CI the built
  * apps started by the workflow), so this config does not spawn servers itself.
  *
- * The portal must be started with ENABLE_UI_GALLERY=true for the component gallery tests and with
- * ENABLE_STUB_AUTH=true for the portal shell tests. The website must have been built with
+ * The portal must be started with ENABLE_UI_GALLERY=true for the component gallery tests. The portal tests sign in
+ * for real, so the API must be running too, on a database seeded with SEED_DEV_USERS=true SEED_DEV_2FA=true. The website must have been built with
  * NEXT_PUBLIC_WHATSAPP_NUMBER set (any digits), because the floating WhatsApp button only exists then.
  */
 export default defineConfig({
@@ -33,7 +33,7 @@ export default defineConfig({
     { name: 'chromium-rtl', testIgnore: /ui-gallery|portal-/, use: { ...devices['Desktop Chrome'], locale: 'ar' } },
     // The gallery tests choose their own language and viewport, so one browser project is enough.
     { name: 'gallery', testMatch: /ui-gallery/, use: { ...devices['Desktop Chrome'], baseURL: portalBaseUrl } },
-    // The portal shell tests sign in with the stub login, so the portal needs ENABLE_STUB_AUTH=true.
+    // The portal shell tests sign in through the API (see the header above).
     { name: 'portal', testMatch: /portal-/, use: { ...devices['Desktop Chrome'], baseURL: portalBaseUrl } },
   ],
 });

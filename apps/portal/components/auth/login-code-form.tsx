@@ -25,8 +25,14 @@ export function LoginCodeForm() {
   const [identifier, setIdentifier] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const ask = useForm<RequestValues>({ resolver: zodResolver(otpRequestSchema), defaultValues: { identifier: '' } });
-  const answer = useForm<VerifyValues>({ resolver: zodResolver(otpVerifySchema), defaultValues: { identifier: '', code: '' } });
+  const ask = useForm<RequestValues>({
+    resolver: zodResolver(otpRequestSchema),
+    defaultValues: { identifier: '' },
+  });
+  const answer = useForm<VerifyValues>({
+    resolver: zodResolver(otpVerifySchema),
+    defaultValues: { identifier: '', code: '' },
+  });
 
   const send = async (value: string) => {
     setError(null);
@@ -59,8 +65,21 @@ export function LoginCodeForm() {
   if (identifier === null) {
     return (
       <form onSubmit={submitAsk} noValidate className="space-y-4">
-        <FormInput control={ask.control} name="identifier" label={t('loginCode.identifier')} description={t('loginCode.identifierHint')} autoComplete="username" dir="ltr" required requiredLabel={t('common.required')} />
-        {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
+        <FormInput
+          control={ask.control}
+          name="identifier"
+          label={t('loginCode.identifier')}
+          description={t('loginCode.identifierHint')}
+          autoComplete="username"
+          dir="ltr"
+          required
+          requiredLabel={t('common.required')}
+        />
+        {error ? (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        ) : null}
         <Button type="submit" className="w-full" loading={ask.formState.isSubmitting}>
           {t('loginCode.send')}
         </Button>
@@ -73,16 +92,38 @@ export function LoginCodeForm() {
       <p role="status" className="text-sm">
         {t('loginCode.sent', { identifier })}
       </p>
-      <FormInput control={answer.control} name="code" label={t('common.code')} autoComplete="one-time-code" dir="ltr" required requiredLabel={t('common.required')} />
-      {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
+      <FormInput
+        control={answer.control}
+        name="code"
+        label={t('common.code')}
+        autoComplete="one-time-code"
+        dir="ltr"
+        required
+        requiredLabel={t('common.required')}
+      />
+      {error ? (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
       <Button type="submit" className="w-full" loading={answer.formState.isSubmitting}>
         {t('loginCode.verify')}
       </Button>
       <p className="flex flex-wrap justify-between gap-2 text-sm">
-        <Button type="button" variant="link" className="h-auto p-0" onClick={() => void send(identifier)}>
+        <Button
+          type="button"
+          variant="link"
+          className="h-auto p-0"
+          onClick={() => void send(identifier)}
+        >
           {t('loginCode.resend')}
         </Button>
-        <Button type="button" variant="link" className="h-auto p-0" onClick={() => setIdentifier(null)}>
+        <Button
+          type="button"
+          variant="link"
+          className="h-auto p-0"
+          onClick={() => setIdentifier(null)}
+        >
           {t('loginCode.different')}
         </Button>
       </p>
