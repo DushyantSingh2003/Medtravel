@@ -4,7 +4,7 @@ Tick a task here when it is finished and `pnpm check` is green. The task queue t
 build loop is `loop/cloud-state.json`; this file is the human-readable view and also records
 what each task deferred.
 
-Tasks: 116 in the plan. Done: S-01 to S-06, F-01, F-02.
+Tasks: 116 in the plan. Done: S-01 to S-06, F-01, F-02, F-03.
 
 ### Phase 0 — Scaffold (week 1)
 
@@ -19,7 +19,7 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01, F-02.
 
 - [x] **F-01** Database schema
 - [x] **F-02** Master data module (the reference pattern)
-- [ ] **F-03** Authentication
+- [x] **F-03** Authentication
 - [ ] **F-04** Roles, permissions and data scoping
 - [ ] **F-05** Audit log and domain events
 - [ ] **F-06** Secure file service
@@ -165,6 +165,26 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01, F-02.
 - [ ] **G-08** Advanced analytics
 
 ## Notes and deferred work
+
+### Deferred from F-03
+
+- **Not yet verified on GitHub:** the browser job now seeds the development users with two-factor enrolment
+  (`SEED_DEV_USERS=true SEED_DEV_2FA=true`), starts the API as `NODE_ENV=test` with a relaxed rate limit, and the
+  image smoke test expects `/docs` 404 and `/masters/countries` 401 in production mode. The F-02 CI run failed only
+  on that image smoke test (`/docs` is off in production); the smoke script was fixed in this task.
+- Mail goes through a `capture` transport by default and SMTP when configured; real templates, SMS and WhatsApp
+  delivery of codes arrive with F-07, so one-time codes are not yet delivered by phone.
+- The login throttle and lockout counters live in the API process (in memory). Move them to Redis before running more
+  than one API instance.
+- `AUTH_TOKEN_SECRET` and `AUTH_ENCRYPTION_KEY` have development defaults that production refuses; set real values and
+  a rotation plan at deployment. No key rotation for the encrypted TOTP secrets yet (the `v1.` prefix leaves room).
+- No "remember this device" for two-factor, no WebAuthn, no phone verification flow, no admin screens to unlock a
+  user or reset their second factor (F-18 user management).
+- The portal's Arabic auth strings are machine drafts (`packages/i18n/REVIEW.md`).
+- The stub sign-in (`ENABLE_STUB_AUTH`) is gone; an existing `apps/api/.env` can drop that line. The permission matrix is
+  still the interim one (F-04).
+- The browser test that walks an un-enrolled staff user through two-factor set-up can run once per database (it enrols
+  the user); it skips itself when the user is already enrolled.
 
 ### Deferred from F-02
 
