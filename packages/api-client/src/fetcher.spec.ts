@@ -52,9 +52,11 @@ describe('apiFetcher', () => {
       return spy;
     };
 
+    const expired = () => new Response('{"code":"session_expired"}', { status: 401 });
+
     it('is refreshed once and the call repeated', async () => {
       const spy = answers(
-        new Response('{}', { status: 401 }),
+        expired(),
         new Response('{}', { status: 200 }),
         new Response('{"ok":true}', { status: 200 }),
       );
@@ -74,7 +76,7 @@ describe('apiFetcher', () => {
         const refreshed = spy.mock.calls.some(
           ([url]) => new URL(String(url)).pathname === '/auth/refresh',
         );
-        return new Response('{}', { status: refreshed ? 200 : 401 });
+        return refreshed ? new Response('{}', { status: 200 }) : expired();
       });
       await Promise.all([apiFetcher('/a'), apiFetcher('/b'), apiFetcher('/c')]);
       expect(
@@ -83,17 +85,18 @@ describe('apiFetcher', () => {
     });
 
     it('is reported as 401 when the refresh fails too', async () => {
-      answers(new Response('{}', { status: 401 }), new Response('{}', { status: 401 }));
+      answers(expired(), new Response('{}', { status: 401 }));
       await expect(apiFetcher('/masters/countries')).rejects.toMatchObject({ status: 401 });
     });
 
-    it('is not retried for a wrong password', async () => {
-      const spy = answers(new Response('{"message":"Incorrect"}', { status: 401 }));
-      await expect(apiFetcher('/auth/login', { method: 'POST' })).rejects.toMatchObject({
-        status: 401,
-      });
-      expect(spy).toHaveBeenCalledTimes(1);
-    });
+    it.each(['/auth/login', '/auth/password/change', '/auth/2fa/enable', '/auth/2fa/disable'])(
+      'is not retried for a wrong password or code on %s',
+      async (path) => {
+        const spy = answers(new Response('{"message":"Incorrect"}', { status: 401 }));
+        await expect(apiFetcher(path, { method: 'POST' })).rejects.toMatchObject({ status: 401 });
+        expect(spy).toHaveBeenCalledTimes(1);
+      },
+    );
   });
 
   it('sends the CSRF cookie back in a header on changes, but not on reads', async () => {

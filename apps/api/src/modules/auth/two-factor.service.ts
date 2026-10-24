@@ -14,6 +14,7 @@ import { RateLimiter } from '../../auth/rate-limiter.js';
 import type { RequestContext } from '../../common/request-context.js';
 import { ENV } from '../../config/config.module.js';
 import type { Env } from '../../config/env.schema.js';
+import { SessionService } from '../../auth/session.service.js';
 import { PRISMA } from '../../database/database.module.js';
 import { hmacHex, normalizeBackupCode, randomBackupCode, safeEqual } from './crypto/tokens.js';
 import { PasswordService } from './password.service.js';
@@ -30,6 +31,7 @@ export class TwoFactorService {
     private readonly signIn: SignInService,
     private readonly limiter: RateLimiter,
     private readonly audit: AuditService,
+    private readonly sessions: SessionService,
   ) {}
 
   private backupHash(code: string): string {
@@ -80,6 +82,8 @@ export class TwoFactorService {
         data: { twoFactorVerifiedAt: new Date() },
       });
       const codes = await this.newBackupCodes(tx, user.id);
+      // Whoever was signed in somewhere else is no longer trusted with the new factor.
+      await this.sessions.revokeAll(tx, user.id, actor.sessionId);
       await this.audit.record(tx, context, {
         action: 'auth.two_factor_enabled',
         entityType: 'User',

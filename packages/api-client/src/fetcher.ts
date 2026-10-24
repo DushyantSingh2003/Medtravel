@@ -44,8 +44,18 @@ function csrfToken(): string | undefined {
   return /(?:^|;\s*)mt_csrf=([^;]*)/.exec(document.cookie)?.[1];
 }
 
-/** Sign-in steps answer 401 for "wrong password or code", which is not a reason to try refreshing. */
-const NO_REFRESH = ['/auth/refresh', '/auth/login', '/auth/2fa/challenge'];
+/**
+ * Only the API's "your session ran out" answer is worth a refresh. Every other 401 (a wrong password or code on sign-in,
+ * on a password change, on turning two-factor on or off) is final, and repeating it would count as a second failed attempt.
+ */
+function sessionExpired(status: number, body: unknown): boolean {
+  return (
+    status === 401 &&
+    typeof body === 'object' &&
+    body !== null &&
+    (body as { code?: unknown }).code === 'session_expired'
+  );
+}
 
 let refreshing: Promise<boolean> | null = null;
 
@@ -80,14 +90,11 @@ export async function apiFetcher<T extends ApiResponse>(
     return fetch(new URL(url, baseUrl()), { ...init, headers, credentials: 'include' });
   };
   let response = await send();
-  if (
-    response.status === 401 &&
-    !NO_REFRESH.some((path) => url.startsWith(path)) &&
-    (await refreshSession())
-  ) {
+  let data = await readBody(response);
+  if (sessionExpired(response.status, data) && (await refreshSession())) {
     response = await send();
+    data = await readBody(response);
   }
-  const data = await readBody(response);
   if (!response.ok) throw new ApiError(response.status, data);
   return { data, status: response.status, headers: response.headers } as T;
 }

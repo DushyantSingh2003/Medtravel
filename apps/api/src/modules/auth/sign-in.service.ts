@@ -1,10 +1,4 @@
-import {
-  HttpException,
-  HttpStatus,
-  Inject,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import type { PrismaClient } from '@medtravel/db';
 import {
   AUTH_LIMITS,
@@ -163,20 +157,13 @@ export class SignInService {
     };
   }
 
-  /** Refuses while the account is locked. */
+  /**
+   * Refuses while the account is locked. The answer is the same as for a wrong password, so that the lock does not
+   * tell a stranger which addresses have accounts.
+   */
   assertNotLocked(user: Pick<Account, 'lockedUntil'>): void {
-    if (user.lockedUntil && user.lockedUntil > new Date()) {
-      const retryAfterSeconds = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 1000);
-      throw new HttpException(
-        {
-          statusCode: HttpStatus.TOO_MANY_REQUESTS,
-          message: `Too many failed attempts. Try again in ${Math.ceil(retryAfterSeconds / 60)} minutes.`,
-          code: 'account_locked',
-          retryAfterSeconds,
-        },
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
-    }
+    if (user.lockedUntil && user.lockedUntil > new Date())
+      throw new UnauthorizedException('Incorrect email, password or code');
   }
 
   /** Counts a wrong password or code; the fifth in a row locks the account. Always ends in a 401. */
@@ -210,11 +197,7 @@ export class SignInService {
         after: { reason },
       },
     );
-    throw new UnauthorizedException(
-      locked
-        ? 'Too many failed attempts. The account is locked for a while.'
-        : 'Incorrect email, password or code',
-    );
+    throw new UnauthorizedException('Incorrect email, password or code');
   }
 
   async clearFailures(

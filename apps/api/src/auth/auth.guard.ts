@@ -12,7 +12,7 @@ import type { FastifyRequest } from 'fastify';
 import { ENV } from '../config/config.module.js';
 import type { Env } from '../config/env.schema.js';
 import { ACCESS_COOKIE, CSRF_COOKIE, CSRF_HEADER, readCookie } from './cookies.js';
-import { LIMITED_KEY, NO_MAGIC_LINK_KEY, PUBLIC_KEY } from './decorators.js';
+import { LIMITED_KEY, ALLOW_MAGIC_LINK_KEY, PUBLIC_KEY } from './decorators.js';
 import { SessionService } from './session.service.js';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
@@ -49,7 +49,15 @@ export class AuthGuard implements CanActivate {
     const cookieToken = readCookie(request.headers.cookie, ACCESS_COOKIE);
     const token = bearer ?? cookieToken;
     const auth = token ? await this.sessions.authenticate(token) : null;
-    if (!auth) throw new UnauthorizedException('Sign in to continue');
+    if (!auth) {
+      // `session_expired` tells the browser client that a refresh is worth trying; other 401s (a wrong password) are final.
+      throw new UnauthorizedException({
+        statusCode: 401,
+        message: 'Sign in to continue',
+        error: 'Unauthorized',
+        code: 'session_expired',
+      });
+    }
 
     // A bearer token is not sent by the browser on its own, so only cookie sessions need the CSRF token.
     if (!bearer && unsafe) {
@@ -65,7 +73,8 @@ export class AuthGuard implements CanActivate {
     }
 
     const magicLink = auth.actor.scopeCaseId !== null;
-    if (magicLink && this.reflector.getAllAndOverride<boolean>(NO_MAGIC_LINK_KEY, targets)) {
+    // A one-case session may use only the routes that opt in and know how to keep to that case.
+    if (magicLink && !this.reflector.getAllAndOverride<boolean>(ALLOW_MAGIC_LINK_KEY, targets)) {
       throw new ForbiddenException('This link only opens one case');
     }
 

@@ -2,13 +2,7 @@ import { Body, Controller, Get, HttpCode, Param, Post, Res } from '@nestjs/commo
 import { ApiCookieAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { FastifyReply } from 'fastify';
 import { SessionCookies } from '../../auth/cookies.js';
-import {
-  Authenticated,
-  CurrentActor,
-  NoMagicLink,
-  Public,
-  Throttle,
-} from '../../auth/decorators.js';
+import { Authenticated, CurrentActor, Public, Throttle } from '../../auth/decorators.js';
 import type { Actor } from '../../auth/actor.js';
 import { Ctx, type RequestContext } from '../../common/request-context.js';
 import {
@@ -37,7 +31,6 @@ export class InvitationsController {
 
   @Post('invitations')
   @Authenticated()
-  @NoMagicLink()
   @HttpCode(202)
   @ApiOperation({
     operationId: 'createInvitation',
@@ -81,7 +74,6 @@ export class InvitationsController {
 
   @Post('magic-links')
   @Authenticated()
-  @NoMagicLink()
   @HttpCode(202)
   @ApiOperation({
     operationId: 'createMagicLink',

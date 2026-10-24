@@ -7,7 +7,7 @@ export const PUBLIC_KEY = 'auth:public';
 export const AUTHENTICATED_KEY = 'auth:authenticated';
 export const PERMISSION_KEY = 'auth:permission';
 export const LIMITED_KEY = 'auth:limited-session';
-export const NO_MAGIC_LINK_KEY = 'auth:no-magic-link';
+export const ALLOW_MAGIC_LINK_KEY = 'auth:allow-magic-link';
 export const THROTTLE_KEY = 'auth:throttle';
 
 export interface RequiredPermission {
@@ -34,8 +34,11 @@ export const Can = (action: PermissionAction, subject: PermissionSubject) =>
  */
 export const AllowLimitedSession = () => SetMetadata(LIMITED_KEY, true);
 
-/** A magic-link session (one doctor, one case) may not use this route: account, 2FA and invitation endpoints. */
-export const NoMagicLink = () => SetMetadata(NO_MAGIC_LINK_KEY, true);
+/**
+ * A magic-link session (one doctor, one case) may use this route. Without it the guard refuses such a session, so a new
+ * endpoint is closed to magic links until its author makes it honour `actor.scopeCaseId`.
+ */
+export const AllowMagicLink = () => SetMetadata(ALLOW_MAGIC_LINK_KEY, true);
 
 export interface ThrottleOptions {
   limit: number;

@@ -112,7 +112,12 @@ export class InvitationsService {
     const token = randomToken();
     await this.prisma.$transaction(async (tx) => {
       await tx.authChallenge.deleteMany({
-        where: { kind: 'invitation', target: body.email, consumedAt: null },
+        where: {
+          kind: 'invitation',
+          target: body.email,
+          consumedAt: null,
+          createdById: actor.userId,
+        },
       });
       const challenge = await tx.authChallenge.create({
         data: {
@@ -245,6 +250,7 @@ export class InvitationsService {
       });
       if (doctor && (doctor.role !== 'doctor' || doctor.status !== 'active'))
         throw new ConflictException('This email address belongs to another kind of account');
+      const created = !doctor;
       if (!doctor) {
         doctor = await tx.user.create({
           data: {
@@ -257,11 +263,10 @@ export class InvitationsService {
           select: { id: true, role: true, status: true },
         });
       }
-      await tx.hospitalStaff.upsert({
-        where: { userId_hospitalId: { userId: doctor.id, hospitalId } },
-        update: { deletedAt: null },
-        create: { userId: doctor.id, hospitalId },
-      });
+      // A doctor of another hospital is not enrolled here by a link: the session is limited to the one case instead.
+      if (created) {
+        await tx.hospitalStaff.create({ data: { userId: doctor.id, hospitalId } });
+      }
       await tx.authChallenge.deleteMany({
         where: {
           kind: 'magic_link',

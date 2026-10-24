@@ -6,7 +6,6 @@ import {
   AllowLimitedSession,
   Authenticated,
   CurrentActor,
-  NoMagicLink,
   Public,
   Throttle,
 } from '../../auth/decorators.js';
@@ -37,7 +36,6 @@ export class TwoFactorController {
   @Post('setup')
   @Authenticated()
   @AllowLimitedSession()
-  @NoMagicLink()
   @HttpCode(200)
   @ApiOperation({
     operationId: 'setUpTwoFactor',
@@ -51,7 +49,6 @@ export class TwoFactorController {
   @Post('enable')
   @Authenticated()
   @AllowLimitedSession()
-  @NoMagicLink()
   @HttpCode(200)
   @ApiOperation({
     operationId: 'enableTwoFactor',
@@ -89,7 +86,6 @@ export class TwoFactorController {
 
   @Post('disable')
   @Authenticated()
-  @NoMagicLink()
   @HttpCode(200)
   @ApiOperation({
     operationId: 'disableTwoFactor',
@@ -107,7 +103,6 @@ export class TwoFactorController {
 
   @Post('backup-codes')
   @Authenticated()
-  @NoMagicLink()
   @HttpCode(200)
   @ApiOperation({
     operationId: 'regenerateBackupCodes',

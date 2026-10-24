@@ -183,6 +183,25 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01, F-02, F-03.
 - The portal's Arabic auth strings are machine drafts (`packages/i18n/REVIEW.md`).
 - The stub sign-in (`ENABLE_STUB_AUTH`) is gone; an existing `apps/api/.env` can drop that line. The permission matrix is
   still the interim one (F-04).
+- **From the F-03 reviews, fixed:** magic-link sessions refresh (without lengthening) and are refused by every route that does
+  not carry `@AllowMagicLink()`; a link no longer enrols another hospital's doctor; a racing refresh gets 409 and keeps its
+  cookies; the replay grace runs from `rotatedAt`; the browser client retries only `session_expired` 401s; a locked account
+  answers like a wrong password; a sign-in code claims an account registered unverified by someone else; turning on
+  two-factor signs the other devices out; invitation tokens are scrubbed from request logs; production needs
+  `TRUST_PROXY_HOPS` and the dev seed refuses to run outside development and test.
+- **From the F-03 reviews, not done (owners in brackets):** (1) `scopeCaseId` is only kept by the deny-by-default guard;
+  case endpoints must filter by it (F-04, F-10). (2) First-time two-factor enrolment needs only the password the limited
+  session proved; bind it to an emailed code or the invitation. (3) Codes by phone are accepted but not delivered until
+  F-07. (4) No way yet to create an agent account (needs an agent invitation, F-18). (5) Lockout and OTP attempt counters are
+  not atomic and the limiter is per process (Redis before more than one API instance); a stranger can lock a known account
+  for 15 minutes. (6) A TOTP code and the 2FA challenge token can be replayed within their window; store the last step.
+  (7) Patients can probe which emails have accounts through invitations (answer 202 either way). (8) The refresh session
+  slides for ever, with no absolute cap and no cleanup job for old sessions and challenges. (9) OTP-only accounts cannot
+  set a password. (10) Mail is sent inside the request (move to the outbox, F-07). (11) Cookies are `Path=/` with an
+  optional parent `Domain`; prefer the same host or `__Host-` names at deployment. (12) Security defaults depend on
+  `NODE_ENV`; deployments must set it to `production`. (13) The magic link redeems on page load, so a mail scanner can
+  burn it; add a confirm button, and consider a second factor for doctors. (14) Registration lets an unverified account
+  sign in; consider holding the password until the address is verified.
 - The browser test that walks an un-enrolled staff user through two-factor set-up can run once per database (it enrols
   the user); it skips itself when the user is already enrolled.
 

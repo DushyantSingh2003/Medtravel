@@ -42,6 +42,7 @@ env_args=(
   -e "AUTH_TOKEN_SECRET=$(openssl rand -base64 48)"
   -e "AUTH_ENCRYPTION_KEY=$(openssl rand -hex 32)"
   -e EMAIL_TRANSPORT=smtp
+  -e TRUST_PROXY_HOPS=1
 )
 docker run -d --name "$name" --network host "${env_args[@]}" "$image" > /dev/null
 

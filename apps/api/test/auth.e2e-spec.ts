@@ -104,9 +104,10 @@ describe('password sign-in', () => {
     const user = await t.makeUser({ email: email(), role: 'patient' });
     for (let i = 0; i < 5; i += 1)
       expect((await signIn(user.email, 'Wrong-password-1')).res.status).toBe(401);
+    // Locked looks the same as a wrong password, so the answer does not reveal which addresses have accounts.
     const locked = await signIn(user.email);
-    expect(locked.res.status).toBe(429);
-    expect(codeOf(locked.res)).toBe('account_locked');
+    expect(locked.res.status).toBe(401);
+    expect(locked.res.body).toMatchObject({ message: 'Incorrect email, password or code' });
 
     await t.db.user.update({
       where: { id: user.id },
@@ -181,13 +182,16 @@ describe('sessions and tokens', () => {
     expect((await t.raw('GET', '/auth/me', { cookies: second })).status).toBe(200);
 
     // Inside the grace period a repeat is two tabs racing: refused, but the session lives.
-    expect((await t.raw('POST', '/auth/refresh', { cookies: first.cookies })).status).toBe(401);
+    // Answered 409 without clearing cookies, so the winning tab keeps the ones it was given.
+    const raced = await t.raw('POST', '/auth/refresh', { cookies: first.cookies });
+    expect(raced.status).toBe(409);
+    expect(raced.setCookieHeaders).toEqual([]);
     expect((await t.raw('GET', '/auth/me', { cookies: second })).status).toBe(200);
 
-    // Later, the same old token is a copied one: the whole session is revoked.
+    // Activity on the session does not stretch the grace period: it runs from the rotation.
     await t.db.session.updateMany({
       where: { userId: user.id },
-      data: { lastUsedAt: new Date(Date.now() - 60_000) },
+      data: { rotatedAt: new Date(Date.now() - 60_000), lastUsedAt: new Date() },
     });
     expect((await t.raw('POST', '/auth/refresh', { cookies: first.cookies })).status).toBe(401);
     expect((await t.raw('GET', '/auth/me', { cookies: second })).status).toBe(401);
@@ -509,7 +513,30 @@ describe('two-factor authentication', () => {
           })
         ).status,
       );
-    expect(statuses).toEqual([401, 401, 401, 401, 401, 429]);
+    expect(statuses).toEqual([401, 401, 401, 401, 401, 401]);
+    expect(
+      (await t.db.user.findUniqueOrThrow({ where: { id: user.id } })).lockedUntil,
+    ).not.toBeNull();
+  });
+
+  it('signs the other devices out when it is turned on', async () => {
+    const patient = await t.makeUser({ email: email('patient'), role: 'patient' });
+    const mine = (await signIn(patient.email)).cookies;
+    const other = (await signIn(patient.email)).cookies;
+    const setup = z
+      .object({ secret: z.string() })
+      .parse((await t.raw('POST', '/auth/2fa/setup', { cookies: mine, headers: csrf(mine) })).body);
+    expect(
+      (
+        await t.raw('POST', '/auth/2fa/enable', {
+          cookies: mine,
+          headers: csrf(mine),
+          body: { code: generateSync({ secret: setup.secret }) },
+        })
+      ).status,
+    ).toBe(200);
+    expect((await t.raw('GET', '/auth/me', { cookies: mine })).status).toBe(200);
+    expect((await t.raw('GET', '/auth/me', { cookies: other })).status).toBe(401);
   });
 
   it('lets a patient turn it on and off, but never lets a staff role turn it off', async () => {
@@ -578,6 +605,23 @@ describe('two-factor authentication', () => {
 describe('one-time codes', () => {
   const lastCode = (to: string) =>
     t.mails.filter((mail) => mail.to === to && mail.template === 'login_code').at(-1)?.secret ?? '';
+
+  it('give the mailbox owner the account, not the person who registered it first', async () => {
+    const address = email('victim');
+    await t.raw('POST', '/auth/register', {
+      body: { name: 'Attacker', email: address, password: 'Attacker-pass-12' },
+    });
+    const attacker = (await signIn(address, 'Attacker-pass-12')).cookies;
+    expect((await t.raw('GET', '/auth/me', { cookies: attacker })).status).toBe(200);
+
+    await t.raw('POST', '/auth/login/otp/request', { body: { identifier: address } });
+    const verify = await t.raw('POST', '/auth/login/otp/verify', {
+      body: { identifier: address, code: lastCode(address) },
+    });
+    expect(verify.status).toBe(200);
+    expect((await t.raw('GET', '/auth/me', { cookies: attacker })).status).toBe(401);
+    expect((await signIn(address, 'Attacker-pass-12')).res.status).toBe(401);
+  });
 
   it('sign a new patient up and in with an emailed code', async () => {
     const address = email('otp');
@@ -1133,8 +1177,8 @@ describe('magic links for doctors', () => {
     expect((await t.raw('GET', '/auth/me', { cookies })).body).toMatchObject({
       scopeCaseId: caseId,
     });
-    expect((await t.raw('GET', '/masters/countries', { cookies })).status).toBe(200);
-    // No account management from a magic link.
+    // Closed to everything that has not opted in to keeping to one case (nothing has yet).
+    expect((await t.raw('GET', '/masters/countries', { cookies })).status).toBe(403);
     for (const [method, url] of [
       ['GET', '/auth/sessions'],
       ['POST', '/auth/logout-others'],
@@ -1144,12 +1188,31 @@ describe('magic links for doctors', () => {
     ] as const) {
       expect((await t.raw(method, url, { cookies, headers: csrf(cookies) })).status, url).toBe(403);
     }
-    // And it cannot be refreshed into a longer one.
-    expect((await t.raw('POST', '/auth/refresh', { cookies })).status).toBe(401);
-
     const session = await t.db.session.findFirstOrThrow({ where: { user: { email: address } } });
+
+    // It can be refreshed (the access token lasts 15 minutes) but never into a longer session.
+    const refreshed = await t.raw('POST', '/auth/refresh', { cookies });
+    expect(refreshed.status).toBe(200);
+    expect(
+      (await t.db.session.findUniqueOrThrow({ where: { id: session.id } })).expiresAt.getTime(),
+    ).toBe(session.expiresAt.getTime());
     expect(session).toMatchObject({ kind: 'magic_link', scopeCaseId: caseId });
     expect(session.expiresAt.getTime() - Date.now()).toBeLessThanOrEqual(8 * 3_600_000 + 5000);
+  });
+
+  it('does not enrol a doctor of another hospital by sending a link', async () => {
+    const otherCity = await t.db.city.findFirstOrThrow({ where: { slug: 'magic-city' } });
+    const other = await t.db.hospital.create({
+      data: { slug: `other-${next()}`, name: 'Other hospital', cityId: otherCity.id },
+    });
+    const doctor = await t.makeUser({ email: email('doctor'), role: 'doctor' });
+    await t.db.hospitalStaff.create({ data: { userId: doctor.id, hospitalId: other.id } });
+    const sent = await t.raw('POST', '/auth/magic-links', {
+      headers: await asDesk(),
+      body: { email: doctor.email, name: 'Dr Other', caseId },
+    });
+    expect(sent.status).toBe(202);
+    expect(await t.db.hospitalStaff.count({ where: { userId: doctor.id, hospitalId } })).toBe(0);
   });
 
   it('works once, and expires after 72 hours', async () => {

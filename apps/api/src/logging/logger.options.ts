@@ -1,5 +1,6 @@
 import { RequestMethod } from '@nestjs/common';
 import type { Params } from 'nestjs-pino';
+import { stdSerializers } from 'pino';
 import type { Env } from '../config/env.schema.js';
 
 /**
@@ -36,6 +37,13 @@ export const REDACTED_PATHS = [
   '*.passportNumber',
 ];
 
+/** Hides one-time tokens in a request address (`/auth/invitations/<token>`, `?token=`). */
+export function scrubUrl(url: string): string {
+  return url
+    .replace(/(\/auth\/invitations\/)[^/?#]+/, '$1[redacted]')
+    .replace(/([?&]token=)[^&#]*/g, '$1[redacted]');
+}
+
 /** pino configuration: pretty and chatty locally, JSON for CloudWatch in production. */
 export function loggerOptions(env: Env): Params {
   const pretty = env.NODE_ENV === 'development';
@@ -45,6 +53,13 @@ export function loggerOptions(env: Env): Params {
     pinoHttp: {
       level: env.LOG_LEVEL,
       redact: { paths: REDACTED_PATHS, censor: '[redacted]' },
+      serializers: {
+        // Invitation and link tokens travel in the address; a log reader must not be able to use them.
+        req: (request: Record<string, unknown>) => ({
+          ...stdSerializers.req(request as never),
+          url: scrubUrl(String(request['url'] ?? '')),
+        }),
+      },
       ...(pretty ? { transport: { target: 'pino-pretty', options: { singleLine: true } } } : {}),
     },
   };

@@ -2,6 +2,7 @@ import {
   HttpException,
   HttpStatus,
   Inject,
+  ConflictException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -20,7 +21,7 @@ import { SessionService, type RefreshOutcome } from '../../auth/session.service.
 import type { RequestContext } from '../../common/request-context.js';
 import { ENV } from '../../config/config.module.js';
 import type { Env } from '../../config/env.schema.js';
-import { PRISMA } from '../../database/database.module.js';
+import { PRISMA, type Db } from '../../database/database.module.js';
 import { hmacHex, randomCode, randomToken, safeEqual, sha256Hex } from './crypto/tokens.js';
 import { Mailer } from './mail/mailer.js';
 import { PasswordService } from './password.service.js';
@@ -218,6 +219,7 @@ export class AuthService {
       if (consumed.count !== 1) return null;
       const verified = isEmail ? { emailVerifiedAt: new Date() } : { phoneVerifiedAt: new Date() };
       if (challenge.userId) {
+        if (isEmail) await this.claimUnverified(tx, challenge.userId);
         return tx.user.update({
           where: { id: challenge.userId },
           data: verified,
@@ -255,6 +257,24 @@ export class AuthService {
     return this.signIn.complete(user, context, 'code');
   }
 
+  /**
+   * Whoever proves they own the mailbox through a sign-in code owns the account. If the account was made by someone else
+   * before the address was verified (they typed the victim's address when registering), their password and sessions must
+   * not survive that. (The registration link itself is not enough to tell: it is what the real owner clicks too.)
+   */
+  private async claimUnverified(tx: Db, userId: string): Promise<void> {
+    const user = await tx.user.findUnique({
+      where: { id: userId },
+      select: { emailVerifiedAt: true, passwordHash: true },
+    });
+    if (!user || user.emailVerifiedAt || !user.passwordHash) return;
+    await tx.user.update({
+      where: { id: userId },
+      data: { passwordHash: null, passwordChangedAt: new Date() },
+    });
+    await this.sessions.revokeAll(tx, userId);
+  }
+
   // ---- tokens and the current session -----------------------------------------------------------------------
   async refresh(
     cookie: string,
@@ -273,6 +293,8 @@ export class AuthService {
           },
         );
       }
+      // A tab that lost a race: the winner has already set new cookies, so say "try again" without ending anything.
+      if (outcome.race) throw new ConflictException('Another tab is refreshing the session');
       throw new UnauthorizedException('Sign in again');
     }
     const user = await this.signIn.accountById(outcome.userId);

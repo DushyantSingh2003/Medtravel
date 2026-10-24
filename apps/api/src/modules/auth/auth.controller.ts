@@ -1,12 +1,23 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  ConflictException,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Req,
+  Res,
+} from '@nestjs/common';
 import { ApiCookieAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { ACCESS_COOKIE, REFRESH_COOKIE, SessionCookies, readCookie } from '../../auth/cookies.js';
 import {
   AllowLimitedSession,
+  AllowMagicLink,
   Authenticated,
   CurrentActor,
-  NoMagicLink,
   Public,
   Throttle,
 } from '../../auth/decorators.js';
@@ -128,7 +139,8 @@ export class AuthController {
       this.cookies.set(reply, outcome.session!.tokens);
       return outcome.user;
     } catch (error) {
-      this.cookies.clear(reply);
+      // A tab that lost a race keeps the cookies the winner set; only a final refusal ends the browser's session.
+      if (!(error instanceof ConflictException)) this.cookies.clear(reply);
       throw error;
     }
   }
@@ -154,6 +166,7 @@ export class AuthController {
 
   @Get('me')
   @Authenticated()
+  @AllowMagicLink()
   @AllowLimitedSession()
   @ApiOperation({
     operationId: 'getMe',
@@ -180,7 +193,6 @@ export class AuthController {
 
   @Post('email/resend')
   @Authenticated()
-  @NoMagicLink()
   @HttpCode(202)
   @ApiOperation({
     operationId: 'resendVerificationEmail',
@@ -222,7 +234,6 @@ export class AuthController {
 
   @Post('password/change')
   @Authenticated()
-  @NoMagicLink()
   @HttpCode(200)
   @ApiOperation({
     operationId: 'changePassword',
@@ -240,7 +251,6 @@ export class AuthController {
 
   @Get('sessions')
   @Authenticated()
-  @NoMagicLink()
   @ApiOperation({
     operationId: 'listSessions',
     summary: 'The devices this account is signed in on',
@@ -252,7 +262,6 @@ export class AuthController {
 
   @Delete('sessions/:id')
   @Authenticated()
-  @NoMagicLink()
   @HttpCode(200)
   @ApiOperation({ operationId: 'revokeSession', summary: 'Sign one device out' })
   @ApiOkResponse({ type: AcceptedDto })
@@ -267,7 +276,6 @@ export class AuthController {
 
   @Post('logout-others')
   @Authenticated()
-  @NoMagicLink()
   @HttpCode(200)
   @ApiOperation({
     operationId: 'logoutOtherSessions',

@@ -49,11 +49,15 @@ describe('loadEnv', () => {
       AUTH_TOKEN_SECRET: 'x'.repeat(48),
       AUTH_ENCRYPTION_KEY: 'ab'.repeat(32),
       EMAIL_TRANSPORT: 'smtp',
+      TRUST_PROXY_HOPS: '1',
     };
     expect(loadEnv(production as NodeJS.ProcessEnv).NODE_ENV).toBe('production');
     expect(() =>
       loadEnv({ ...production, EMAIL_TRANSPORT: 'capture' } as NodeJS.ProcessEnv),
     ).toThrow(/EMAIL_TRANSPORT/);
+    expect(() => loadEnv({ ...production, TRUST_PROXY_HOPS: '0' } as NodeJS.ProcessEnv)).toThrow(
+      /TRUST_PROXY_HOPS/,
+    );
   });
 
   it('rejects a malformed encryption key and a short token secret', () => {

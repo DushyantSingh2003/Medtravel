@@ -79,6 +79,11 @@ export const envSchema = z
         issue('AUTH_TOKEN_SECRET', 'Set a real AUTH_TOKEN_SECRET in production');
       if (env.AUTH_ENCRYPTION_KEY === DEV_ENCRYPTION_KEY)
         issue('AUTH_ENCRYPTION_KEY', 'Set a real AUTH_ENCRYPTION_KEY in production');
+      if (env.TRUST_PROXY_HOPS < 1)
+        issue(
+          'TRUST_PROXY_HOPS',
+          'Set TRUST_PROXY_HOPS to the number of proxies in front of the API, or every visitor shares one address',
+        );
       if (env.EMAIL_TRANSPORT === 'capture')
         issue('EMAIL_TRANSPORT', 'Mail must be sent (EMAIL_TRANSPORT=smtp) in production');
     }

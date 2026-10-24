@@ -41,7 +41,8 @@ export interface SessionResult {
 }
 
 export type RefreshOutcome =
-  { ok: true; result: SessionResult; userId: string } | { ok: false; revokedUserId?: string };
+  | { ok: true; result: SessionResult; userId: string }
+  | { ok: false; revokedUserId?: string; race?: true };
 
 @Injectable()
 export class SessionService {
@@ -175,24 +176,28 @@ export class SessionService {
         previousTokenHash: true,
         revokedAt: true,
         expiresAt: true,
-        lastUsedAt: true,
+        rotatedAt: true,
         user: { select: { status: true, deletedAt: true } },
       },
     });
-    if (!session || session.revokedAt || session.expiresAt <= new Date() || session.kind !== 'user')
-      return { ok: false };
+    if (!session || session.revokedAt || session.expiresAt <= new Date()) return { ok: false };
     if (session.user.status !== 'active' || session.user.deletedAt) return { ok: false };
 
     const presented = sha256Hex(secret);
     if (safeEqual(presented, session.tokenHash)) {
       const next = randomToken();
-      const expiresAt = new Date(Date.now() + AUTH_LIMITS.refreshTokenDays * DAY_MS);
+      // A magic-link session keeps the end it was given; only a user session slides forward.
+      const expiresAt =
+        session.kind === 'user'
+          ? new Date(Date.now() + AUTH_LIMITS.refreshTokenDays * DAY_MS)
+          : session.expiresAt;
       // Only the request that still holds the current token wins; a concurrent one finds the hash already changed.
       const rotated = await this.prisma.session.updateMany({
         where: { id: session.id, tokenHash: session.tokenHash, revokedAt: null },
         data: {
           tokenHash: sha256Hex(next),
           previousTokenHash: session.tokenHash,
+          rotatedAt: new Date(),
           lastUsedAt: new Date(),
           expiresAt,
         },
@@ -208,8 +213,9 @@ export class SessionService {
       };
     }
     if (session.previousTokenHash && safeEqual(presented, session.previousTokenHash)) {
-      const rotatedAgo = session.lastUsedAt ? Date.now() - session.lastUsedAt.getTime() : Infinity;
-      if (rotatedAgo <= ROTATION_GRACE_MS) return { ok: false };
+      const rotatedAgo = session.rotatedAt ? Date.now() - session.rotatedAt.getTime() : Infinity;
+      // A second tab that raced the first: refuse it, but leave the session (and the first tab's new cookies) alone.
+      if (rotatedAgo <= ROTATION_GRACE_MS) return { ok: false, race: true };
       await this.revoke(this.prisma, session.id);
       return { ok: false, revokedUserId: session.userId };
     }

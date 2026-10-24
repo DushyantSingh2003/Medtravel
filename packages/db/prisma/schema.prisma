@@ -814,6 +814,7 @@ model Session {
   kind                SessionKind @default(user)
   tokenHash           String      @unique
   previousTokenHash   String?     @unique
+  rotatedAt           DateTime?   @db.Timestamptz(3)
   userAgent           String?
   deviceLabel         String?     @db.VarChar(120)
   ip                  String?     @db.VarChar(45)

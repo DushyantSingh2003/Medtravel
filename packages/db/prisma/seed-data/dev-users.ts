@@ -34,8 +34,9 @@ function encryptSecret(keyHex: string, plaintext: string): string {
 }
 
 export async function seedDevUsers(prisma: PrismaClient): Promise<number> {
-  if (process.env['NODE_ENV'] === 'production')
-    throw new Error('Refusing to create development users in production');
+  // These accounts share a published password: only where the environment is explicitly a development or test one.
+  if (!['development', 'test'].includes(process.env['NODE_ENV'] ?? 'development'))
+    throw new Error('Refusing to create development users outside development and test');
   const passwordHash = await hash(DEV_PASSWORD, {
     algorithm: 2,
     memoryCost: 19_456,
