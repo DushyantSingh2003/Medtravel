@@ -168,7 +168,8 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01, F-02, F-03.
 
 ### Deferred from F-03
 
-- **Not yet verified on GitHub:** the browser job now seeds the development users with two-factor enrolment
+- **Verified on GitHub:** `ci.yml` run 15 on `develop` (commit 46e9225) passed, including the browser job with the seeded dev users,
+  the API e2e and the image smoke tests. (Run 14 and 13, for F-02, had failed only on the image smoke test; fixed here.) The job seeds the development users with two-factor enrolment
   (`SEED_DEV_USERS=true SEED_DEV_2FA=true`), starts the API as `NODE_ENV=test` with a relaxed rate limit, and the
   image smoke test expects `/docs` 404 and `/masters/countries` 401 in production mode. The F-02 CI run failed only
   on that image smoke test (`/docs` is off in production); the smoke script was fixed in this task.
