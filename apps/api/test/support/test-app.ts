@@ -19,6 +19,7 @@ export interface RawResponse {
   /** Every `Set-Cookie` of the response, as `name -> value` (an empty value means the cookie was cleared). */
   cookies: Record<string, string>;
   setCookieHeaders: string[];
+  headers: Record<string, string | string[] | number | undefined>;
 }
 
 export interface RawRequest {
@@ -104,7 +105,15 @@ export async function createTestApp(
   const mailer = app.get(Mailer);
   const tokens = new Map<string, string>();
 
-  const parse = (text: string): unknown => (text ? JSON.parse(text) : undefined);
+  const parse = (text: string): unknown => {
+    if (!text) return undefined;
+    try {
+      return JSON.parse(text);
+    } catch {
+      // Not JSON (a CSV export): hand back the text.
+      return text;
+    }
+  };
 
   const makeUser: TestApp['makeUser'] = async ({
     email,
@@ -161,7 +170,13 @@ export async function createTestApp(
         return [(pair ?? '').slice(0, index), (pair ?? '').slice(index + 1)];
       }),
     );
-    return { status: response.statusCode, body: parse(response.body), cookies, setCookieHeaders };
+    return {
+      status: response.statusCode,
+      body: parse(response.body),
+      cookies,
+      setCookieHeaders,
+      headers: response.headers,
+    };
   };
 
   return {

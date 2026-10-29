@@ -1,8 +1,23 @@
 import { Global, Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { OutboxService } from '../outbox/outbox.service.js';
+import { AuditController } from './audit.controller.js';
+import { AuditQueryService } from './audit-query.service.js';
+import { AuditTrailInterceptor } from './audit-trail.interceptor.js';
 import { AuditService } from './audit.service.js';
+import { DownloadAlertService } from './download-alert.service.js';
 
 /** Audit trail and outbox, global because every module that changes data writes both in its transaction. */
 @Global()
-@Module({ providers: [AuditService, OutboxService], exports: [AuditService, OutboxService] })
+@Module({
+  controllers: [AuditController],
+  providers: [
+    AuditService,
+    AuditQueryService,
+    DownloadAlertService,
+    OutboxService,
+    { provide: APP_INTERCEPTOR, useClass: AuditTrailInterceptor },
+  ],
+  exports: [AuditService, OutboxService],
+})
 export class AuditModule {}

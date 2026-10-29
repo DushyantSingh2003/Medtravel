@@ -554,7 +554,6 @@
       "cms": "Content",
       "pricing": "Pricing rules",
       "templates": "Templates",
-      "audit-log": "Audit log",
       "reports": "Reports",
       "invoicing": "Invoicing",
       "payments": "Payment collection",
@@ -569,7 +568,8 @@
       "transport": "Transport",
       "interpreters": "Interpreters",
       "welcome-kit": "Welcome kit",
-      "flights": "Flight bookings"
+      "flights": "Flight bookings",
+      "audit": "Audit log"
     }
   },
   "pages": {
@@ -645,7 +645,6 @@
       "cms": "Edit treatment, hospital, doctor, city and blog pages with translations, SEO fields and a publish workflow.",
       "pricing": "Service package prices, margins and currency conversion rates updated daily.",
       "templates": "Email, WhatsApp, SMS and PDF templates in every language.",
-      "audit-log": "Who viewed or changed any patient record, with time and IP address.",
       "reports": "Success metrics with export to Excel.",
       "invoicing": "GST-compliant invoices for service fees, and credit notes.",
       "payments": "Card, international wire and UPI, payment links, partial payments and multi-currency with INR settlement.",
@@ -660,7 +659,8 @@
       "transport": "Vendors, drivers, vehicles including wheelchair and ambulance, city rates and job assignment.",
       "interpreters": "Languages, city, rates, availability, assignment and hours log.",
       "welcome-kit": "SIM cards, currency and kit items in stock per city.",
-      "flights": "Bookings made through the travel partner, with PNR and times, creating the pickup job automatically."
+      "flights": "Bookings made through the travel partner, with PNR and times, creating the pickup job automatically.",
+      "audit": "Who viewed or changed any patient record, with time and IP address."
     }
   },
   "shell": {
@@ -1165,6 +1165,83 @@
         "resend": "Send the link again",
         "sent": "We sent the link."
       }
+    }
+  },
+  "audit": {
+    "title": "Audit log",
+    "description": "Who viewed, downloaded or changed what, with the time, address and device. Passport numbers, passwords and tokens are masked.",
+    "filters": {
+      "actor": "Search by person: name or email",
+      "action": "Action",
+      "allActions": "All actions",
+      "entityType": "Record type",
+      "entityTypePlaceholder": "For example Document",
+      "from": "From",
+      "to": "To",
+      "clear": "Clear filters"
+    },
+    "actions": {
+      "document_": "All document activity",
+      "document_viewed": "Document viewed",
+      "document_downloaded": "Document downloaded",
+      "patient_": "All patient record activity",
+      "patient_viewed": "Patient record viewed",
+      "patient_exported": "Patient record exported",
+      "master_data_": "Master data changes",
+      "auth_": "Sign-in and account changes",
+      "invitation_": "Invitations",
+      "audit_exported": "Audit log exported",
+      "incident_created": "Incident opened"
+    },
+    "columns": {
+      "time": "Time",
+      "person": "Person",
+      "action": "Action",
+      "record": "Record",
+      "address": "IP address"
+    },
+    "system": "System",
+    "viewDetails": "Show details of {action}",
+    "detail": {
+      "title": "Audit event",
+      "description": "As recorded. Only the fields that changed are kept, and sensitive values are masked.",
+      "action": "Action",
+      "time": "Time",
+      "person": "Person",
+      "record": "Record",
+      "patient": "Patient",
+      "request": "Request ID",
+      "device": "Device",
+      "address": "IP address",
+      "before": "Before",
+      "after": "After",
+      "noChanges": "No field values were recorded for this event.",
+      "close": "Close"
+    },
+    "export": {
+      "button": "Export CSV",
+      "working": "Preparing the file",
+      "done": "The audit log was downloaded",
+      "failed": "Could not export the audit log"
+    },
+    "table": {
+      "caption": "Audit log",
+      "search": "Search by person: name or email",
+      "columns": "Columns",
+      "selectAll": "Select all rows",
+      "selectRow": "Select {name}",
+      "previous": "Previous page",
+      "next": "Next page",
+      "rowsPerPage": "Rows per page",
+      "pageOf": "Page {page} of {pages}",
+      "total": "{count, plural, one {# event} other {# events}}",
+      "selected": "{count, plural, one {# selected} other {# selected}}",
+      "loading": "Loading the audit log",
+      "emptyTitle": "No events",
+      "emptyDescription": "Nothing matches these filters. Widen the dates or clear the filters.",
+      "errorTitle": "Could not load the audit log",
+      "errorDescription": "Check your connection, then try again.",
+      "retry": "Try again"
     }
   }
 }

@@ -93,6 +93,8 @@ jobs:
       - run: pnpm --filter @medtravel/api test:e2e
       # Applies the migrations to an empty throwaway database and checks the schema with real SQL.
       - run: pnpm --filter @medtravel/db test:e2e
+      # The worker's outbox handlers against a real database.
+      - run: pnpm --filter @medtravel/worker test:e2e
 
   build:
     name: Build all apps and browser tests

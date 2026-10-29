@@ -89,6 +89,7 @@ describe('schema.prisma enums', () => {
           'translationLocale',
           'permissionAction',
           'permissionSubject',
+          'auditAccessAction',
           'identifier',
         ].includes(base)
       )

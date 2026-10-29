@@ -4,7 +4,7 @@ Tick a task here when it is finished and `pnpm check` is green. The task queue t
 build loop is `loop/cloud-state.json`; this file is the human-readable view and also records
 what each task deferred.
 
-Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-04.
+Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-05.
 
 ### Phase 0 — Scaffold (week 1)
 
@@ -21,7 +21,7 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-04.
 - [x] **F-02** Master data module (the reference pattern)
 - [x] **F-03** Authentication
 - [x] **F-04** Roles, permissions and data scoping
-- [ ] **F-05** Audit log and domain events
+- [x] **F-05** Audit log and domain events
 - [ ] **F-06** Secure file service
 - [ ] **F-07** Notification engine
 - [ ] **F-08** Realtime gateway
@@ -166,9 +166,41 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-04.
 
 ## Notes and deferred work
 
+### Deferred from F-05
+
+- **Not yet verified on GitHub:** first CI result for this task (the API e2e job now also runs the worker's database tests).
+- **Automatic capture of every change:** services write detailed audit rows (what changed) in their own transaction, as
+  masters and auth do. As a safety net an interceptor adds a plain `http.<method>` row naming the route (never ids) when a
+  signed-in change finishes without any audit row. It does not say what changed; a Prisma extension that records every
+  create, update and delete is the follow-up if the safety net proves too coarse.
+- **Blocking dependency for F-06 and the case screens:** every patient or document read and download must call
+  `AuditService.recordAccess`. No real call site exists yet, so the end-to-end proof uses a test-only route, and the Playwright
+  test shows a sign-in within seconds instead of a document view.
+- **Masking is a key-name deny-list** (contact details, birth dates, medical text, identifiers, secrets, passports), not an
+  allow-list per entity. A new field with an unusual name is stored as it is: a service logging a whole record must also pass
+  only the fields it means to. Values inside free text (a link with a token in a harmless key) are not scrubbed.
+- **The download alert** counts `document.downloaded` only (not inline views), once per user per rolling hour, and does not
+  escalate after the first alert; no account suspension or step-up. A hospital-wide or address-wide counter is not built.
+- **Audit rows can be deleted only by the retention job** (a trigger needs `SET LOCAL medtravel.audit_retention = 'on'`); the job
+  itself, and a retention period for IP and device data, are not built. The deployment should also connect with a role that
+  has no DELETE or UPDATE on the table.
+- The audit list total is capped at 10,001; the actor filter needs three characters and looks at the first 1,000 matching users;
+  `action` prefix filters use `LIKE 'x.%'`, which wants a `text_pattern_ops` index on a very large table.
+- The CSV export is built in memory (10,000 rows at most, `x-audit-truncated: true` says when more matched), not streamed,
+  and the portal does not yet show that header.
+- The audit screen's dates are Asia/Kolkata days; the browser's own zone is not used.
+- Outbox: polls every 2 seconds and keeps going while batches are full; events no handler knows are deferred 10 minutes, not
+  consumed; an event that keeps killing its worker is marked failed after 6 tries; a handler that runs longer than the 120 s
+  lock can run twice (handlers must be idempotent). Failed events have no alert or screen yet, processed rows are never
+  pruned, and only `incident.created` has a handler.
+- Admin notifications for an incident are in-app only and in English until the notification engine (F-07) renders templates.
+- Reads of the audit trail are not themselves audited (only the export is); the incident created by the alert has no assignee
+  and no screen to work it until the incidents module.
+
 ### Deferred from F-04
 
-- **Not yet verified on GitHub:** first CI result for this task (recorded here once it has run).
+- **Verified on GitHub:** `ci.yml` run 18 on `develop` (commit 676843d, "loop: finish F-04") passed, including the API e2e, the browser job
+  and the image smoke tests.
 - No endpoint uses `ScopeService` yet (the case, document and patient endpoints arrive in F-06, F-10 and later); it is proven
   against a real database by `apps/api/test/rbac.e2e-spec.ts`. Every new list endpoint must AND `caseWhere` / `documentWhere` /
   `patientWhere` into its query, and call `assertCaseAccess` before loading a case's children. Magic-link sessions are

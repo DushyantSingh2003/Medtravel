@@ -141,8 +141,8 @@ test.describe('click through every placeholder page', () => {
           await page.locator(`[data-slot=app-shell] aside nav a[href="${target.href}"]`).click();
           await expect(page).toHaveURL(new RegExp(`${target.href}$`));
           await expect(page.getByRole('heading', { level: 1 })).toHaveText(target.text);
-          // Screens that have been built (master data) no longer show the placeholder.
-          if (!target.href.endsWith('/admin/masters')) {
+          // Screens that have been built (master data, audit log) no longer show the placeholder.
+          if (!/\/admin\/(masters|audit)$/.test(target.href)) {
             await expect(page.getByRole('main').getByRole('heading', { level: 2 })).toBeVisible();
           }
           await expect(page.locator('aside nav a[aria-current=page]')).toHaveText(target.text);

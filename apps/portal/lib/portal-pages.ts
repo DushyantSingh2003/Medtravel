@@ -178,7 +178,7 @@ export const PORTAL_DEFINITIONS: Record<Portal, PortalDefinition> = {
       { key: 'cms', icon: 'PenSquare', priority: 'P0', section: 'admin' },
       { key: 'pricing', icon: 'BadgePercent', priority: 'P0', section: 'admin' },
       { key: 'templates', icon: 'FileText', priority: 'P0', section: 'admin' },
-      { key: 'audit-log', icon: 'History', priority: 'P0', section: 'admin' },
+      { key: 'audit', icon: 'History', priority: 'P0', section: 'admin' },
       { key: 'reports', icon: 'BarChart3', priority: 'P0', section: 'admin' },
       { key: 'invoicing', icon: 'FileSpreadsheet', priority: 'P0', section: 'finance' },
       { key: 'payments', icon: 'CreditCard', priority: 'P0', section: 'finance' },

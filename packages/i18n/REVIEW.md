@@ -37,3 +37,8 @@ The whole `auth.*` namespace (sign-in, one-time code, two-step verification, bac
 invitation, magic link, account security) and `shell.accountSecurity` are machine-drafted Arabic. Worth a native
 speaker's eye: "two-step verification" (التحقق بخطوتين), "backup codes" (رموز احتياطية) and the generic wrong-credentials
 message, which must stay deliberately vague.
+
+## F-05 (audit log)
+
+The whole `audit.*` namespace is machine-drafted Arabic. Worth a native speaker's eye: "سجل التدقيق" (audit log), the action
+names in `audit.actions` (view, download, export of a document or patient record) and the plural forms of the event count.

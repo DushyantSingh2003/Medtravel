@@ -64,7 +64,7 @@ describe('portal screen registry', () => {
       expect.arrayContaining(['leads', 'pipeline', 'cases', 'quotes', 'logistics', 'incidents']),
     );
     expect(keysOf('admin')).toEqual(
-      expect.arrayContaining(['users', 'audit-log', 'invoicing', 'stays', 'flights']),
+      expect.arrayContaining(['users', 'audit', 'invoicing', 'stays', 'flights']),
     );
   });
 });
