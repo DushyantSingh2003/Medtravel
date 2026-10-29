@@ -71,6 +71,12 @@
       "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e",
       "finishedAt": "2026-10-24T04:52:13.630Z",
       "note": "Authentication: sessions, 2FA, OTP, invitations, magic links, portal pages, dev users, browser tests"
+    },
+    "F-04": {
+      "status": "in-progress",
+      "attempts": 1,
+      "claimedAt": "2026-10-29T08:55:25.167Z",
+      "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e"
     }
   },
   "approvals": [],
@@ -92,6 +98,7 @@
     "2026-10-22T16:42:50.219Z claim F-02 attempt 1",
     "2026-10-22T17:28:21.718Z finish F-02 done",
     "2026-10-22T17:28:31.897Z claim F-03 attempt 1",
-    "2026-10-24T04:52:13.630Z finish F-03 done"
+    "2026-10-24T04:52:13.630Z finish F-03 done",
+    "2026-10-29T08:55:25.178Z claim F-04 attempt 1"
   ]
 }
