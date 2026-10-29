@@ -118,7 +118,7 @@ describe('looking up a rate', () => {
     );
   });
 
-  it('refuses a rate older than three days, or a currency with none, instead of guessing', async () => {
+  it('refuses a rate older than five days, or a currency with none, instead of guessing', async () => {
     await expect(rateOn(prisma, 'USD', 'AED', day('2026-11-05'))).rejects.toBeInstanceOf(
       RateUnavailableError,
     );

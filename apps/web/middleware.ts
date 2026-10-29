@@ -19,5 +19,5 @@ export default function middleware(request: NextRequest): NextResponse {
 
 export const config = {
   // Run on every path except Next internals, the API proxy and anything with a file extension.
-  matcher: ['/((?!api|_next|_vercel|.*\\..*).*)'],
+  matcher: ['/((?!api/|_next/|_vercel/|.*\\..*).*)'],
 };

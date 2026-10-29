@@ -52,6 +52,7 @@ export class RealtimePublisher {
       room,
       event,
       at: new Date().toISOString(),
+      seq: await this.redis.incr('rt:seq'),
       payload: parsed,
     };
     const key = logKey(room);
@@ -105,7 +106,7 @@ export class RealtimePublisher {
       for (const message of logged)
         if (Date.parse(message.at) >= since.getTime()) events.push(message);
     }
-    events.sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+    events.sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || (a.seq ?? 0) - (b.seq ?? 0));
     return { events, truncated };
   }
 }

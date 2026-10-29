@@ -37,17 +37,25 @@ describe('Frankfurter', () => {
       'AED',
       'EUR',
     ]);
-    expect(seen[0]?.url).toBe('/latest?from=USD&to=INR,AED,EUR');
+    expect(seen[0]?.url).toBe('/latest?from=USD');
     expect(result.asOf.toISOString()).toBe('2026-10-29T00:00:00.000Z');
     expect(result.rates).toEqual({ INR: '83.25120000', AED: '3.67250000', EUR: '0.92000000' });
   });
 
-  it('fails, leaving the stored rates alone, on an error answer, a missing currency or a malformed body', async () => {
+  it('leaves out a currency the bank does not quote, and fails only when none is quoted', async () => {
+    const provider = new FrankfurterProvider({ baseUrl: base });
+    reply = { status: 200, body: { date: '2026-10-29', rates: { INR: 83 } } };
+    expect((await provider.fetchRates('USD', ['INR', 'AED'])).rates).toEqual({
+      INR: '83.00000000',
+    });
+    reply = { status: 200, body: { date: '2026-10-29', rates: { EUR: 0.9 } } };
+    await expect(provider.fetchRates('USD', ['AED'])).rejects.toThrow(/no rate for any of AED/);
+  });
+
+  it('fails, leaving the stored rates alone, on an error answer or a malformed body', async () => {
     const provider = new FrankfurterProvider({ baseUrl: base });
     reply = { status: 503, body: {} };
     await expect(provider.fetchRates('USD', ['INR'])).rejects.toThrow(/503/);
-    reply = { status: 200, body: { date: '2026-10-29', rates: { INR: 83 } } };
-    await expect(provider.fetchRates('USD', ['INR', 'AED'])).rejects.toThrow(/no rate for AED/);
     reply = { status: 200, body: { nope: true } };
     await expect(provider.fetchRates('USD', ['INR'])).rejects.toThrow();
   });

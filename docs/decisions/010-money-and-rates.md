@@ -10,7 +10,7 @@ Status: accepted (F-09)
 - The worker fetches rates every day at 06:00 India time (a BullMQ job scheduler, registered once however many workers run) from
   a provider chosen by `FX_PROVIDER` and stores one `FxRate` row per currency against USD and day; re-running changes nothing.
   A failed fetch keeps yesterday's rates and retries with backoff.
-- A rate lookup finds the newest rate not after the date asked: direct, inverted, or through USD. Older than three days, or none, is an
+- A rate lookup finds the newest rate not after the date asked: direct, inverted, or through USD. Older than five days, or none, is an
   error: nobody is shown or charged a guessed price.
 - A quote stores the rate it used (`fxRate`, `fxRateAt`, `fxSource`, `fxBaseCurrency`) so a converted price never moves after it is sent.
 - Language is the visitor's earlier choice, then the browser's, then the country's; Arabic shows Latin digits and keeps each figure
@@ -25,3 +25,10 @@ sent quote again later would change a price the patient had already accepted.
 
 The public `GET /fx/rates` (cached five minutes) feeds the website's currency switcher. New currencies need a master row and a provider
 that quotes them.
+
+## Notes
+
+- Rates may be five days old, not three: the ECB publishes only on working days, and a Friday rate must survive a weekend plus a Monday holiday.
+- The ECB set (Frankfurter) has no dirham, riyal or dinar; those currencies are skipped without failing the refresh and have no rate until a provider that quotes them (`openexchangerates`) is configured. The conversion then refuses instead of guessing.
+- `/fx/*` are public on purpose (website visitors are not signed in), so there is no forbidden-role test; they are rate-limited instead and the tests cover that.
+- A revised rate for a pair and day already stored is ignored (first write wins); the next day's refresh corrects it.

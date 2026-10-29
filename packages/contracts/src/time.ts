@@ -51,6 +51,9 @@ export function dayBoundary(
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
   if (!match) throw new RangeError(`Not a day: ${day}`);
   const [, y, m, d] = match.map(Number) as [number, number, number, number];
+  const check = new Date(Date.UTC(y, m - 1, d));
+  if (check.getUTCMonth() !== m - 1 || check.getUTCDate() !== d)
+    throw new RangeError(`Not a day: ${day}`);
   const wall =
     edge === 'start' ? Date.UTC(y, m - 1, d, 0, 0, 0, 0) : Date.UTC(y, m - 1, d, 23, 59, 59, 999);
   // The offset depends on the instant being sought: settle it in two steps.

@@ -63,3 +63,10 @@ describe('formatting and dayOf', () => {
     expect(dayOf('2026-03-03T18:30:00Z', 'UTC')).toBe('2026-03-03');
   });
 });
+
+describe('dayBoundary with an impossible date', () => {
+  it('refuses a day that does not exist instead of rolling over', () => {
+    expect(() => dayBoundary('2026-02-31', 'start')).toThrow(RangeError);
+    expect(() => dayBoundary('2026-13-01', 'start')).toThrow(RangeError);
+  });
+});

@@ -16,7 +16,7 @@ type Db = Prisma.TransactionClient;
 /** The pivot currency cross rates go through when no direct rate is stored. */
 export const PIVOT_CURRENCY = 'USD';
 /** A rate older than this (relative to the day asked about) is not used: a stale price is worse than none. */
-export const MAX_RATE_AGE_DAYS = 3;
+export const MAX_RATE_AGE_DAYS = 5;
 
 export class RateUnavailableError extends MoneyError {
   constructor(from: string, to: string) {
@@ -91,7 +91,7 @@ const tooOld = (asOf: Date, date: Date) =>
 
 /**
  * The exchange rate from one currency to another on a date: the newest stored rate not after that date, direct, inverted, or
- * through USD. Throws `RateUnavailableError` when there is none or it is older than three days: callers must not guess.
+ * through USD. Throws `RateUnavailableError` when there is none or it is older than five days: callers must not guess.
  */
 export async function rateOn(
   db: Db,
@@ -105,7 +105,7 @@ export async function rateOn(
   const direct = await latest(db, from, to, date);
   if (direct && !tooOld(direct.asOf, date))
     return {
-      rate: fromScaled(toScaled(direct.rate.toString())),
+      rate: fromScaled(toScaled(direct.rate.toFixed(8))),
       asOf: direct.asOf,
       source: direct.source,
       how: 'direct',
@@ -114,7 +114,7 @@ export async function rateOn(
   const reverse = await latest(db, to, from, date);
   if (reverse && !tooOld(reverse.asOf, date))
     return {
-      rate: invertRate(reverse.rate.toString()),
+      rate: invertRate(reverse.rate.toFixed(8)),
       asOf: reverse.asOf,
       source: reverse.source,
       how: 'inverse',

@@ -15,6 +15,9 @@ export interface FxProvider {
 
 type Fetch = typeof fetch;
 
+/** A provider that does not answer must fail the job so it retries, not hold it forever. */
+const FETCH_TIMEOUT_MS = 15_000;
+
 async function json(response: Response, what: string): Promise<unknown> {
   if (!response.ok) throw new Error(`${what} answered ${response.status}`);
   return response.json();
@@ -26,11 +29,13 @@ function pick(
   what: string,
 ): Record<string, string> {
   const result: Record<string, string> = {};
+  // A currency the provider does not quote (the ECB has no dirham) is left out, not an error: the others still refresh.
   for (const quote of quotes) {
     const value = rates[quote];
-    if (value === undefined) throw new Error(`${what} has no rate for ${quote}`);
-    result[quote] = numberToRate(value);
+    if (value !== undefined) result[quote] = numberToRate(value);
   }
+  if (Object.keys(result).length === 0)
+    throw new Error(`${what} has no rate for any of ${quotes.join(', ')}`);
   return result;
 }
 
@@ -40,10 +45,17 @@ export class FrankfurterProvider implements FxProvider {
   constructor(private readonly options: { baseUrl?: string; fetch?: Fetch } = {}) {}
 
   async fetchRates(base: string, quotes: readonly string[]): Promise<FetchedRates> {
-    const url = `${this.options.baseUrl ?? 'https://api.frankfurter.app'}/latest?from=${base}&to=${quotes.join(',')}`;
+    const url = `${this.options.baseUrl ?? 'https://api.frankfurter.app'}/latest?from=${base}`;
     const body = z
       .object({ date: z.string(), rates: z.record(z.string(), z.number()) })
-      .parse(await json(await (this.options.fetch ?? fetch)(url), 'Frankfurter'));
+      .parse(
+        await json(
+          await (this.options.fetch ?? fetch)(url, {
+            signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+          }),
+          'Frankfurter',
+        ),
+      );
     // The ECB publishes once a day around 16:00 CET: the rates are valid from that day's publication.
     return {
       asOf: new Date(`${body.date}T00:00:00.000Z`),
@@ -61,6 +73,7 @@ export class OpenExchangeRatesProvider implements FxProvider {
     const url = `${this.options.baseUrl ?? 'https://openexchangerates.org'}/api/latest.json?base=${base}&symbols=${quotes.join(',')}`;
     const response = await (this.options.fetch ?? fetch)(url, {
       headers: { authorization: `Token ${this.options.appId}` },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
     const body = z
       .object({ timestamp: z.number(), rates: z.record(z.string(), z.number()) })
