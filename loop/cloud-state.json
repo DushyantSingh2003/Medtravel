@@ -105,10 +105,12 @@
       "note": "Notification engine: outbox-delivered email, SMS and WhatsApp in en and ar, preferences, bell, admin log"
     },
     "F-08": {
-      "status": "in-progress",
+      "status": "done",
       "attempts": 1,
       "claimedAt": "2026-10-29T12:54:14.248Z",
-      "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e"
+      "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e",
+      "finishedAt": "2026-10-29T13:37:38.416Z",
+      "note": "Realtime gateway: Socket.IO with Redis adapter, permission-checked rooms, catch-up, portal client, live bell"
     }
   },
   "approvals": [],
@@ -139,6 +141,7 @@
     "2026-10-29T11:18:01.107Z finish F-06 done",
     "2026-10-29T11:25:23.582Z claim F-07 attempt 1",
     "2026-10-29T12:24:24.081Z finish F-07 done",
-    "2026-10-29T12:54:14.259Z claim F-08 attempt 1"
+    "2026-10-29T12:54:14.259Z claim F-08 attempt 1",
+    "2026-10-29T13:37:38.417Z finish F-08 done"
   ]
 }
