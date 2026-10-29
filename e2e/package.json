@@ -16,6 +16,7 @@
     "@types/node": "^24.0.0",
     "eslint": "^9.39.5",
     "otplib": "^13.5.0",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.2",
+    "pdf-lib": "^1.17.1"
   }
 }

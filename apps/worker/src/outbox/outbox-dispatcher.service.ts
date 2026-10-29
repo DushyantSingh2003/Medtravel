@@ -73,7 +73,7 @@ export class OutboxDispatcher implements OnApplicationBootstrap, OnApplicationSh
           ),
       },
     );
-    if (result.claimed > 0)
+    if (result.processed + result.retried + result.failed > 0)
       this.logger.log(
         `outbox: ${result.processed} processed, ${result.retried} to retry, ${result.failed} failed`,
       );

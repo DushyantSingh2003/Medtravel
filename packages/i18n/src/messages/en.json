@@ -84,7 +84,9 @@
       "brandMark": "Brand mark",
       "siteHeader": "Site header",
       "siteFooter": "Site footer",
-      "whatsappButton": "WhatsApp button"
+      "whatsappButton": "WhatsApp button",
+      "documentList": "Document list",
+      "shareToggleList": "Share toggles"
     },
     "descriptions": {
       "button": "Variants, sizes, loading and disabled states.",
@@ -127,7 +129,9 @@
       "brandMark": "The logo, at any size. It is decorative: the name sits next to it as text.",
       "siteHeader": "The public website header: logo, menu, language switcher and a call to action. On a phone the menu opens as a panel.",
       "siteFooter": "Link columns, legal links and the copyright line.",
-      "whatsappButton": "The chat button. On the website it floats in the corner of the screen."
+      "whatsappButton": "The chat button. On the website it floats in the corner of the screen.",
+      "documentList": "A person's files with type tag, size, date, scan state and who can see them. A file that is still being scanned or did not pass cannot be opened.",
+      "shareToggleList": "One switch per hospital: turning it on is the patient's consent to share the document with that hospital."
     },
     "button": {
       "primary": "Primary",
@@ -450,6 +454,35 @@
       "siteNavigation": "Demo site navigation",
       "footerNavigation": "Demo footer links",
       "legalNavigation": "Demo legal links"
+    },
+    "documents": {
+      "listLabel": "Documents",
+      "status": {
+        "pending": "Scanning",
+        "clean": "Clean",
+        "infected": "Removed: virus found",
+        "failed": "Could not be checked"
+      },
+      "preview": "Preview {name}",
+      "download": "Download {name}",
+      "share": "Share {name}",
+      "remove": "Delete {name}",
+      "pages": "{count, plural, one {# page} other {# pages}}",
+      "uploadedBy": "by {name}",
+      "sharedWith": "Shared with {names}",
+      "notShared": "Not shared",
+      "targetsLabel": "Hospitals",
+      "toggle": "Share with {name}",
+      "sharedOn": "Can see this document",
+      "sharedOff": "Cannot see this document",
+      "noTargets": "No hospital has been asked about this case yet.",
+      "types": {
+        "report": "Medical report",
+        "scan": "Scan",
+        "passport": "Passport",
+        "other": "Other"
+      },
+      "sampleBy": "Asha Verma"
     }
   },
   "navSections": {
@@ -1242,6 +1275,106 @@
       "errorTitle": "Could not load the audit log",
       "errorDescription": "Check your connection, then try again.",
       "retry": "Try again"
+    }
+  },
+  "documents": {
+    "title": "Medical records",
+    "description": "Upload reports, scans and prescriptions. Every file is checked for viruses before anyone can open it, and only the hospitals you choose can see it.",
+    "upload": {
+      "title": "Add files",
+      "kindLabel": "What are you uploading?",
+      "hint": "PDF, JPG, PNG, HEIC, Word or a ZIP of scans (DICOM), up to 500 MB each."
+    },
+    "kinds": {
+      "report": "Medical report",
+      "scan": "Scan or image",
+      "prescription": "Prescription",
+      "passport": "Passport",
+      "other": "Other"
+    },
+    "uploader": {
+      "dropTitle": "Drop your files here",
+      "dropHint": "or browse files",
+      "restrictions": "PDF, JPG, PNG, HEIC, DOCX or ZIP, up to 500 MB each",
+      "remove": "Remove",
+      "retry": "Retry",
+      "start": "Start upload",
+      "cancelAll": "Cancel all",
+      "uploading": "Uploading",
+      "done": "Uploaded",
+      "failed": "Failed",
+      "queued": "Waiting",
+      "progress": "Upload progress for {name}",
+      "list": "Files being uploaded",
+      "rejected": {
+        "empty": "{name} is empty.",
+        "tooLarge": "{name} is larger than 500 MB.",
+        "wrongType": "{name} is not a PDF, JPG, PNG, HEIC, DOCX or ZIP file.",
+        "tooMany": "{name} was not added: too many files.",
+        "duplicate": "{name} was already added."
+      }
+    },
+    "list": {
+      "title": "Your files",
+      "label": "Your files",
+      "status": {
+        "pending": "Scanning",
+        "clean": "Ready",
+        "infected": "Removed: virus found",
+        "failed": "Could not be checked"
+      },
+      "preview": "Preview {name}",
+      "download": "Download {name}",
+      "share": "Choose who can see {name}",
+      "remove": "Delete {name}",
+      "pages": "{count, plural, one {# page} other {# pages}}",
+      "uploadedBy": "by {name}",
+      "sharedWith": "Shared with {names}",
+      "notShared": "Not shared",
+      "total": "{count, plural, one {# file} other {# files}}",
+      "emptyTitle": "No files yet",
+      "emptyDescription": "Files you upload will appear here once they have been checked.",
+      "errorTitle": "Could not load your files",
+      "errorDescription": "Check your connection, then try again.",
+      "retry": "Try again",
+      "scanningNote": "Files are checked for viruses first; this takes a moment."
+    },
+    "preview": {
+      "title": "Preview",
+      "close": "Close",
+      "download": "Download",
+      "loading": "Opening the file",
+      "notShown": "This kind of file cannot be shown here. Download it to open it.",
+      "watermarked": "This copy is marked with your name, today's date and the case number.",
+      "frame": "Preview of {name}",
+      "failed": "Could not open the file."
+    },
+    "share": {
+      "title": "Who can see this file",
+      "description": "Hospitals only see what you choose. Turning a hospital on records your consent for that hospital and this case; turning it off stops it at once.",
+      "close": "Close",
+      "list": "Hospitals",
+      "toggle": "Share with {name}",
+      "on": "Can see this file",
+      "off": "Cannot see this file",
+      "none": "No hospital has been asked about your case yet. You can choose once one has.",
+      "noCase": "Only files that belong to a case can be shared with a hospital.",
+      "failed": "Could not change sharing. Try again."
+    },
+    "delete": {
+      "title": "Delete {name}?",
+      "body": "The file disappears from your records. It is kept for a while by us for safety and legal reasons.",
+      "confirm": "Delete",
+      "cancel": "Cancel",
+      "error": "Could not delete the file."
+    },
+    "toast": {
+      "uploaded": "{name} was uploaded and is being checked",
+      "uploadFailed": "{name} could not be saved",
+      "deleted": "{name} was deleted",
+      "shared": "{hospital} can now see {name}",
+      "unshared": "{hospital} can no longer see {name}",
+      "downloadFailed": "Could not download the file."
     }
   }
 }

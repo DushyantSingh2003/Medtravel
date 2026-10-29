@@ -42,6 +42,8 @@ RUN pnpm --filter @medtravel/${APP} deploy --prod --legacy /out
 # ---- runtime ----
 FROM node:${NODE_VERSION}-alpine AS runtime
 ENV NODE_ENV=production
+# Fonts for the watermark the API writes into images (the SVG text is drawn by librsvg, which needs fontconfig and a font).
+RUN apk add --no-cache fontconfig ttf-dejavu
 WORKDIR /app
 COPY --from=build --chown=node:node /out ./
 USER node

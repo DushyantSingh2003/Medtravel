@@ -37,6 +37,8 @@ const SECTIONS = [
   'data-table',
   'form-fields',
   'file-uploader',
+  'document-list',
+  'share-toggle-list',
   'stage-tracker',
   'timeline',
   'chat-panel',

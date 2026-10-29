@@ -34,9 +34,17 @@ export const DOCUMENT_TYPES = [
   },
 ] as const;
 
-/** For the uploader's `allowedFileTypes`: MIME types and extensions together. */
+/**
+ * For the uploader's `allowedFileTypes`: MIME types and extensions together. `application/octet-stream` is left out (browsers
+ * report it for anything unknown, which would let every file through); a ZIP is recognised by its extension.
+ */
 export const DOCUMENT_ACCEPT: string[] = [
-  ...new Set(DOCUMENT_TYPES.flatMap((type) => [...type.mimeTypes, type.extension])),
+  ...new Set(
+    DOCUMENT_TYPES.flatMap((type) => [
+      ...type.mimeTypes.filter((mime) => mime !== 'application/octet-stream'),
+      type.extension,
+    ]),
+  ),
 ];
 
 /** Whether a file name and declared MIME type are one of the allowed types. */
@@ -63,10 +71,7 @@ const fileNameSchema = z
   .trim()
   .min(1)
   .max(200)
-  .refine(
-    (name) => !/[\\/\p{Cc}]/u.test(name),
-    'A file name has no slashes or control characters',
-  );
+  .refine((name) => !/[\\/\p{Cc}]/u.test(name), 'A file name has no slashes or control characters');
 
 /** What a new upload is, sent with the request that starts it. */
 export const uploadFileSchema = z.object({

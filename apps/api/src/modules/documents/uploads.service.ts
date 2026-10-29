@@ -142,6 +142,22 @@ export class UploadsService {
       });
       caseId = file.caseId;
       patientId = found?.patientId ?? null;
+    } else if (actor.role === 'patient' && !file.patientId) {
+      // A patient's own file: no case needed.
+      const own = await this.prisma.patient.findFirst({
+        where: { userId: actor.userId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!own) throw new NotFoundException('Patient not found');
+      patientId = own.id;
+    } else if (actor.role === 'patient' && !file.patientId) {
+      // A patient's own file: no case needed.
+      const own = await this.prisma.patient.findFirst({
+        where: { userId: actor.userId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!own) throw new NotFoundException('Patient not found');
+      patientId = own.id;
     } else if (file.patientId && actor.role !== 'attendant') {
       const patient = await this.prisma.patient.findFirst({
         where: { AND: [{ id: file.patientId }, await this.scope.patientWhere(actor)] },

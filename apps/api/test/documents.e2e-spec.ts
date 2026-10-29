@@ -335,9 +335,10 @@ describe('uploading a file', () => {
     expect((await start({ ...base, sizeBytes: DOCUMENT_MAX_BYTES + 1 })).status).toBe(400);
     expect((await start({ ...base, sizeBytes: 0 })).status).toBe(400);
     expect((await start({ ...base, fileName: '../../a.pdf' })).status).toBe(400);
-    expect(
-      (await start({ fileName: 'a.pdf', mimeType: 'application/pdf', sizeBytes: 10 })).status,
-    ).toBe(400);
+    // Staff must say which case or patient; a patient's own file needs neither.
+    const bare = { fileName: 'a.pdf', mimeType: 'application/pdf', sizeBytes: 10 };
+    expect((await start(bare, users['cm1'] as Who)).status).toBe(400);
+    expect((await start(bare)).status).toBe(200);
     expect(
       (
         await call(users['patient1'] as Who, 'POST', '/documents/uploads/sign', {
