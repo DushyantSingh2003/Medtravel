@@ -44,8 +44,10 @@ export const envSchema = z
         path: ['S3_SECRET_KEY'],
         message: 'Set real S3 keys in production',
       });
-    refineProviderEnv(env, (path, message) =>
-      ctx.addIssue({ code: 'custom', path: [path], message }),
+    refineProviderEnv(
+      env,
+      (path, message) => ctx.addIssue({ code: 'custom', path: [path], message }),
+      { webhooks: false },
     );
   });
 

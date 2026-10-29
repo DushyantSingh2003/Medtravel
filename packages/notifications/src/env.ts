@@ -36,6 +36,8 @@ export type ProviderEnv = z.infer<z.ZodObject<typeof PROVIDER_ENV_SHAPE>>;
 export function refineProviderEnv(
   env: ProviderEnv & { NODE_ENV: string },
   issue: (path: string, message: string) => void,
+  /** The webhook secrets are only the API's concern; the worker does not receive callbacks. */
+  options: { webhooks?: boolean } = {},
 ): void {
   if (
     env.SMS_PROVIDER === 'twilio' &&
@@ -53,6 +55,7 @@ export function refineProviderEnv(
     if (env.SMS_PROVIDER === 'dev') issue('SMS_PROVIDER', 'Set a real SMS provider in production');
     if (env.WHATSAPP_PROVIDER === 'dev')
       issue('WHATSAPP_PROVIDER', 'Set a real WhatsApp provider in production');
+    if (options.webhooks === false) return;
     if (env.WHATSAPP_VERIFY_TOKEN === DEV_VERIFY_TOKEN)
       issue('WHATSAPP_VERIFY_TOKEN', 'Set a real WHATSAPP_VERIFY_TOKEN in production');
     if (env.NOTIFICATION_WEBHOOK_SECRET === env.WHATSAPP_VERIFY_TOKEN)

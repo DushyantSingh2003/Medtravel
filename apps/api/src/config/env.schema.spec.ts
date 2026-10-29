@@ -60,6 +60,7 @@ describe('loadEnv', () => {
       WHATSAPP_PHONE_NUMBER_ID: '555',
       WHATSAPP_ACCESS_TOKEN: 'tok',
       NOTIFICATION_WEBHOOK_SECRET: 'a-real-webhook-secret',
+      WHATSAPP_VERIFY_TOKEN: 'a-real-verify-token-1',
     };
     expect(loadEnv(production as NodeJS.ProcessEnv).NODE_ENV).toBe('production');
     expect(() =>
@@ -76,6 +77,7 @@ describe('loadEnv', () => {
       ['SMS_PROVIDER', 'dev'],
       ['WHATSAPP_PROVIDER', 'dev'],
       ['NOTIFICATION_WEBHOOK_SECRET', 'dev-notification-webhook-secret'],
+      ['WHATSAPP_VERIFY_TOKEN', 'dev-whatsapp-verify-token'],
     ] as const)
       expect(() => loadEnv({ ...production, [name]: value } as NodeJS.ProcessEnv)).toThrow(
         new RegExp(name),
