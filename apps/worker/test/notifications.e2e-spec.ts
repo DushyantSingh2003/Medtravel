@@ -10,6 +10,7 @@ import {
 import { ObjectStore } from '@medtravel/storage';
 import { FakeClamd, FakeS3Server } from '@medtravel/storage/testing';
 import { OutboxDispatcher } from '../src/outbox/outbox-dispatcher.service.js';
+import { recordingPublisher } from './support/fake-publisher.js';
 import { recordingProviders, type Recording } from './support/fake-providers.js';
 
 /** The notification engine against a real database: queue in a transaction, deliver through the outbox, track the status. */
@@ -27,6 +28,7 @@ let admin: PrismaClient;
 let prisma: PrismaClient;
 let dispatcher: OutboxDispatcher;
 let rec: Recording;
+const realtime = recordingPublisher();
 const s3 = new FakeS3Server();
 const clamd = new FakeClamd();
 let n = 0;
@@ -96,6 +98,7 @@ beforeAll(async () => {
       forcePathStyle: true,
     }),
     rec.providers,
+    realtime.publisher,
     { CLAMAV_HOST: '127.0.0.1', CLAMAV_PORT: port },
   );
 });
@@ -109,6 +112,8 @@ afterAll(async () => {
 });
 
 beforeEach(() => {
+  realtime.state.published.length = 0;
+  realtime.state.failing = false;
   rec.emails.length = 0;
   rec.sms.length = 0;
   rec.whatsappTemplates.length = 0;
@@ -262,6 +267,76 @@ describe('sending an event', () => {
     expect(rec.sms).toHaveLength(1);
     expect(rec.sms[0]?.text).toContain('Ravi');
     expect(rec.sms[0]?.text).toContain('14:30');
+  });
+});
+
+describe('telling open browsers', () => {
+  it('pushes notification.created to the person’s room when an in-app message is written, after the commit', async () => {
+    const user = await makeUser();
+    const { queued } = await send([user.id], { channels: ['in_app'] });
+    expect(realtime.state.published).toEqual([]);
+    await dispatcher.runOnce();
+    expect(realtime.state.published).toEqual([
+      {
+        room: `user:${user.id}`,
+        event: 'notification.created',
+        payload: { notificationId: queued[0]?.id },
+      },
+    ]);
+  });
+
+  it('pushes nothing for a transaction that rolled back, and retries when Redis is down', async () => {
+    const user = await makeUser();
+    await expect(
+      prisma.$transaction(async (tx) => {
+        await enqueueNotification(tx, {
+          eventKey: 'test_event',
+          recipients: [user.id],
+          data: { name: 'Asha' },
+          dedupeKey: `rb-${randomBytes(3).toString('hex')}`,
+          channels: ['in_app'],
+        });
+        throw new Error('the change failed');
+      }),
+    ).rejects.toThrow('the change failed');
+    await dispatcher.runOnce();
+    expect(realtime.state.published.filter((p) => p.room === `user:${user.id}`)).toEqual([]);
+
+    const { queued } = await send([user.id], { channels: ['in_app'] });
+    realtime.state.failing = true;
+    await dispatcher.runOnce();
+    const event = await prisma.outboxEvent.findFirstOrThrow({
+      where: {
+        type: 'realtime.publish',
+        payload: { path: ['payload', 'notificationId'], equals: queued[0]?.id },
+      },
+    });
+    expect(event).toMatchObject({ status: 'pending', attempts: 1 });
+    realtime.state.failing = false;
+    await prisma.outboxEvent.update({ where: { id: event.id }, data: { availableAt: new Date() } });
+    await dispatcher.runOnce();
+    expect(realtime.state.published.filter((p) => p.room === `user:${user.id}`)).toHaveLength(1);
+  });
+
+  it('refuses a published payload that carries more than ids', async () => {
+    const event = await prisma.outboxEvent.create({
+      data: {
+        type: 'realtime.publish',
+        aggregateType: 'Realtime',
+        aggregateId: 'case:x',
+        payload: {
+          room: 'case:x',
+          event: 'case.updated',
+          payload: { caseId: 'not-a-uuid', note: 'diagnosis text' },
+        },
+      },
+    });
+    await dispatcher.runOnce();
+    expect(await prisma.outboxEvent.findUniqueOrThrow({ where: { id: event.id } })).toMatchObject({
+      status: 'pending',
+      attempts: 1,
+    });
+    expect(realtime.state.published.some((p) => p.room === 'case:x')).toBe(false);
   });
 });
 

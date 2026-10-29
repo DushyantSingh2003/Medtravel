@@ -4,7 +4,7 @@ Tick a task here when it is finished and `pnpm check` is green. The task queue t
 build loop is `loop/cloud-state.json`; this file is the human-readable view and also records
 what each task deferred.
 
-Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-07.
+Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-08.
 
 ### Phase 0 — Scaffold (week 1)
 
@@ -24,7 +24,7 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-07.
 - [x] **F-05** Audit log and domain events
 - [x] **F-06** Secure file service
 - [x] **F-07** Notification engine
-- [ ] **F-08** Realtime gateway
+- [x] **F-08** Realtime gateway
 - [ ] **F-09** Money, currencies and languages
 - [ ] **F-10** Case core and stage machine
 - [ ] **F-11** Seed data and test factories
@@ -165,6 +165,24 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-07.
 - [ ] **G-08** Advanced analytics
 
 ## Notes and deferred work
+
+### Deferred from F-08
+
+- **Only the notification bell and the typing signal use it so far.** Nothing publishes `case.updated`, `message.created` or
+  `task.assigned` yet: the case, messaging and task tasks (C-04, C-10, C-09) queue them with `enqueueRealtime(tx, ...)` and
+  subscribe with `useRealtimeEvent` / `useCaseRoom` / `useTyping`. The acceptance sentence ("two browsers on the same case see
+  each other's changes live") is proven at the gateway (two real socket clients: join, typing, a published change, catch-up)
+  and in the browser for the bell (two contexts); there is no case screen to show it on yet.
+- **Latency of pushes from business code is the outbox's poll (about 2 seconds)**, because they are published by the worker after
+  the commit. Typing goes straight through the gateway.
+- Catch-up is best effort: a log of the last 200 events and one hour per room in Redis; beyond that the browser is told to refetch.
+- Needs a load balancer that passes WebSocket upgrades on `/realtime` with an idle timeout above 30 seconds (Socket.IO pings every
+  25 s). The client uses WebSocket only, so no sticky sessions are required. Redis down: the API still serves the sockets of its
+  own instance, and the worker's pushes are retried by the outbox.
+- A connected session is re-checked once a minute, so a revoked session can stay connected for up to a minute.
+- Case rooms follow the case scope when joined; a case that leaves a person's scope later (reassigned, consent withdrawn) does not
+  remove them from a room they already joined until they reconnect.
+- Pinned `@nestjs/websockets` and `@nestjs/platform-socket.io` to 12.1.x to match the installed `@nestjs/common` 12.1.2.
 
 ### Deferred from F-07
 

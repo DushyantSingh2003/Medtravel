@@ -7,6 +7,7 @@ import { createPrismaClient, type PrismaClient } from '@medtravel/db';
 import type { Role } from '@medtravel/contracts';
 import { FakeS3Server } from '@medtravel/storage/testing';
 import { AppModule } from '../../src/app.module.js';
+import { RealtimeAdapter } from '../../src/realtime/realtime.adapter.js';
 import { SessionService } from '../../src/auth/session.service.js';
 import { Mailer, type Mail } from '../../src/modules/auth/mail/mailer.js';
 import { PasswordService } from '../../src/modules/auth/password.service.js';
@@ -63,6 +64,8 @@ export interface TestApp {
     userId: string,
     options?: { twoFactorVerified?: boolean },
   ): Promise<{ accessToken: string; sessionId: string }>;
+  /** Where the app listens (only when started with `listen`). */
+  url: string;
   /** The in-memory S3 server the API stores files in. */
   s3: FakeS3Server;
   /** The private bucket's name. */
@@ -81,7 +84,12 @@ function urlFor(name: string): string {
  * migrations the deploy runs), so tests exercise real SQL, constraints and triggers and cannot disturb each other.
  */
 export async function createTestApp(
-  options: { env?: Record<string, string>; imports?: ModuleMetadata['imports'] } = {},
+  options: {
+    env?: Record<string, string>;
+    imports?: ModuleMetadata['imports'];
+    /** Listen on a real port with the realtime adapter, for tests that open WebSocket connections. */
+    listen?: boolean;
+  } = {},
 ): Promise<TestApp> {
   const name = `api_${randomBytes(4).toString('hex')}`;
   const admin = createPrismaClient({ connectionString: SERVER_URL });
@@ -112,8 +120,16 @@ export async function createTestApp(
   const app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter(), {
     rawBody: true,
   });
+  if (options.listen)
+    app.useWebSocketAdapter(
+      new RealtimeAdapter(app, {
+        CORS_ORIGINS: ['http://localhost:3002'],
+        REDIS_URL: process.env['REDIS_URL'] ?? 'redis://localhost:6379',
+      }),
+    );
   await app.init();
   await app.getHttpAdapter().getInstance().ready();
+  if (options.listen) await app.listen(0, '127.0.0.1');
   const db = createPrismaClient({ connectionString: urlFor(name) });
   const sessions = app.get(SessionService);
   const passwords = app.get(PasswordService);
@@ -196,6 +212,9 @@ export async function createTestApp(
 
   return {
     app,
+    url: options.listen
+      ? `http://127.0.0.1:${(app.getHttpServer().address() as { port: number }).port}`
+      : '',
     db,
     mails: mailer.captured,
     makeUser,

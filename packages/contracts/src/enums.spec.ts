@@ -20,6 +20,7 @@ describe('database enums', () => {
           'AUDIT_ACCESS_ACTIONS',
           'DOCUMENT_ACCEPT',
           'DOCUMENT_TYPES',
+          'REALTIME_EVENTS',
         ].includes(name)
       )
         continue;

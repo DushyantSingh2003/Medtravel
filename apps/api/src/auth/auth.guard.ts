@@ -35,6 +35,8 @@ export class AuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    // A WebSocket connection is authenticated once, when it connects (RealtimeGateway), not per message.
+    if (context.getType() !== 'http') return true;
     const request = context.switchToHttp().getRequest<FastifyRequest>();
     const targets = [context.getHandler(), context.getClass()];
     const unsafe = !SAFE_METHODS.has(request.method);

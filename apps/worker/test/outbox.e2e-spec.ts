@@ -6,6 +6,7 @@ import { ObjectStore } from '@medtravel/storage';
 import { FakeClamd, FakeS3Server } from '@medtravel/storage/testing';
 import { notifyAdminsOfIncident } from '../src/outbox/handlers/incident-created.handler.js';
 import { OutboxDispatcher } from '../src/outbox/outbox-dispatcher.service.js';
+import { recordingPublisher } from './support/fake-publisher.js';
 import { recordingProviders } from './support/fake-providers.js';
 
 /** The dispatcher against a real database: an `incident.created` event becomes one notification per active super admin, once. */
@@ -80,10 +81,16 @@ beforeAll(async () => {
     bucket: BUCKET,
     forcePathStyle: true,
   });
-  dispatcher = new OutboxDispatcher(prisma, store, recordingProviders().providers, {
-    CLAMAV_HOST: '127.0.0.1',
-    CLAMAV_PORT: port,
-  });
+  dispatcher = new OutboxDispatcher(
+    prisma,
+    store,
+    recordingProviders().providers,
+    recordingPublisher().publisher,
+    {
+      CLAMAV_HOST: '127.0.0.1',
+      CLAMAV_PORT: port,
+    },
+  );
 });
 
 afterAll(async () => {

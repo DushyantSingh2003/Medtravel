@@ -6,6 +6,7 @@ import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module.js';
 import { ENV } from './config/config.module.js';
 import { loadEnv, type Env } from './config/env.schema.js';
+import { RealtimeAdapter } from './realtime/realtime.adapter.js';
 import { buildOpenApiDocument } from './openapi.js';
 
 async function bootstrap(): Promise<void> {
@@ -37,6 +38,8 @@ async function bootstrap(): Promise<void> {
     // Sessions are httpOnly cookies, so the browser must be allowed to send them.
     credentials: true,
   });
+
+  app.useWebSocketAdapter(new RealtimeAdapter(app, env));
 
   app.enableShutdownHooks();
 

@@ -26,6 +26,7 @@ const contextFor = (
   ({
     getHandler: () => handler,
     getClass: () => owner,
+    getType: () => 'http',
     switchToHttp: () => ({
       getRequest: () => ({
         actor: role ? { userId: 'u', role, sessionId: 's', scopeCaseId: null } : undefined,
@@ -36,6 +37,14 @@ const contextFor = (
 describe('PermissionsGuard', () => {
   const guard = new PermissionsGuard(new Reflector());
   const routes = new Routes();
+
+  it('leaves WebSocket messages to the gateway, which checks the room a socket has joined', () => {
+    const socketContext = {
+      ...contextFor(routes.undeclared),
+      getType: () => 'ws',
+    } as unknown as ExecutionContext;
+    expect(guard.canActivate(socketContext)).toBe(true);
+  });
 
   it('lets a role through when the matrix allows the declared permission', () => {
     expect(guard.canActivate(contextFor(routes.guarded, 'super_admin'))).toBe(true);

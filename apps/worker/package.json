@@ -21,6 +21,7 @@
     "@medtravel/emails": "workspace:*",
     "@medtravel/notifications": "workspace:*",
     "@medtravel/pdf": "workspace:*",
+    "@medtravel/realtime": "workspace:*",
     "@medtravel/storage": "workspace:*",
     "@nestjs/bullmq": "^12.0.0",
     "@nestjs/common": "^12.1.2",

@@ -7,10 +7,12 @@ import {
 } from '@nestjs/common';
 import { processOutbox, type PrismaClient } from '@medtravel/db';
 import type { Providers } from '@medtravel/notifications';
+import type { RealtimePublisher } from '@medtravel/realtime';
 import type { ObjectStore } from '@medtravel/storage';
 import { ENV } from '../config/config.module.js';
 import type { Env } from '../config/env.schema.js';
 import { PRISMA } from '../database/database.module.js';
+import { REALTIME_PUBLISHER } from '../realtime/realtime.module.js';
 import { NOTIFICATION_PROVIDERS } from '../notifications/providers.module.js';
 import { OBJECT_STORE } from '../storage/storage.module.js';
 import { outboxHandlers } from './outbox-handlers.js';
@@ -35,6 +37,7 @@ export class OutboxDispatcher implements OnApplicationBootstrap, OnApplicationSh
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     @Inject(OBJECT_STORE) private readonly store: ObjectStore,
     @Inject(NOTIFICATION_PROVIDERS) private readonly providers: Providers,
+    @Inject(REALTIME_PUBLISHER) private readonly publisher: Pick<RealtimePublisher, 'publish'>,
     @Inject(ENV) private readonly env: Pick<Env, 'CLAMAV_HOST' | 'CLAMAV_PORT'>,
   ) {}
 
@@ -65,6 +68,7 @@ export class OutboxDispatcher implements OnApplicationBootstrap, OnApplicationSh
         store: this.store,
         clamd: { host: this.env.CLAMAV_HOST, port: this.env.CLAMAV_PORT },
         providers: this.providers,
+        publisher: this.publisher,
       }),
       {
         limit: BATCH_SIZE,

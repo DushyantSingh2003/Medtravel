@@ -7,6 +7,7 @@ import { createPrismaClient, type PrismaClient } from '@medtravel/db';
 import { ObjectStore } from '@medtravel/storage';
 import { EICAR, FakeClamd, FakeS3Server } from '@medtravel/storage/testing';
 import { OutboxDispatcher } from '../src/outbox/outbox-dispatcher.service.js';
+import { recordingPublisher } from './support/fake-publisher.js';
 import { recordingProviders } from './support/fake-providers.js';
 
 /** What the worker does with an uploaded file, against a real database, an in-memory bucket and a fake clamd. */
@@ -88,10 +89,16 @@ beforeAll(async () => {
     bucket: BUCKET,
     forcePathStyle: true,
   });
-  dispatcher = new OutboxDispatcher(prisma, store, recordingProviders().providers, {
-    CLAMAV_HOST: '127.0.0.1',
-    CLAMAV_PORT: port,
-  });
+  dispatcher = new OutboxDispatcher(
+    prisma,
+    store,
+    recordingProviders().providers,
+    recordingPublisher().publisher,
+    {
+      CLAMAV_HOST: '127.0.0.1',
+      CLAMAV_PORT: port,
+    },
+  );
   patientId = (await prisma.patient.create({ data: { fullName: 'Asha' } })).id;
   uploaderId = (
     await prisma.user.create({

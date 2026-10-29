@@ -88,3 +88,5 @@ Appended by build tasks. Format: `- [<TASK-ID>] <question> — assumed: <what wa
 - [F-07] Retries — assumed: five attempts with the outbox's exponential backoff, then the message is marked failed; a refusal the provider marks final (a bad number) fails at once.
 - [F-07] WhatsApp free text — assumed: allowed only within 24 hours of the person's last WhatsApp message to us; otherwise the approved template is sent.
 - [F-07] Who may read the log — assumed: the super admin only (new permission subject `NotificationLog`).
+- [F-08] Who may join which room — assumed: exactly who may read the case over the REST API (staff scope, the patient's own cases, hospitals with consent, never agents); a magic-link doctor only their one case.
+- [F-08] How fresh must pushes be — assumed: a couple of seconds is fine for business events (they go through the outbox); typing is immediate.
