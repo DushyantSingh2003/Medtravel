@@ -14,6 +14,7 @@ import { DocumentsModule } from './modules/documents/documents.module.js';
 import { RealtimeModule } from './realtime/realtime.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { StorageModule } from './storage/storage.module.js';
+import { FxModule } from './modules/fx/fx.module.js';
 import { MastersModule } from './modules/masters/masters.module.js';
 
 @Module({
@@ -31,6 +32,7 @@ import { MastersModule } from './modules/masters/masters.module.js';
     StorageModule,
     HealthModule,
     MastersModule,
+    FxModule,
     DocumentsModule,
     NotificationsModule,
     RealtimeModule,

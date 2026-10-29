@@ -21,6 +21,7 @@
     "@fastify/static": "^10.1.5",
     "@medtravel/contracts": "workspace:*",
     "@medtravel/db": "workspace:*",
+    "@medtravel/fx": "workspace:*",
     "@medtravel/notifications": "workspace:*",
     "@medtravel/realtime": "workspace:*",
     "@medtravel/storage": "workspace:*",

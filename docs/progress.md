@@ -4,7 +4,7 @@ Tick a task here when it is finished and `pnpm check` is green. The task queue t
 build loop is `loop/cloud-state.json`; this file is the human-readable view and also records
 what each task deferred.
 
-Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-08.
+Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-09.
 
 ### Phase 0 — Scaffold (week 1)
 
@@ -25,7 +25,7 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-08.
 - [x] **F-06** Secure file service
 - [x] **F-07** Notification engine
 - [x] **F-08** Realtime gateway
-- [ ] **F-09** Money, currencies and languages
+- [x] **F-09** Money, currencies and languages
 - [ ] **F-10** Case core and stage machine
 - [ ] **F-11** Seed data and test factories
 - [ ] **F-12** Observability
@@ -165,6 +165,20 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-08.
 - [ ] **G-08** Advanced analytics
 
 ## Notes and deferred work
+
+### Deferred from F-09
+
+- **No price is shown on the website yet.** `ConvertedPrice` (website) and `Price` (ui) are built and proven in the component
+  gallery in INR, USD and AED, in English and Arabic; the first pages that show hospital and treatment prices (W-xx) use them.
+  Quotes (C-xx) store the rate with `snapshotRate(prisma, pricedIn, shownIn)`.
+- **Real rates need a provider choice:** development uses a fixed `static` table; production refuses it and needs
+  `FX_PROVIDER=frankfurter` (ECB, no key, about 30 currencies) or `openexchangerates` (key, covers the Gulf and African
+  currencies Frankfurter lacks). See `docs/questions.md`.
+- **The visitor's country is read from the host's header** (`x-vercel-ip-country`, `cf-ipcountry`, `x-country-code`); without a
+  host that sets one, language falls back to the browser and then English.
+- **The Arabic digits choice** (Latin digits in Arabic) is the platform rule already used by the form fields; prices follow it.
+- Translated database content: `getTranslated(entity, translations, locale, fields)` is ready; the masters screens that edit
+  translations come with the content tasks.
 
 ### Deferred from F-08
 

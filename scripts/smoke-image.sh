@@ -55,6 +55,7 @@ env_args=(
   -e "WHATSAPP_ACCESS_TOKEN=$(openssl rand -hex 8)"
   -e "NOTIFICATION_WEBHOOK_SECRET=$(openssl rand -hex 16)"
   -e "WHATSAPP_VERIFY_TOKEN=$(openssl rand -hex 16)"
+  -e FX_PROVIDER=frankfurter
 )
 docker run -d --name "$name" --network host "${env_args[@]}" "$image" > /dev/null
 

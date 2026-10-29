@@ -90,3 +90,6 @@ Appended by build tasks. Format: `- [<TASK-ID>] <question> — assumed: <what wa
 - [F-07] Who may read the log — assumed: the super admin only (new permission subject `NotificationLog`).
 - [F-08] Who may join which room — assumed: exactly who may read the case over the REST API (staff scope, the patient's own cases, hospitals with consent, never agents); a magic-link doctor only their one case.
 - [F-08] How fresh must pushes be — assumed: a couple of seconds is fine for business events (they go through the outbox); typing is immediate.
+- [F-09] Which exchange-rate provider in production — assumed: Frankfurter (ECB, free) is enough to start; Open Exchange Rates when a currency we sell in is missing. Rates are refreshed daily at 06:00 India time and a rate older than 3 days is refused rather than guessed.
+- [F-09] Rounding of converted prices — assumed: half-even on the final minor unit; a quote stores the rate it used, so a converted price never changes after it is sent.
+- [F-09] Which language a first-time visitor sees — assumed: their earlier choice, then the browser's language, then the language of their country (Arabic-speaking countries), then English.

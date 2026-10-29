@@ -7,6 +7,7 @@ import type { Env } from './config/env.schema.js';
 import { StorageModule } from './storage/storage.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { OutboxModule } from './outbox/outbox.module.js';
+import { FxModule } from './fx/fx.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
 import { RealtimeModule } from './realtime/realtime.module.js';
 import { ProvidersModule } from './notifications/providers.module.js';
@@ -48,6 +49,7 @@ import { ProvidersModule } from './notifications/providers.module.js';
     RealtimeModule,
     OutboxModule,
     NotificationsModule,
+    FxModule,
   ],
 })
 export class AppModule {}

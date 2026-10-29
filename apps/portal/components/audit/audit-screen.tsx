@@ -6,7 +6,7 @@ import {
   type AuditPageDtoItemsItem,
   type ListAuditParams,
 } from '@medtravel/api-client';
-import type { Locale } from '@medtravel/contracts';
+import { OPS_TIME_ZONE, dayBoundary, type Locale } from '@medtravel/contracts';
 import {
   Button,
   DataTable,
@@ -43,11 +43,6 @@ const ACTION_FILTERS = [
   'audit.exported',
   'incident.created',
 ] as const;
-
-/** Ops screens run on Indian time (CLAUDE.md): a date typed here is a day in Asia/Kolkata (UTC+05:30, no daylight saving). */
-const OPS_TIME_ZONE = 'Asia/Kolkata';
-const dayBoundary = (day: string, end: boolean): string =>
-  new Date(`${day}T${end ? '23:59:59.999' : '00:00:00'}+05:30`).toISOString();
 
 function useDebounced(value: string): string {
   const [debounced, setDebounced] = useState(value);
@@ -86,8 +81,8 @@ export function AuditScreen() {
       ...(actor ? { actor } : {}),
       ...(entityType ? { entityType } : {}),
       ...(action === ALL ? {} : { action }),
-      ...(from ? { from: dayBoundary(from, false) } : {}),
-      ...(to ? { to: dayBoundary(to, true) } : {}),
+      ...(from ? { from: dayBoundary(from, 'start') } : {}),
+      ...(to ? { to: dayBoundary(to, 'end') } : {}),
     }),
     [actor, entityType, action, from, to],
   );

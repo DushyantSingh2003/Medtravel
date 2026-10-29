@@ -11,3 +11,8 @@ export * from './documents.js';
 export * from './notification-events.js';
 export * from './notifications.js';
 export * from './realtime.js';
+export * from './fx.js';
+export * from './money.js';
+export * from './locale.js';
+export * from './time.js';
+export * from './translated.js';

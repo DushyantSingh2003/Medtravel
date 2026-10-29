@@ -86,7 +86,8 @@
       "siteFooter": "Site footer",
       "whatsappButton": "WhatsApp button",
       "documentList": "Document list",
-      "shareToggleList": "Share toggles"
+      "shareToggleList": "Share toggles",
+      "price": "Price"
     },
     "descriptions": {
       "button": "Variants, sizes, loading and disabled states.",
@@ -131,7 +132,8 @@
       "siteFooter": "Link columns, legal links and the copyright line.",
       "whatsappButton": "The chat button. On the website it floats in the corner of the screen.",
       "documentList": "A person's files with type tag, size, date, scan state and who can see them. A file that is still being scanned or did not pass cannot be opened.",
-      "shareToggleList": "One switch per hospital: turning it on is the patient's consent to share the document with that hospital."
+      "shareToggleList": "One switch per hospital: turning it on is the patient's consent to share the document with that hospital.",
+      "price": "A price in the viewer’s language and currency: symbol and digits per locale, Latin digits in Arabic, figure kept left-to-right. A converted price shows ≈ and the original beneath."
     },
     "button": {
       "primary": "Primary",
@@ -486,6 +488,12 @@
         "other": "Other"
       },
       "sampleBy": "Asha Verma"
+    },
+    "prices": {
+      "inr": "Indian rupee",
+      "usd": "US dollar",
+      "aed": "UAE dirham",
+      "converted": "Converted from the hospital’s price"
     }
   },
   "navSections": {
