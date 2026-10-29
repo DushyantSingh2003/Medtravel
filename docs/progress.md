@@ -177,6 +177,14 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-07.
   with `NOTIFICATION_WEBHOOK_SECRET` (header `X-Hub-Signature-256`, which is Meta's own scheme, or `X-Signature`). Twilio and MSG91
   cannot sign that way, so their callbacks need a small signing relay (or their own scheme added) before delivery status works
   for SMS. Email has no delivery status beyond `sent` (SES bounces and complaints need an SNS subscription).
+- **Review findings left open (F-07):** delivery is at-least-once (a crash between the provider call and the row update can send
+  twice); `enqueueNotification` runs about three queries per recipient and channel (batch it before a broadcast to hundreds);
+  the admin log counts the whole table and searches names with `contains` (add a trigram index or cap the total when it grows);
+  the webhook route buffers up to the API's 10 MB body limit before checking the signature (give it its own small limit);
+  Twilio's `X-Twilio-Signature` is not verified (see above) and the sign-in SMS limit is a per-process counter (1000 an hour for
+  the platform, 5 an hour for a number): move it to Redis and add a country allow-list before SMS sign-in is switched on;
+  in-app text and values are kept indefinitely and `ProcessedWebhook` grows without a clean-up job (add retention); the bell does
+  not yet open the case a notification is about; reading the log is not itself audited.
 - **Realtime push** to the bell waits for F-08; until then the bell polls every 30 seconds.
 - Templates are code, not database rows an admin can edit (the `/admin/templates` placeholder screen stays a placeholder).
   The log page is at `/admin/notifications`, not `/admin/notifications/log`.

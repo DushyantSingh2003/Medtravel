@@ -56,7 +56,7 @@ export class WebhooksController {
     return this.webhooks.apply(channel, body);
   }
 
-  /** Meta's one-time check that we own the callback URL: echo the challenge when the verify token is our secret. */
+  /** Meta's one-time check that we own the callback URL: echo the challenge when the verify token is ours. */
   @Get(':channel')
   @Public()
   @Throttle({ limit: 60, windowSeconds: 60 })
@@ -71,7 +71,7 @@ export class WebhooksController {
     @Query('hub.verify_token') token: string | undefined,
     @Query('hub.challenge') challenge: string | undefined,
   ): string {
-    const secret = Buffer.from(this.webhooks.secret);
+    const secret = Buffer.from(this.webhooks.verifyToken);
     const given = Buffer.from(token ?? '');
     if (
       mode !== 'subscribe' ||

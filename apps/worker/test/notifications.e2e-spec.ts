@@ -2,7 +2,11 @@ import { execFileSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createPrismaClient, type PrismaClient } from '@medtravel/db';
-import { applyStatusUpdate, enqueueNotification } from '@medtravel/notifications';
+import {
+  applyStatusUpdate,
+  deliverNotification,
+  enqueueNotification,
+} from '@medtravel/notifications';
 import { ObjectStore } from '@medtravel/storage';
 import { FakeClamd, FakeS3Server } from '@medtravel/storage/testing';
 import { OutboxDispatcher } from '../src/outbox/outbox-dispatcher.service.js';
@@ -32,6 +36,8 @@ interface UserOptions {
   email?: string | null;
   phone?: string | null;
   status?: 'active' | 'invited' | 'suspended';
+  /** Whether the email and phone are confirmed (default yes). */
+  verified?: boolean;
 }
 const makeUser = (options: UserOptions = {}) => {
   n += 1;
@@ -43,6 +49,8 @@ const makeUser = (options: UserOptions = {}) => {
       role: 'patient',
       language: options.language ?? 'en',
       status: options.status ?? 'active',
+      emailVerifiedAt: options.verified === false ? null : new Date(),
+      phoneVerifiedAt: options.verified === false ? null : new Date(),
     },
     select: { id: true },
   });
@@ -172,6 +180,35 @@ describe('sending an event', () => {
         where: { type: 'notification.deliver', aggregateId: { in: first.queued.map((q) => q.id) } },
       }),
     ).toBe(2);
+  });
+
+  it('does not let two different events with the same caller key suppress each other', async () => {
+    const user = await makeUser();
+    const first = await send([user.id], {
+      eventKey: 'test_event',
+      dedupeKey: 'shared-key',
+      channels: ['in_app'],
+    });
+    const second = await send([user.id], {
+      eventKey: 'document_quarantined',
+      dedupeKey: 'shared-key',
+      channels: ['in_app'],
+    });
+    expect(first.queued).toHaveLength(1);
+    expect(second.queued).toHaveLength(1);
+  });
+
+  it('sends nothing to an email address or phone number the person has not confirmed', async () => {
+    const user = await makeUser({ verified: false });
+    const result = await send([user.id]);
+    expect(result.queued.map((q) => q.channel)).toEqual(['in_app']);
+    expect(result.skipped.map((s) => `${s.channel}:${s.reason}`).sort()).toEqual([
+      'email:email_unverified',
+      'whatsapp:phone_unverified',
+    ]);
+    // Not even a security alert goes to a contact nobody has confirmed.
+    const security = await send([user.id], { eventKey: 'document_quarantined' });
+    expect(security.queued.map((q) => q.channel)).toEqual(['in_app']);
   });
 
   it('does not send to a channel the person switched off, but never switches off in-app or a security alert', async () => {
@@ -353,6 +390,21 @@ describe('failures', () => {
   });
 });
 
+describe('two workers at once', () => {
+  it('send a message only once', async () => {
+    const user = await makeUser();
+    const { queued } = await send([user.id], { channels: ['email'] });
+    const id = queued[0]?.id as string;
+    const deps = { prisma, providers: rec.providers };
+    const results = await Promise.all([
+      deliverNotification(deps, id),
+      deliverNotification(deps, id),
+    ]);
+    expect(results.sort()).toEqual(['sent', 'skipped']);
+    expect(rec.emails).toHaveLength(1);
+  });
+});
+
 describe('delivery status from the provider', () => {
   async function sentMessage() {
     const user = await makeUser();
@@ -380,13 +432,13 @@ describe('delivery status from the provider', () => {
   it('moves a message from sent to delivered to read, and records when', async () => {
     const message = await sentMessage();
     expect(
-      await applyStatusUpdate(prisma, message.provider, {
+      await applyStatusUpdate(prisma, 'whatsapp', {
         ...update(message.providerMessageId, 'delivered'),
         at: '2026-10-29T10:00:00.000Z',
       }),
     ).toBe('applied');
     expect(
-      await applyStatusUpdate(prisma, message.provider, update(message.providerMessageId, 'read')),
+      await applyStatusUpdate(prisma, 'whatsapp', update(message.providerMessageId, 'read')),
     ).toBe('applied');
     const row = await prisma.notification.findUniqueOrThrow({ where: { id: message.id } });
     expect(row.status).toBe('read');
@@ -397,28 +449,16 @@ describe('delivery status from the provider', () => {
   it('ignores a repeated callback, an older status, and a failure that comes after delivery', async () => {
     const message = await sentMessage();
     expect(
-      await applyStatusUpdate(
-        prisma,
-        message.provider,
-        update(message.providerMessageId, 'delivered'),
-      ),
+      await applyStatusUpdate(prisma, 'whatsapp', update(message.providerMessageId, 'delivered')),
     ).toBe('applied');
     expect(
-      await applyStatusUpdate(
-        prisma,
-        message.provider,
-        update(message.providerMessageId, 'delivered'),
-      ),
+      await applyStatusUpdate(prisma, 'whatsapp', update(message.providerMessageId, 'delivered')),
     ).toBe('duplicate');
     expect(
-      await applyStatusUpdate(prisma, message.provider, update(message.providerMessageId, 'sent')),
+      await applyStatusUpdate(prisma, 'whatsapp', update(message.providerMessageId, 'sent')),
     ).toBe('ignored');
     expect(
-      await applyStatusUpdate(
-        prisma,
-        message.provider,
-        update(message.providerMessageId, 'failed'),
-      ),
+      await applyStatusUpdate(prisma, 'whatsapp', update(message.providerMessageId, 'failed')),
     ).toBe('ignored');
     expect(
       (await prisma.notification.findUniqueOrThrow({ where: { id: message.id } })).status,
@@ -428,7 +468,7 @@ describe('delivery status from the provider', () => {
   it('records a failure reported by the provider for a message that was only sent', async () => {
     const message = await sentMessage();
     expect(
-      await applyStatusUpdate(prisma, message.provider, {
+      await applyStatusUpdate(prisma, 'whatsapp', {
         ...update(message.providerMessageId, 'failed'),
         error: 'Undeliverable',
       }),
@@ -441,8 +481,30 @@ describe('delivery status from the provider', () => {
     });
   });
 
+  it('puts a message right when the provider reports it delivered after having reported it failed', async () => {
+    const message = await sentMessage();
+    await applyStatusUpdate(prisma, 'whatsapp', {
+      ...update(message.providerMessageId, 'failed'),
+      error: 'Temporary +919800000001',
+    });
+    const failed = await prisma.notification.findUniqueOrThrow({ where: { id: message.id } });
+    expect(failed.status).toBe('failed');
+    // The number a provider echoes in its error text is not kept.
+    expect(failed.lastError).not.toContain('9198');
+    expect(
+      await applyStatusUpdate(prisma, 'whatsapp', update(message.providerMessageId, 'delivered')),
+    ).toBe('applied');
+    expect(
+      await prisma.notification.findUniqueOrThrow({ where: { id: message.id } }),
+    ).toMatchObject({
+      status: 'delivered',
+      failedAt: null,
+      lastError: null,
+    });
+  });
+
   it('does not remember a callback for a message it does not know, so the provider can send it again', async () => {
-    expect(await applyStatusUpdate(prisma, 'test-wa', update('wa-unknown', 'delivered'))).toBe(
+    expect(await applyStatusUpdate(prisma, 'whatsapp', update('wa-unknown', 'delivered'))).toBe(
       'unknown',
     );
     expect(

@@ -35,4 +35,14 @@ describe('scrubUrl', () => {
     expect(scrubUrl('/x?token=secret&a=1')).toBe('/x?token=[redacted]&a=1');
     expect(scrubUrl('/masters/countries?q=in')).toBe('/masters/countries?q=in');
   });
+
+  it('hides the verify token and challenge of the WhatsApp subscription check', () => {
+    expect(
+      scrubUrl(
+        '/webhooks/notifications/whatsapp?hub.mode=subscribe&hub.verify_token=s3cret-value&hub.challenge=12345',
+      ),
+    ).toBe(
+      '/webhooks/notifications/whatsapp?hub.mode=subscribe&hub.verify_token=[redacted]&hub.challenge=[redacted]',
+    );
+  });
 });

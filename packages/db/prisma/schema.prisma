@@ -2290,6 +2290,7 @@ model Notification {
   @@index([providerMessageId])
   @@index([createdAt, id])
   @@index([templateKey])
+  @@index([userId, channel, createdAt(sort: Desc), id(sort: Desc)])
 }
 
 /// Whether a person wants messages on a channel. No row means yes. In-app messages and security alerts cannot be switched off.

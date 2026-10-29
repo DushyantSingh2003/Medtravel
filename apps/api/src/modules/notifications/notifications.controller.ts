@@ -1,6 +1,6 @@
 import { Body, Controller, Get, HttpCode, Post, Put, Query } from '@nestjs/common';
 import { ApiCookieAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Can, CurrentActor } from '../../auth/decorators.js';
+import { Can, CurrentActor, Throttle } from '../../auth/decorators.js';
 import type { Actor } from '../../auth/actor.js';
 import { Ctx, type RequestContext } from '../../common/request-context.js';
 import {
@@ -106,6 +106,7 @@ export class NotificationsController {
   @Post('test')
   @HttpCode(200)
   @Can('create', 'NotificationLog')
+  @Throttle({ limit: 10, windowSeconds: 60 })
   @ApiOperation({
     operationId: 'sendTestNotification',
     summary: 'Send the test event to a user on their channels (super admin)',

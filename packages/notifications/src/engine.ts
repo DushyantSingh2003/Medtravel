@@ -86,6 +86,15 @@ export async function enqueueNotification(db: Db, input: SendInput): Promise<Sen
         skip('no_phone');
         continue;
       }
+      // A mistyped or someone else's address must not receive case details: only contacts the person has confirmed.
+      if (channel === 'email' && !user.emailVerifiedAt) {
+        skip('email_unverified');
+        continue;
+      }
+      if ((channel === 'sms' || channel === 'whatsapp') && !user.phoneVerifiedAt) {
+        skip('phone_unverified');
+        continue;
+      }
       const mustSend =
         channel === 'in_app' || def.category === 'security' || input.ignorePreferences;
       if (!mustSend && off.has(`${user.id}:${channel}`)) {
@@ -93,7 +102,7 @@ export async function enqueueNotification(db: Db, input: SendInput): Promise<Sen
         continue;
       }
 
-      const dedupeKey = `${input.dedupeKey}:${user.id}:${channel}`;
+      const dedupeKey = `${input.eventKey}:${input.dedupeKey}:${user.id}:${channel}`;
       const inApp = channel === 'in_app';
       const text = renderText(input.eventKey, user.language, data);
       // `ON CONFLICT DO NOTHING` on the unique key: a repeated or concurrent send of the same occurrence adds nothing, and does
@@ -153,6 +162,7 @@ const stringData = (value: Prisma.JsonValue | null): TemplateData => {
   const data: TemplateData = {};
   for (const [key, item] of Object.entries(value))
     if (typeof item === 'string' || typeof item === 'number') data[key] = item;
+    else if (typeof item === 'boolean') data[key] = String(item);
   return data;
 };
 
@@ -195,6 +205,13 @@ export async function deliverNotification(
     return fail(deps, row.id, row.attempts + 1, 'unknown_event', true);
   const data = stringData(row.data);
   const attempts = row.attempts + 1;
+  // Claim the attempt before sending: of two workers handling the same message at once, only one moves `attempts` on from the
+  // value both read, and only that one sends.
+  const claimed = await deps.prisma.notification.updateMany({
+    where: { id: row.id, status: 'queued', attempts: row.attempts },
+    data: { attempts },
+  });
+  if (claimed.count === 0) return 'skipped';
 
   try {
     let sent: { id: string };
@@ -276,6 +293,9 @@ async function fail(
   return 'failed';
 }
 
+/** Provider error texts can echo the phone number; hide digit runs before keeping them. */
+const maskNumbers = (text: string): string => text.replace(/\+?\d[\d\s-]{6,}\d/g, '[number]');
+
 export type StatusOutcome = 'applied' | 'duplicate' | 'unknown' | 'ignored';
 
 /**
@@ -286,17 +306,18 @@ export type StatusOutcome = 'applied' | 'duplicate' | 'unknown' | 'ignored';
  */
 export async function applyStatusUpdate(
   prisma: PrismaClient,
-  provider: string,
+  channel: 'sms' | 'whatsapp',
   update: StatusUpdate,
 ): Promise<StatusOutcome> {
   return prisma.$transaction(async (tx) => {
     const row = await tx.notification.findFirst({
-      where: { providerMessageId: update.providerMessageId, provider },
-      select: { id: true, status: true, deliveredAt: true },
+      // By channel, not by the provider now configured: a callback for a message sent before a provider switch still lands.
+      where: { providerMessageId: update.providerMessageId, channel },
+      select: { id: true, status: true, deliveredAt: true, provider: true },
     });
     if (!row) return 'unknown' as const;
     const seen = await tx.processedWebhook.createMany({
-      data: [{ provider, eventId: update.eventId }],
+      data: [{ provider: row.provider ?? channel, eventId: update.eventId }],
       skipDuplicates: true,
     });
     if (seen.count === 0) return 'duplicate' as const;
@@ -312,16 +333,18 @@ export async function applyStatusUpdate(
         data: {
           status: 'failed',
           failedAt: at,
-          lastError: (update.error ?? 'failed at provider').slice(0, 500),
+          lastError: maskNumbers(update.error ?? 'failed at provider').slice(0, 500),
         },
       });
       return 'applied' as const;
     }
-    if (next <= current || row.status === 'failed') return 'ignored' as const;
+    // A provider can report a failure and then, out of order, the delivery: a message we know it carried is not failed.
+    if (next <= current && row.status !== 'failed') return 'ignored' as const;
     await tx.notification.update({
       where: { id: row.id },
       data: {
         status: update.status,
+        ...(row.status === 'failed' ? { failedAt: null, lastError: null } : {}),
         ...(update.status === 'delivered' ? { deliveredAt: at } : {}),
         // A read receipt can arrive without a delivery receipt; the delivery time already recorded is kept.
         ...(update.status === 'read'

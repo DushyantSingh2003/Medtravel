@@ -95,7 +95,13 @@ beforeAll(async () => {
   patientId = (await prisma.patient.create({ data: { fullName: 'Asha' } })).id;
   uploaderId = (
     await prisma.user.create({
-      data: { email: 'up@worker.test', name: 'Up', role: 'patient', status: 'active' },
+      data: {
+        email: 'up@worker.test',
+        name: 'Up',
+        role: 'patient',
+        status: 'active',
+        emailVerifiedAt: new Date(),
+      },
     })
   ).id;
 });
@@ -182,7 +188,7 @@ describe('document.uploaded', () => {
           userId: uploaderId,
           templateKey: 'document_quarantined',
           channel: 'in_app',
-          dedupeKey: { startsWith: `document-quarantined:${doc.id}` },
+          dedupeKey: { startsWith: `document_quarantined:document-quarantined:${doc.id}` },
         },
       }),
     ).toBe(1);

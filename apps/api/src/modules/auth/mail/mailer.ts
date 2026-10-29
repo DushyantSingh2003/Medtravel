@@ -3,7 +3,11 @@ import type { Providers } from '@medtravel/notifications';
 import nodemailer from 'nodemailer';
 import { ENV } from '../../../config/config.module.js';
 import type { Env } from '../../../config/env.schema.js';
+import { RateLimiter } from '../../../auth/rate-limiter.js';
 import { NOTIFICATION_PROVIDERS } from '../../notifications/notifications.providers.js';
+
+/** Most sign-in SMS the whole API sends in an hour. */
+const SMS_PER_HOUR = 1000;
 
 export interface Mail {
   to: string;
@@ -37,6 +41,7 @@ export class Mailer {
   constructor(
     @Inject(ENV) private readonly env: Env,
     @Inject(NOTIFICATION_PROVIDERS) private readonly providers: Providers,
+    private readonly limiter: RateLimiter,
   ) {
     this.transport =
       env.EMAIL_TRANSPORT === 'smtp'
@@ -53,6 +58,10 @@ export class Mailer {
       return;
     }
     if (mail.channel === 'sms') {
+      // Each SMS costs money and can be pointed at a stranger: cap one number, and the whole platform, so a flood of
+      // made-up numbers cannot run up a bill.
+      this.limiter.consume(`sms:to:${mail.to.replace(/\D/g, '')}`, 5, 3600);
+      this.limiter.consume('sms:all', SMS_PER_HOUR, 3600);
       // A code is a secret: it goes straight to the provider and is not written to the notification log.
       await this.providers.sms.send({ to: mail.to, text: mail.text });
       return;

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { ProviderConfig } from './providers/index.js';
 
 export const DEV_WEBHOOK_SECRET = 'dev-notification-webhook-secret';
+export const DEV_VERIFY_TOKEN = 'dev-whatsapp-verify-token';
 
 /**
  * Settings of the three channels, shared by the API and the worker so both build their providers the same way. Spread into each
@@ -23,8 +24,10 @@ export const PROVIDER_ENV_SHAPE = {
   WHATSAPP_PROVIDER: z.enum(['dev', 'meta']).default('dev'),
   WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
   WHATSAPP_ACCESS_TOKEN: z.string().optional(),
-  /** Signs the delivery callbacks of the SMS and WhatsApp providers (HMAC-SHA256 of the body). */
+  /** Signs the delivery callbacks of the SMS and WhatsApp providers (HMAC-SHA256 of the body). For Meta it is the app secret. */
   NOTIFICATION_WEBHOOK_SECRET: z.string().min(16).default(DEV_WEBHOOK_SECRET),
+  /** The token WhatsApp's subscription check sends in the URL. Separate from the signing secret, which must never travel in an address. */
+  WHATSAPP_VERIFY_TOKEN: z.string().min(16).default(DEV_VERIFY_TOKEN),
 };
 
 export type ProviderEnv = z.infer<z.ZodObject<typeof PROVIDER_ENV_SHAPE>>;
@@ -50,6 +53,13 @@ export function refineProviderEnv(
     if (env.SMS_PROVIDER === 'dev') issue('SMS_PROVIDER', 'Set a real SMS provider in production');
     if (env.WHATSAPP_PROVIDER === 'dev')
       issue('WHATSAPP_PROVIDER', 'Set a real WhatsApp provider in production');
+    if (env.WHATSAPP_VERIFY_TOKEN === DEV_VERIFY_TOKEN)
+      issue('WHATSAPP_VERIFY_TOKEN', 'Set a real WHATSAPP_VERIFY_TOKEN in production');
+    if (env.NOTIFICATION_WEBHOOK_SECRET === env.WHATSAPP_VERIFY_TOKEN)
+      issue(
+        'WHATSAPP_VERIFY_TOKEN',
+        'WHATSAPP_VERIFY_TOKEN must differ from NOTIFICATION_WEBHOOK_SECRET',
+      );
     if (env.NOTIFICATION_WEBHOOK_SECRET === DEV_WEBHOOK_SECRET)
       issue('NOTIFICATION_WEBHOOK_SECRET', 'Set a real NOTIFICATION_WEBHOOK_SECRET in production');
   }

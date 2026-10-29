@@ -22,6 +22,10 @@ export class WebhooksService {
     return this.env.NOTIFICATION_WEBHOOK_SECRET;
   }
 
+  get verifyToken(): string {
+    return this.env.WHATSAPP_VERIFY_TOKEN;
+  }
+
   verify(rawBody: Buffer, signature: string | undefined): boolean {
     return verifyWebhookSignature(rawBody, signature, this.secret);
   }
@@ -35,7 +39,7 @@ export class WebhooksService {
     let applied = 0;
     let ignored = 0;
     for (const update of provider.parseStatus(body)) {
-      const outcome = await applyStatusUpdate(this.prisma, provider.name, update);
+      const outcome = await applyStatusUpdate(this.prisma, channel, update);
       if (outcome === 'applied') applied += 1;
       else ignored += 1;
     }

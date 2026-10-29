@@ -7,7 +7,7 @@ import {
   sendTestResultSchema,
   type Role,
 } from '@medtravel/contracts';
-import { DEV_WEBHOOK_SECRET } from '@medtravel/notifications';
+import { DEV_VERIFY_TOKEN, DEV_WEBHOOK_SECRET } from '@medtravel/notifications';
 import { NotificationsService } from '../src/modules/notifications/notifications.service.js';
 import { createTestApp, type TestApp } from './support/test-app.js';
 
@@ -29,6 +29,7 @@ const as = async (
     data: {
       ...(extra.language ? { language: extra.language } : {}),
       phone: extra.phone === undefined ? `+9198111${String(n).padStart(5, '0')}` : extra.phone,
+      phoneVerifiedAt: new Date(),
     },
   });
   const { accessToken } = await t.tokenFor(user.id);
@@ -269,7 +270,7 @@ describe('the delivery log and the test event', () => {
     ).toBe(1);
   });
 
-  it('sends the test to another user even when they switched a channel off, and can be limited to chosen channels', async () => {
+  it('respects another user’s switched-off channels (but not the admin’s own), and can be limited to chosen channels', async () => {
     const admin = await as('super_admin');
     const target = await as('patient');
     await t.db.notificationPreference.create({
@@ -283,7 +284,21 @@ describe('the delivery log and the test event', () => {
         })
       ).body,
     );
-    expect(res.queued.map((q) => q.channel)).toEqual(['email']);
+    expect(res.queued).toEqual([]);
+    expect(res.skipped).toEqual([{ channel: 'email', reason: 'switched_off' }]);
+    // The admin's own switches do not stop a test they ask for on their own account.
+    await t.db.notificationPreference.create({
+      data: { userId: admin.user.id, channel: 'email', enabled: false },
+    });
+    const own = sendTestResultSchema.parse(
+      (
+        await t.raw('POST', '/notifications/test', {
+          headers: admin.headers,
+          body: { channels: ['email'] },
+        })
+      ).body,
+    );
+    expect(own.queued.map((q) => q.channel)).toEqual(['email']);
     expect(
       (
         await t.raw('POST', '/notifications/test', {
@@ -482,7 +497,7 @@ describe('delivery callbacks from the providers', () => {
   it('answers the WhatsApp subscription check only with the right token', async () => {
     const ok = await t.raw(
       'GET',
-      `/webhooks/notifications/whatsapp?hub.mode=subscribe&hub.verify_token=${DEV_WEBHOOK_SECRET}&hub.challenge=12345`,
+      `/webhooks/notifications/whatsapp?hub.mode=subscribe&hub.verify_token=${DEV_VERIFY_TOKEN}&hub.challenge=12345`,
     );
     expect(ok.status).toBe(200);
     expect(ok.body).toBe(12345);

@@ -292,7 +292,8 @@ export class NotificationsService {
         recipients: [target.id],
         data: { name: target.name },
         dedupeKey: `test:${randomUUID()}`,
-        ignorePreferences: true,
+        // A test the admin sends to themself ignores their own switches; to anyone else it respects the person's choices.
+        ignorePreferences: target.id === actor.userId,
         ...(body.channels ? { channels: body.channels } : {}),
       });
       await this.audit.record(tx, context, {

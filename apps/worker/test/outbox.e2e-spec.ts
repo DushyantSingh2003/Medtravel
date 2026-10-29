@@ -35,7 +35,13 @@ const makeUser = (
   status: 'active' | 'suspended' = 'active',
 ) =>
   prisma.user.create({
-    data: { email: `u${(n += 1)}@worker.test`, name: role, role, status },
+    data: {
+      email: `u${(n += 1)}@worker.test`,
+      name: role,
+      role,
+      status,
+      emailVerifiedAt: new Date(),
+    },
     select: { id: true },
   });
 
@@ -100,7 +106,10 @@ describe('incident.created', () => {
     await dispatcher.runOnce();
 
     const rows = await prisma.notification.findMany({
-      where: { templateKey: 'incident_logged', dedupeKey: { startsWith: event.id } },
+      where: {
+        templateKey: 'incident_logged',
+        dedupeKey: { startsWith: `incident_logged:${event.id}` },
+      },
     });
     const recipients = rows.map((row) => row.userId);
     expect(recipients).toContain(first.id);
@@ -123,7 +132,9 @@ describe('incident.created', () => {
     const event = await publish(incident.id);
     await dispatcher.runOnce();
     const count = () =>
-      prisma.notification.count({ where: { dedupeKey: { startsWith: event.id } } });
+      prisma.notification.count({
+        where: { dedupeKey: { startsWith: `incident_logged:${event.id}` } },
+      });
     const once = await count();
     expect(once).toBeGreaterThan(0);
 
@@ -181,7 +192,11 @@ describe('incident.created', () => {
     ]);
     expect(
       await prisma.notification.count({
-        where: { userId: first.id, channel: 'in_app', dedupeKey: { startsWith: event.id } },
+        where: {
+          userId: first.id,
+          channel: 'in_app',
+          dedupeKey: { startsWith: `incident_logged:${event.id}` },
+        },
       }),
     ).toBe(1);
   });
