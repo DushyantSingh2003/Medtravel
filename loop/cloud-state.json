@@ -103,6 +103,12 @@
       "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e",
       "finishedAt": "2026-10-29T12:24:24.081Z",
       "note": "Notification engine: outbox-delivered email, SMS and WhatsApp in en and ar, preferences, bell, admin log"
+    },
+    "F-08": {
+      "status": "in-progress",
+      "attempts": 1,
+      "claimedAt": "2026-10-29T12:54:14.248Z",
+      "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e"
     }
   },
   "approvals": [],
@@ -132,6 +138,7 @@
     "2026-10-29T10:29:13.118Z claim F-06 attempt 1",
     "2026-10-29T11:18:01.107Z finish F-06 done",
     "2026-10-29T11:25:23.582Z claim F-07 attempt 1",
-    "2026-10-29T12:24:24.081Z finish F-07 done"
+    "2026-10-29T12:24:24.081Z finish F-07 done",
+    "2026-10-29T12:54:14.259Z claim F-08 attempt 1"
   ]
 }
