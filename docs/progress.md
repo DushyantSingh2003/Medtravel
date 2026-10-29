@@ -4,7 +4,7 @@ Tick a task here when it is finished and `pnpm check` is green. The task queue t
 build loop is `loop/cloud-state.json`; this file is the human-readable view and also records
 what each task deferred.
 
-Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-04.
+Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-05.
 
 ### Phase 0 — Scaffold (week 1)
 
@@ -21,7 +21,7 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-04.
 - [x] **F-02** Master data module (the reference pattern)
 - [x] **F-03** Authentication
 - [x] **F-04** Roles, permissions and data scoping
-- [ ] **F-05** Audit log and domain events
+- [x] **F-05** Audit log and domain events
 - [ ] **F-06** Secure file service
 - [ ] **F-07** Notification engine
 - [ ] **F-08** Realtime gateway
@@ -165,6 +165,24 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-04.
 - [ ] **G-08** Advanced analytics
 
 ## Notes and deferred work
+
+### Deferred from F-05
+
+- **Not yet verified on GitHub:** first CI result for this task (the API e2e job now also runs the worker's database tests).
+- **Automatic capture of every change** is by convention, not by a database hook: each service writes its audit row in the
+  same transaction (`AuditService.record`, as masters and auth do). A model change made without it leaves no row; a Prisma
+  extension that records every create, update and delete is the follow-up if that proves too easy to forget.
+- **Views and downloads** are recorded by `AuditService.recordAccess`, which the document and patient endpoints (F-06 and the
+  case screens) must call on every read; they do not exist yet, so the end-to-end proof uses a test-only route, and the
+  Playwright test shows a sign-in within seconds instead of a document view.
+- The audit list counts rows for its total with every request; on a very large table that count wants a cap or an estimate.
+- The CSV export is built in memory (10,000 rows at most), not streamed.
+- The outbox dispatcher polls every 2 seconds; PostgreSQL `LISTEN/NOTIFY` would cut the delay. Only `incident.created` has a
+  handler; the notification, SLA timer and search-refresh handlers arrive with their tasks. Failed events (after 6 tries)
+  stay in the table with `status = failed` and no screen shows them yet.
+- Admin notifications for an incident are in-app only and in English until the notification engine (F-07) renders templates.
+- Audit rows are never deleted or archived yet (the retention job belongs with the data protection work).
+- The incident created by the download alert has no assignee and no screen to work it until the incidents module.
 
 ### Deferred from F-04
 

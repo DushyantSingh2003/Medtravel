@@ -73,3 +73,7 @@ Appended by build tasks. Format: `- [<TASK-ID>] <question> — assumed: <what wa
 - [F-04] Attendants — assumed: see the case, travel, visa and chat of the patient they are attached to, and can upload their own passport; not the medical record.
 - [F-04] Agents and consent — assumed: an agency sees a referral only while the patient has an unwithdrawn `share_stage_with_agent` consent for that agency, and then only case number, name, stage and status.
 - [F-04] Hospital access ends — assumed: when the opinion request is declined, expired or cancelled, or the patient withdraws the consent, the hospital loses the case and its documents at once.
+- [F-05] Download alert — assumed: more than 50 `document.downloaded` events by one user in any rolling hour opens one `Incident` (type other, severity high) per user per clock hour and notifies every active super admin in the app; sharing a download count across a team is not considered.
+- [F-05] What the trail masks — assumed: passwords, tokens, secrets, hashes and one-time codes entirely; date of birth, email, phone and address entirely; passport numbers down to their last four characters. An update stores only the changed fields.
+- [F-05] Who reads the audit log — assumed: super admin only (read and export); the PRD names no other role.
+- [F-05] Retries — assumed: an outbox event is tried 6 times with 5 s, 10 s, 20 s ... waits before it is marked failed.
