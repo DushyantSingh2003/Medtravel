@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { randomBytes, randomInt } from 'node:crypto';
+import type { ModuleMetadata } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { createPrismaClient, type PrismaClient } from '@medtravel/db';
@@ -74,7 +75,7 @@ function urlFor(name: string): string {
  * migrations the deploy runs), so tests exercise real SQL, constraints and triggers and cannot disturb each other.
  */
 export async function createTestApp(
-  options: { env?: Record<string, string> } = {},
+  options: { env?: Record<string, string>; imports?: ModuleMetadata['imports'] } = {},
 ): Promise<TestApp> {
   const name = `api_${randomBytes(4).toString('hex')}`;
   const admin = createPrismaClient({ connectionString: SERVER_URL });
@@ -91,7 +92,9 @@ export async function createTestApp(
   process.env['CORS_ORIGINS'] = 'http://localhost:3002';
   Object.assign(process.env, options.env);
 
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+  const moduleRef = await Test.createTestingModule({
+    imports: [AppModule, ...(options.imports ?? [])],
+  }).compile();
   const app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
   await app.init();
   await app.getHttpAdapter().getInstance().ready();

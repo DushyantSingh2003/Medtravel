@@ -11,20 +11,25 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
-    "test": "vitest run"
+    "test": "vitest run",
+    "docs:permissions": "tsx scripts/generate-permissions-doc.ts"
   },
   "dependencies": {
+    "@casl/ability": "^7.1.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
     "@medtravel/config": "workspace:*",
     "eslint": "^9.39.5",
     "typescript": "^6.0.2",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "tsx": "^4.21.0"
   }
 }

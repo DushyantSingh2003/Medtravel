@@ -20,18 +20,22 @@ export class PermissionsGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const targets = [context.getHandler(), context.getClass()];
-    if (this.reflector.getAllAndOverride<boolean>(PUBLIC_KEY, targets)) return true;
-
-    const actor = context.switchToHttp().getRequest<FastifyRequest>().actor;
-    if (actor && this.reflector.getAllAndOverride<boolean>(AUTHENTICATED_KEY, targets)) return true;
-
     const required = this.reflector.getAllAndOverride<RequiredPermission | undefined>(
       PERMISSION_KEY,
       targets,
     );
-    if (!required || !actor || !can(actor.role, required.action, required.subject)) {
-      throw new ForbiddenException('You do not have permission to do this');
+    const actor = context.switchToHttp().getRequest<FastifyRequest>().actor;
+
+    // A declared permission is always checked, even under a class-level @Public() or @Authenticated() that would
+    // otherwise wave every handler through.
+    if (required) {
+      if (!actor || !can(actor.role, required.action, required.subject)) {
+        throw new ForbiddenException('You do not have permission to do this');
+      }
+      return true;
     }
-    return true;
+    if (this.reflector.getAllAndOverride<boolean>(PUBLIC_KEY, targets)) return true;
+    if (actor && this.reflector.getAllAndOverride<boolean>(AUTHENTICATED_KEY, targets)) return true;
+    throw new ForbiddenException('You do not have permission to do this');
   }
 }

@@ -54,7 +54,6 @@ Appended by build tasks. Format: `- [<TASK-ID>] <question> — assumed: <what wa
 - [F-02] Currencies — the task's 11 exactly (the F-01 seed's Kuwaiti dinar and yen are gone); minor units follow ISO 4217 (OMR and IQD have 3).
 - [F-02] Where Arabic goes — assumed: only Arabic is translatable at MVP (`translations.ar`), English lives on the row; adding a language later means widening `translationLocaleSchema`.
 
-
 - [F-03] Session lifetime — assumed: access cookie 15 minutes, refresh 30 days rotating (a replayed old token ends the session after a 10 second grace), so a signed-in browser stays signed in for 30 days of use.
 - [F-03] Which roles need two-factor — assumed: every staff role, hospital desk, doctor and super_admin (PRD 12); patients, attendants and agents may enable it. A role that needs it but has none gets a limited session that can only reach the set-up page.
 - [F-03] Lockout — assumed: five wrong passwords or codes lock the account for 15 minutes; the answer is the same for unknown and known addresses.
@@ -63,3 +62,14 @@ Appended by build tasks. Format: `- [<TASK-ID>] <question> — assumed: <what wa
 - [F-03] Patient sign-up — assumed: open registration for patients with email and password, or a one-time code by email or phone; the email is verified by a link but sign-in does not wait for it.
 - [F-03] Magic link for doctors — assumed: a hospital desk issues it for one case the hospital has received, valid up to 72 hours, session capped at 8 hours and scoped to that case.
 - [F-03] Dev sign-in — assumed: `AUTH_DEV_SKIP_2FA=true` lets staff without two-factor in, only when `NODE_ENV=development`; CI and tests enforce it.
+
+- [F-04] Case manager "team" — assumed: cases owned by staff with the same `managerId`; a staff profile with `isManager` sees every case; a case manager with no manager sees only their own.
+- [F-04] Ground coordinator "in their city" — assumed: the city of the hospital the case is sent to, or the preferred city while no hospital is chosen; "arrival within ±30 days" is the planned arrival date.
+- [F-04] Interpreter and medical reviewer scopes — assumed: an interpreter sees cases with a booking assigned to them; a reviewer sees cases assigned to them plus unassigned cases in the medical review stage.
+- [F-04] Agent scope — assumed: every user of an agency sees all of the agency's referrals (owner and sub-users); agents see case number, name, stage and status only, and never documents, money or medical data (PRD 2 and 12). Sharing status with agents needs the patient's consent (PRD 12), to be checked when the agent case list is built (F-10).
+- [F-04] Doctor scope — assumed: a doctor sees a case only through an opinion request that names their doctor record; a hospital desk sees every case sent to its hospital.
+- [F-04] Finance — assumed: sees every case's identity, stage and money fields, but no medical fields and no documents; invoices and payments are theirs.
+- [F-04] Who exports — assumed: only roles with a reports permission (agent: own referrals, case manager: team, finance, super admin; the audit log by super admin only).
+- [F-04] Attendants — assumed: see the case, travel, visa and chat of the patient they are attached to, and can upload their own passport; not the medical record.
+- [F-04] Agents and consent — assumed: an agency sees a referral only while the patient has an unwithdrawn `share_stage_with_agent` consent for that agency, and then only case number, name, stage and status.
+- [F-04] Hospital access ends — assumed: when the opinion request is declined, expired or cancelled, or the patient withdraws the consent, the hospital loses the case and its documents at once.

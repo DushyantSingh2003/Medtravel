@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { requirePortalSession } from '../../lib/auth/session';
+import { PermissionsProvider } from '../../lib/permissions/permissions';
 import { PortalShell } from './portal-shell';
 
 interface LayoutProps {
@@ -19,9 +20,11 @@ export async function PortalLayout({ portal, children, params }: LayoutProps & {
   setRequestLocale(locale);
   const session = await requirePortalSession(locale, portal);
   return (
-    <PortalShell portal={portal} role={session.role}>
-      {children}
-    </PortalShell>
+    <PermissionsProvider role={session.role}>
+      <PortalShell portal={portal} role={session.role}>
+        {children}
+      </PortalShell>
+    </PermissionsProvider>
   );
 }
 

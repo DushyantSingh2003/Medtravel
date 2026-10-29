@@ -423,6 +423,9 @@ importers:
 
   packages/contracts:
     dependencies:
+      '@casl/ability':
+        specifier: ^7.1.0
+        version: 7.1.0
       zod:
         specifier: ^4.6.5
         version: 4.6.5
@@ -433,6 +436,9 @@ importers:
       eslint:
         specifier: ^9.39.5
         version: 9.39.5(jiti@2.7.0)
+      tsx:
+        specifier: ^4.21.0
+        version: 4.23.15
       typescript:
         specifier: ^6.0.2
         version: 6.0.3
@@ -784,6 +790,9 @@ packages:
   '@bramus/specificity@2.4.3':
     resolution: {integrity: sha512-0GEz8qJWokkUVYQYRukmkSHIFNoBH8QTreeHrAFbvz1XFYc3Y+puhMs8PQ5x8GNugiC2l5jvDBXKLbBIByeSBw==}
     hasBin: true
+
+  '@casl/ability@7.1.0':
+    resolution: {integrity: sha512-M7eETIffU3x38Oy7ggpSgjMZkIo+6q/vVIboWtlrSxEplIfP3c66g8Vi3ulImvo2WOjh+Xv9uWnJkjRhCajOiA==}
 
   '@colors/colors@1.5.0':
     resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}
@@ -3769,6 +3778,18 @@ packages:
   '@typescript-eslint/visitor-keys@8.71.1':
     resolution: {integrity: sha512-0GxiUGqMU0qXJt58cBsiG3DP8lUmBaFo2vChtUX+CT7PnR3v/VGLLrzVP4K9r1lNiZXjHYefMBbPunplr09v6w==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+
+  '@ucast/core@2.0.0':
+    resolution: {integrity: sha512-4XVx6LzPXZGvnZO5jp39cm/G4UvuwvEdtmg+9+4+zl6uFkCcB7UJacvtMYeBE56GJVT99Zqy6Pii7dGJq3Kz9Q==}
+
+  '@ucast/js@4.0.1':
+    resolution: {integrity: sha512-9O5xPBvwEWQk2WvO69Eh2WJB8QljVZ2vRVdFvfnKjlZwWXcYxp1lqLBhwXBU1AtuSgCvKhJPkXdjKJggUmAmQQ==}
+
+  '@ucast/mongo2js@2.0.0':
+    resolution: {integrity: sha512-vNBZzRnsfLr/TSxEoxz6W6hHQ5tmWsfEeC0nCq5z8RezC1AqIRy3cfHm8AGvlGtcn+cTSFQcZremfqnz6wm+nQ==}
+
+  '@ucast/mongo@3.0.0':
+    resolution: {integrity: sha512-kwuSH+kdB4GCR0LGhy/PEDm4PCflur89AlK82kNiYD0FvsA8A/p+0sx7m+/R8mMFAlmlkAd3VXp7sM/cLLYWYg==}
 
   '@unrs/resolver-binding-android-arm-eabi@1.12.2':
     resolution: {integrity: sha512-g5T90pqg1bo/7mytQx6F4iBNC0Wsh9cu+z9veDbFjc7HjpesJFWD7QMS0NGStXM075+7dJPPVvBbpZlnrdpi/w==}
@@ -7228,6 +7249,10 @@ snapshots:
     dependencies:
       css-tree: 3.2.1
 
+  '@casl/ability@7.1.0':
+    dependencies:
+      '@ucast/mongo2js': 2.0.0
+
   '@colors/colors@1.5.0':
     optional: true
 
@@ -9939,6 +9964,22 @@ snapshots:
     dependencies:
       '@typescript-eslint/types': 8.71.1
       eslint-visitor-keys: 5.0.1
+
+  '@ucast/core@2.0.0': {}
+
+  '@ucast/js@4.0.1':
+    dependencies:
+      '@ucast/core': 2.0.0
+
+  '@ucast/mongo2js@2.0.0':
+    dependencies:
+      '@ucast/core': 2.0.0
+      '@ucast/js': 4.0.1
+      '@ucast/mongo': 3.0.0
+
+  '@ucast/mongo@3.0.0':
+    dependencies:
+      '@ucast/core': 2.0.0
 
   '@unrs/resolver-binding-android-arm-eabi@1.12.2':
     optional: true
