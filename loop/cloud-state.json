@@ -89,10 +89,12 @@
       "note": "Audit log with masking and diff, access audit, download alert, outbox runtime and worker dispatcher, /admin/audit screen"
     },
     "F-06": {
-      "status": "in-progress",
+      "status": "done",
       "attempts": 1,
       "claimedAt": "2026-10-29T10:29:13.105Z",
-      "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e"
+      "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e",
+      "finishedAt": "2026-10-29T11:18:01.106Z",
+      "note": "Secure file service: signed multipart uploads, ClamAV scan, audited five-minute watermarked downloads, consent sharing"
     }
   },
   "approvals": [],
@@ -119,6 +121,7 @@
     "2026-10-29T09:25:57.031Z finish F-04 done",
     "2026-10-29T09:26:36.148Z claim F-05 attempt 1",
     "2026-10-29T10:10:20.496Z finish F-05 done",
-    "2026-10-29T10:29:13.118Z claim F-06 attempt 1"
+    "2026-10-29T10:29:13.118Z claim F-06 attempt 1",
+    "2026-10-29T11:18:01.107Z finish F-06 done"
   ]
 }
