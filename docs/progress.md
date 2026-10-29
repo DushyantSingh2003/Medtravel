@@ -186,7 +186,8 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-05.
 
 ### Deferred from F-04
 
-- **Not yet verified on GitHub:** first CI result for this task (recorded here once it has run).
+- **Verified on GitHub:** `ci.yml` run 18 on `develop` (commit 676843d, "loop: finish F-04") passed, including the API e2e, the browser job
+  and the image smoke tests.
 - No endpoint uses `ScopeService` yet (the case, document and patient endpoints arrive in F-06, F-10 and later); it is proven
   against a real database by `apps/api/test/rbac.e2e-spec.ts`. Every new list endpoint must AND `caseWhere` / `documentWhere` /
   `patientWhere` into its query, and call `assertCaseAccess` before loading a case's children. Magic-link sessions are
