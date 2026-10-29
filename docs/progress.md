@@ -4,7 +4,7 @@ Tick a task here when it is finished and `pnpm check` is green. The task queue t
 build loop is `loop/cloud-state.json`; this file is the human-readable view and also records
 what each task deferred.
 
-Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-06.
+Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-07.
 
 ### Phase 0 — Scaffold (week 1)
 
@@ -23,7 +23,7 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-06.
 - [x] **F-04** Roles, permissions and data scoping
 - [x] **F-05** Audit log and domain events
 - [x] **F-06** Secure file service
-- [ ] **F-07** Notification engine
+- [x] **F-07** Notification engine
 - [ ] **F-08** Realtime gateway
 - [ ] **F-09** Money, currencies and languages
 - [ ] **F-10** Case core and stage machine
@@ -165,6 +165,30 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-06.
 - [ ] **G-08** Advanced analytics
 
 ## Notes and deferred work
+
+### Deferred from F-07
+
+- **Never sent through a real provider.** Amazon SES (over SMTP), MSG91, Twilio and the Meta WhatsApp Cloud API were exercised
+  only against local HTTP/SMTP doubles (`providers.spec.ts`, `smtp.spec.ts`); request shapes follow each provider's public
+  documentation but a first sandbox send is still to do. The MSG91 adapter assumes a DLT flow template with one variable named
+  `message`; confirm the template when the account exists. WhatsApp templates (`mt_<event>`, 31 of them, in en and ar) must be
+  submitted for approval at the BSP with the same wording as `packages/notifications/src/templates`.
+- **Delivery callbacks:** the webhook (`POST /webhooks/notifications/{sms|whatsapp}`) verifies an HMAC-SHA256 of the raw body
+  with `NOTIFICATION_WEBHOOK_SECRET` (header `X-Hub-Signature-256`, which is Meta's own scheme, or `X-Signature`). Twilio and MSG91
+  cannot sign that way, so their callbacks need a small signing relay (or their own scheme added) before delivery status works
+  for SMS. Email has no delivery status beyond `sent` (SES bounces and complaints need an SNS subscription).
+- **Realtime push** to the bell waits for F-08; until then the bell polls every 30 seconds.
+- Templates are code, not database rows an admin can edit (the `/admin/templates` placeholder screen stays a placeholder).
+  The log page is at `/admin/notifications`, not `/admin/notifications/log`.
+- Recipients must be users: a lead without an account (the enquiry-received message) gets nothing until C-01 creates one.
+- No quiet hours, digest or per-event preferences: a person chooses channels, not events. In-app and security events cannot be switched off.
+- Nothing calls `NotificationsService.send` yet except the file-quarantine and incident notices; each business event
+  (quote sent, visa decision, pickup reminders, ...) is wired by the task that owns it. The time-driven reminders
+  (quote expiring in 3 days, pickup 24 h / 2 h before landing, appointment reminders) need the scheduler of C-02/C-09.
+- Failed rows keep their error text but no content; successful non-in-app rows clear the values used to write them. The log
+  therefore shows what happened, not what was said.
+- SMS and WhatsApp numbers are sent as stored (`+<country><number>`); no check that a number can receive WhatsApp.
+- `apps/worker/src/notifications` (the BullMQ example processor) is now only a wiring example.
 
 ### Deferred from F-06
 

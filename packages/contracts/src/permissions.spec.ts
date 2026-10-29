@@ -277,7 +277,7 @@ describe('the rules that must never regress', () => {
   it('lets only the super admin change users, settings and master data, and only it read the audit log', () => {
     for (const role of ROLES) {
       const admin = role === 'super_admin';
-      for (const subject of ['User', 'Setting', 'AuditLog'] as const)
+      for (const subject of ['User', 'Setting', 'AuditLog', 'NotificationLog'] as const)
         expect(can(role, 'read', subject), `${role} read ${subject}`).toBe(admin);
       for (const action of ['create', 'update', 'delete'] as const)
         expect(can(role, action, 'MasterData'), `${role} ${action} MasterData`).toBe(admin);
@@ -299,6 +299,7 @@ describe('the rules that must never regress', () => {
         'User',
         'Setting',
         'AuditLog',
+        'NotificationLog',
         'Agent',
         'Commission',
         'Payout',

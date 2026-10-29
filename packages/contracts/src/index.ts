@@ -8,3 +8,5 @@ export * from './permissions.js';
 export * from './auth.js';
 export * from './audit.js';
 export * from './documents.js';
+export * from './notification-events.js';
+export * from './notifications.js';

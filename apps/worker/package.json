@@ -19,6 +19,7 @@
     "@medtravel/contracts": "workspace:*",
     "@medtravel/db": "workspace:*",
     "@medtravel/emails": "workspace:*",
+    "@medtravel/notifications": "workspace:*",
     "@medtravel/pdf": "workspace:*",
     "@medtravel/storage": "workspace:*",
     "@nestjs/bullmq": "^12.0.0",

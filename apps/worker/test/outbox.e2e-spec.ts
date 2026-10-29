@@ -6,6 +6,7 @@ import { ObjectStore } from '@medtravel/storage';
 import { FakeClamd, FakeS3Server } from '@medtravel/storage/testing';
 import { notifyAdminsOfIncident } from '../src/outbox/handlers/incident-created.handler.js';
 import { OutboxDispatcher } from '../src/outbox/outbox-dispatcher.service.js';
+import { recordingProviders } from './support/fake-providers.js';
 
 /** The dispatcher against a real database: an `incident.created` event becomes one notification per active super admin, once. */
 
@@ -73,7 +74,10 @@ beforeAll(async () => {
     bucket: BUCKET,
     forcePathStyle: true,
   });
-  dispatcher = new OutboxDispatcher(prisma, store, { CLAMAV_HOST: '127.0.0.1', CLAMAV_PORT: port });
+  dispatcher = new OutboxDispatcher(prisma, store, recordingProviders().providers, {
+    CLAMAV_HOST: '127.0.0.1',
+    CLAMAV_PORT: port,
+  });
 });
 
 afterAll(async () => {
@@ -96,17 +100,18 @@ describe('incident.created', () => {
     await dispatcher.runOnce();
 
     const rows = await prisma.notification.findMany({
-      where: {
-        templateKey: 'incident.created',
-        data: { path: ['incidentId'], equals: incident.id },
-      },
+      where: { templateKey: 'incident_logged', dedupeKey: { startsWith: event.id } },
     });
     const recipients = rows.map((row) => row.userId);
     expect(recipients).toContain(first.id);
     expect(recipients).toContain(second.id);
     expect(recipients).not.toContain(suspended.id);
     expect(recipients).not.toContain(manager.id);
-    expect(rows.every((row) => row.channel === 'in_app' && row.title?.includes('high'))).toBe(true);
+    // In the app and by email, as the event says.
+    expect(new Set(rows.map((row) => row.channel))).toEqual(new Set(['in_app', 'email']));
+    expect(
+      rows.filter((row) => row.channel === 'in_app').every((row) => row.title?.includes('high')),
+    ).toBe(true);
     expect((await prisma.outboxEvent.findUniqueOrThrow({ where: { id: event.id } })).status).toBe(
       'processed',
     );
@@ -118,7 +123,7 @@ describe('incident.created', () => {
     const event = await publish(incident.id);
     await dispatcher.runOnce();
     const count = () =>
-      prisma.notification.count({ where: { data: { path: ['incidentId'], equals: incident.id } } });
+      prisma.notification.count({ where: { dedupeKey: { startsWith: event.id } } });
     const once = await count();
     expect(once).toBeGreaterThan(0);
 
@@ -176,7 +181,7 @@ describe('incident.created', () => {
     ]);
     expect(
       await prisma.notification.count({
-        where: { userId: first.id, data: { path: ['eventId'], equals: event.id } },
+        where: { userId: first.id, channel: 'in_app', dedupeKey: { startsWith: event.id } },
       }),
     ).toBe(1);
   });

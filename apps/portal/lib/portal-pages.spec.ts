@@ -59,7 +59,7 @@ describe('portal screen registry', () => {
     expect(keysOf('ops')).toHaveLength(18);
     expect(keysOf('hospital')).toHaveLength(13);
     expect(keysOf('agent')).toHaveLength(10);
-    expect(keysOf('admin')).toHaveLength(24);
+    expect(keysOf('admin')).toHaveLength(25);
     expect(keysOf('ops')).toEqual(
       expect.arrayContaining(['leads', 'pipeline', 'cases', 'quotes', 'logistics', 'incidents']),
     );

@@ -2,7 +2,7 @@
 
 > Generated from `packages/db/prisma/schema.prisma` by `pnpm --filter @medtravel/db docs:model`. Do not edit by hand: a test fails when this file is out of date.
 
-The database holds **78 tables** and **51 enums** (PRD section 11). The central entity is the **Case**: one patient, one treatment episode, and everything else hangs off it.
+The database holds **79 tables** and **51 enums** (PRD section 11). The central entity is the **Case**: one patient, one treatment episode, and everything else hangs off it.
 
 ## Overview
 
@@ -98,7 +98,7 @@ One `User` per login. What a user is linked to depends on the role: a Patient, a
 
 | Entity | What it is | Belongs to | Has | Notes |
 | --- | --- | --- | --- | --- |
-| **User** | One row per login. Linked to a Patient, Agent (AgentUser), HospitalStaff or StaffProfile by role. |  | Session (sessions), AuthChallenge (authChallenges), AuthChallenge (createdChallenges), BackupCode (backupCodes), StaffProfile (managedStaff), Case (ownedCases), Case (reviewedCases), CaseStageHistory (stageChanges), MedicalSummary (medicalSummaries), Document (uploadedDocuments), FileUpload (fileUploads), DocumentShare (documentShares), CaseNote (caseNotes), HospitalStaff (hospitalStaffs), OpinionRequest (sentOpinionRequests), Opinion (submittedOpinions), Quote (acceptedQuotes), Quote (createdQuotes), Refund (requestedRefunds), Refund (approvedRefunds), Task (assignedTasks), Task (createdTasks), Message (sentMessages), Notification (notifications), Incident (reportedIncidents), Incident (assignedIncidents), Incident (escalatedIncidents), StaffProfile (staffProfile), AgentUser (agentUser), Patient (patient), Attendant (attendant), Interpreter (interpreter) | soft delete |
+| **User** | One row per login. Linked to a Patient, Agent (AgentUser), HospitalStaff or StaffProfile by role. |  | Session (sessions), AuthChallenge (authChallenges), AuthChallenge (createdChallenges), BackupCode (backupCodes), StaffProfile (managedStaff), Case (ownedCases), Case (reviewedCases), CaseStageHistory (stageChanges), MedicalSummary (medicalSummaries), Document (uploadedDocuments), FileUpload (fileUploads), NotificationPreference (notificationPreferences), DocumentShare (documentShares), CaseNote (caseNotes), HospitalStaff (hospitalStaffs), OpinionRequest (sentOpinionRequests), Opinion (submittedOpinions), Quote (acceptedQuotes), Quote (createdQuotes), Refund (requestedRefunds), Refund (approvedRefunds), Task (assignedTasks), Task (createdTasks), Message (sentMessages), Notification (notifications), Incident (reportedIncidents), Incident (assignedIncidents), Incident (escalatedIncidents), StaffProfile (staffProfile), AgentUser (agentUser), Patient (patient), Attendant (attendant), Interpreter (interpreter) | soft delete |
 | **Session** | A signed-in browser or device. Only a hash of the token is stored. One sign-in on one device. `tokenHash` is the hash of the current refresh token; it rotates on every refresh and the previous hash is kept so that a replayed (stolen) refresh token revokes the whole session. | User (user), Case (scopeCase, optional) |  |  |
 | **AuthChallenge** | A one-time secret sent to a person: email verification, password reset, a sign-in code, an invitation or a magic link. Only hashes are stored; the token or code itself exists in the email and nowhere else. | User (user, optional), User (createdBy, optional) |  |  |
 | **BackupCode** | A single-use recovery code for a user who lost their authenticator app. Stored hashed. | User (user) |  |  |
@@ -211,6 +211,7 @@ Tasks, conversations, notifications, ratings and incidents.
 | **Message** | One message in a conversation. Message text can contain medical information: never logged. | Conversation (conversation), User (sender, optional) | MessageAttachment (attachments) | soft delete |
 | **MessageAttachment** |  | Message (message), Document (document) |  | unique: messageId + documentId |
 | **Notification** | A message the system sent to a user. In-app ones are what the bell shows. | User (user), Case (case, optional) |  | soft delete |
+| **NotificationPreference** | Whether a person wants messages on a channel. No row means yes. In-app messages and security alerts cannot be switched off. | User (user) |  | unique: userId + channel |
 | **Feedback** | A patient's ratings of a finished case; 1 to 5. | Case (case), Patient (patient), Hospital (hospital, optional), Doctor (doctor, optional) |  | soft delete |
 | **Incident** | A complaint, complication or lost document, with escalation to a manager. | Case (case, optional), User (reportedBy, optional), User (assignee, optional), User (escalatedTo, optional) |  | soft delete |
 

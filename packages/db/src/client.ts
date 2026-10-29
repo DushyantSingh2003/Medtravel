@@ -1,7 +1,7 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../generated/prisma/client.ts';
 
-export type { Prisma } from '../generated/prisma/client.ts';
+export { Prisma } from '../generated/prisma/client.ts';
 export { PrismaClient };
 
 /** Everything the database connection needs. Validated by each app's own config schema. */

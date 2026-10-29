@@ -29,7 +29,7 @@ const PORTAL_TOURS = [
   { portal: 'ops', role: 'case_manager', screens: 18 },
   { portal: 'hospital', role: 'hospital_desk', screens: 13 },
   { portal: 'agent', role: 'agent', screens: 10 },
-  { portal: 'admin', role: 'super_admin', screens: 24 },
+  { portal: 'admin', role: 'super_admin', screens: 25 },
 ] as const;
 
 const LOCALES = ['en', 'ar'] as const;
@@ -142,7 +142,7 @@ test.describe('click through every placeholder page', () => {
           await expect(page).toHaveURL(new RegExp(`${target.href}$`));
           await expect(page.getByRole('heading', { level: 1 })).toHaveText(target.text);
           // Screens that have been built (master data, audit log, records) no longer show the placeholder.
-          if (!/\/(admin\/(masters|audit)|patient\/records)$/.test(target.href)) {
+          if (!/\/(admin\/(masters|audit|notifications)|patient\/records)$/.test(target.href)) {
             await expect(page.getByRole('main').getByRole('heading', { level: 2 })).toBeVisible();
           }
           await expect(page.locator('aside nav a[aria-current=page]')).toHaveText(target.text);

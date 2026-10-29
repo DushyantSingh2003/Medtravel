@@ -7,6 +7,7 @@ import { createPrismaClient, type PrismaClient } from '@medtravel/db';
 import { ObjectStore } from '@medtravel/storage';
 import { EICAR, FakeClamd, FakeS3Server } from '@medtravel/storage/testing';
 import { OutboxDispatcher } from '../src/outbox/outbox-dispatcher.service.js';
+import { recordingProviders } from './support/fake-providers.js';
 
 /** What the worker does with an uploaded file, against a real database, an in-memory bucket and a fake clamd. */
 
@@ -87,10 +88,15 @@ beforeAll(async () => {
     bucket: BUCKET,
     forcePathStyle: true,
   });
-  dispatcher = new OutboxDispatcher(prisma, store, { CLAMAV_HOST: '127.0.0.1', CLAMAV_PORT: port });
+  dispatcher = new OutboxDispatcher(prisma, store, recordingProviders().providers, {
+    CLAMAV_HOST: '127.0.0.1',
+    CLAMAV_PORT: port,
+  });
   patientId = (await prisma.patient.create({ data: { fullName: 'Asha' } })).id;
   uploaderId = (
-    await prisma.user.create({ data: { email: 'up@worker.test', name: 'Up', role: 'patient' } })
+    await prisma.user.create({
+      data: { email: 'up@worker.test', name: 'Up', role: 'patient', status: 'active' },
+    })
   ).id;
 });
 
@@ -174,8 +180,9 @@ describe('document.uploaded', () => {
       await prisma.notification.count({
         where: {
           userId: uploaderId,
-          templateKey: 'document.quarantined',
-          data: { path: ['documentId'], equals: doc.id },
+          templateKey: 'document_quarantined',
+          channel: 'in_app',
+          dedupeKey: { startsWith: `document-quarantined:${doc.id}` },
         },
       }),
     ).toBe(1);

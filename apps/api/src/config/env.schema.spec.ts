@@ -52,6 +52,14 @@ describe('loadEnv', () => {
       TRUST_PROXY_HOPS: '1',
       S3_ACCESS_KEY: 'AKIAREAL',
       S3_SECRET_KEY: 'real-secret-key',
+      SMS_PROVIDER: 'twilio',
+      TWILIO_ACCOUNT_SID: 'AC1',
+      TWILIO_AUTH_TOKEN: 'token',
+      TWILIO_FROM: '+15550001',
+      WHATSAPP_PROVIDER: 'meta',
+      WHATSAPP_PHONE_NUMBER_ID: '555',
+      WHATSAPP_ACCESS_TOKEN: 'tok',
+      NOTIFICATION_WEBHOOK_SECRET: 'a-real-webhook-secret',
     };
     expect(loadEnv(production as NodeJS.ProcessEnv).NODE_ENV).toBe('production');
     expect(() =>
@@ -63,6 +71,34 @@ describe('loadEnv', () => {
     expect(() =>
       loadEnv({ ...production, S3_SECRET_KEY: 'medtravel-secret' } as NodeJS.ProcessEnv),
     ).toThrow(/S3_SECRET_KEY/);
+    // SMS and WhatsApp must go through real providers, and callbacks must be signed with a real secret.
+    for (const [name, value] of [
+      ['SMS_PROVIDER', 'dev'],
+      ['WHATSAPP_PROVIDER', 'dev'],
+      ['NOTIFICATION_WEBHOOK_SECRET', 'dev-notification-webhook-secret'],
+    ] as const)
+      expect(() => loadEnv({ ...production, [name]: value } as NodeJS.ProcessEnv)).toThrow(
+        new RegExp(name),
+      );
+  });
+
+  it('asks a real SMS or WhatsApp provider for its keys', () => {
+    for (const [settings, name] of [
+      [{ SMS_PROVIDER: 'twilio' }, 'SMS_PROVIDER'],
+      [{ SMS_PROVIDER: 'msg91', MSG91_AUTH_KEY: 'k' }, 'SMS_PROVIDER'],
+      [{ WHATSAPP_PROVIDER: 'meta', WHATSAPP_PHONE_NUMBER_ID: '1' }, 'WHATSAPP_PROVIDER'],
+    ] as const)
+      expect(() => loadEnv({ ...valid, ...settings } as NodeJS.ProcessEnv)).toThrow(
+        new RegExp(name),
+      );
+    expect(
+      loadEnv({
+        ...valid,
+        SMS_PROVIDER: 'msg91',
+        MSG91_AUTH_KEY: 'k',
+        MSG91_TEMPLATE_ID: 't',
+      } as NodeJS.ProcessEnv).SMS_PROVIDER,
+    ).toBe('msg91');
   });
 
   it('rejects a malformed encryption key and a short token secret', () => {

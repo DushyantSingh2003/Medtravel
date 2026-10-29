@@ -757,60 +757,61 @@ model LostReasonTranslation {
 
 /// One row per login. Linked to a Patient, Agent (AgentUser), HospitalStaff or StaffProfile by role.
 model User {
-  id                  String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email               String?            @unique
-  phone               String?            @unique @db.VarChar(20)
-  name                String
-  role                Role
-  language            String             @default("en") @db.VarChar(8)
-  timezone            String?            @db.VarChar(64)
-  status              UserStatus         @default(invited)
-  passwordHash        String?
-  twoFactorEnabled    Boolean            @default(false)
+  id                      String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                   String?                  @unique
+  phone                   String?                  @unique @db.VarChar(20)
+  name                    String
+  role                    Role
+  language                String                   @default("en") @db.VarChar(8)
+  timezone                String?                  @db.VarChar(64)
+  status                  UserStatus               @default(invited)
+  passwordHash            String?
+  twoFactorEnabled        Boolean                  @default(false)
   /// TOTP secret, encrypted by the application (AES-256-GCM); never readable from the database alone.
-  twoFactorSecret     String?
-  emailVerifiedAt     DateTime?          @db.Timestamptz(3)
-  phoneVerifiedAt     DateTime?          @db.Timestamptz(3)
-  passwordChangedAt   DateTime?          @db.Timestamptz(3)
+  twoFactorSecret         String?
+  emailVerifiedAt         DateTime?                @db.Timestamptz(3)
+  phoneVerifiedAt         DateTime?                @db.Timestamptz(3)
+  passwordChangedAt       DateTime?                @db.Timestamptz(3)
   /// Consecutive failed password or code attempts; five lock the account for a while.
-  failedLoginCount    Int                @default(0)
-  lockedUntil         DateTime?          @db.Timestamptz(3)
-  lastLoginAt         DateTime?          @db.Timestamptz(3)
-  sessions            Session[]
-  authChallenges      AuthChallenge[]    @relation("ChallengeUser")
-  createdChallenges   AuthChallenge[]    @relation("ChallengeCreator")
-  backupCodes         BackupCode[]
-  staffProfile        StaffProfile?
-  managedStaff        StaffProfile[]     @relation("StaffManager")
-  agentUser           AgentUser?
-  patient             Patient?
-  attendant           Attendant?
-  ownedCases          Case[]             @relation("CaseOwner")
-  reviewedCases       Case[]             @relation("CaseReviewer")
-  stageChanges        CaseStageHistory[]
-  medicalSummaries    MedicalSummary[]
-  uploadedDocuments   Document[]         @relation("DocumentUploader")
-  fileUploads         FileUpload[]
-  documentShares      DocumentShare[]
-  caseNotes           CaseNote[]
-  hospitalStaffs      HospitalStaff[]
-  sentOpinionRequests OpinionRequest[]
-  submittedOpinions   Opinion[]
-  acceptedQuotes      Quote[]            @relation("QuoteAcceptedBy")
-  createdQuotes       Quote[]            @relation("QuoteCreatedBy")
-  requestedRefunds    Refund[]           @relation("RefundRequestedBy")
-  approvedRefunds     Refund[]           @relation("RefundApprovedBy")
-  interpreter         Interpreter?
-  assignedTasks       Task[]             @relation("TaskAssignee")
-  createdTasks        Task[]             @relation("TaskCreator")
-  sentMessages        Message[]
-  notifications       Notification[]
-  reportedIncidents   Incident[]         @relation("IncidentReporter")
-  assignedIncidents   Incident[]         @relation("IncidentAssignee")
-  escalatedIncidents  Incident[]         @relation("IncidentEscalatedTo")
-  createdAt           DateTime           @default(now()) @db.Timestamptz(3)
-  updatedAt           DateTime           @updatedAt @db.Timestamptz(3)
-  deletedAt           DateTime?          @db.Timestamptz(3)
+  failedLoginCount        Int                      @default(0)
+  lockedUntil             DateTime?                @db.Timestamptz(3)
+  lastLoginAt             DateTime?                @db.Timestamptz(3)
+  sessions                Session[]
+  authChallenges          AuthChallenge[]          @relation("ChallengeUser")
+  createdChallenges       AuthChallenge[]          @relation("ChallengeCreator")
+  backupCodes             BackupCode[]
+  staffProfile            StaffProfile?
+  managedStaff            StaffProfile[]           @relation("StaffManager")
+  agentUser               AgentUser?
+  patient                 Patient?
+  attendant               Attendant?
+  ownedCases              Case[]                   @relation("CaseOwner")
+  reviewedCases           Case[]                   @relation("CaseReviewer")
+  stageChanges            CaseStageHistory[]
+  medicalSummaries        MedicalSummary[]
+  uploadedDocuments       Document[]               @relation("DocumentUploader")
+  fileUploads             FileUpload[]
+  notificationPreferences NotificationPreference[]
+  documentShares          DocumentShare[]
+  caseNotes               CaseNote[]
+  hospitalStaffs          HospitalStaff[]
+  sentOpinionRequests     OpinionRequest[]
+  submittedOpinions       Opinion[]
+  acceptedQuotes          Quote[]                  @relation("QuoteAcceptedBy")
+  createdQuotes           Quote[]                  @relation("QuoteCreatedBy")
+  requestedRefunds        Refund[]                 @relation("RefundRequestedBy")
+  approvedRefunds         Refund[]                 @relation("RefundApprovedBy")
+  interpreter             Interpreter?
+  assignedTasks           Task[]                   @relation("TaskAssignee")
+  createdTasks            Task[]                   @relation("TaskCreator")
+  sentMessages            Message[]
+  notifications           Notification[]
+  reportedIncidents       Incident[]               @relation("IncidentReporter")
+  assignedIncidents       Incident[]               @relation("IncidentAssignee")
+  escalatedIncidents      Incident[]               @relation("IncidentEscalatedTo")
+  createdAt               DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime                 @updatedAt @db.Timestamptz(3)
+  deletedAt               DateTime?                @db.Timestamptz(3)
 
   @@index([role, status])
 }
@@ -2254,28 +2255,54 @@ model MessageAttachment {
 
 /// A message the system sent to a user. In-app ones are what the bell shows.
 model Notification {
-  id          String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  channel     NotificationChannel
-  status      NotificationStatus  @default(queued)
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  channel           NotificationChannel
+  status            NotificationStatus  @default(queued)
   /// Makes a repeated delivery of the same event a no-op: one notification per key.
-  dedupeKey   String?             @unique
-  templateKey String
-  title       String?
-  body        String?             @db.Text
-  data        Json?
-  sentAt      DateTime?           @db.Timestamptz(3)
-  readAt      DateTime?           @db.Timestamptz(3)
-  userId      String              @db.Uuid
-  user        User                @relation(fields: [userId], references: [id], onDelete: Restrict)
-  caseId      String?             @db.Uuid
-  case        Case?               @relation(fields: [caseId], references: [id], onDelete: Restrict)
-  createdAt   DateTime            @default(now()) @db.Timestamptz(3)
-  updatedAt   DateTime            @updatedAt @db.Timestamptz(3)
-  deletedAt   DateTime?           @db.Timestamptz(3)
+  dedupeKey         String?             @unique
+  templateKey       String
+  title             String?
+  body              String?             @db.Text
+  data              Json?
+  /// Language the message was written in.
+  locale            String?             @db.VarChar(8)
+  /// Adapter that carried it (`smtp`, `msg91`, `twilio`, `meta`, `dev`, `in_app`).
+  provider          String?             @db.VarChar(40)
+  /// The provider's id for the message, used to match its delivery callbacks.
+  providerMessageId String?             @db.VarChar(200)
+  attempts          Int                 @default(0)
+  lastError         String?             @db.VarChar(500)
+  sentAt            DateTime?           @db.Timestamptz(3)
+  deliveredAt       DateTime?           @db.Timestamptz(3)
+  readAt            DateTime?           @db.Timestamptz(3)
+  failedAt          DateTime?           @db.Timestamptz(3)
+  userId            String              @db.Uuid
+  user              User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  caseId            String?             @db.Uuid
+  case              Case?               @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  createdAt         DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime            @updatedAt @db.Timestamptz(3)
+  deletedAt         DateTime?           @db.Timestamptz(3)
 
   @@index([userId, status])
   @@index([userId, readAt])
   @@index([caseId])
+  @@index([providerMessageId])
+  @@index([createdAt, id])
+  @@index([templateKey])
+}
+
+/// Whether a person wants messages on a channel. No row means yes. In-app messages and security alerts cannot be switched off.
+model NotificationPreference {
+  id        String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String              @db.Uuid
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel   NotificationChannel
+  enabled   Boolean             @default(true)
+  createdAt DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime            @updatedAt @db.Timestamptz(3)
+
+  @@unique([userId, channel])
 }
 
 /// A patient's ratings of a finished case; 1 to 5.

@@ -60,9 +60,12 @@ export async function seedDevUsers(prisma: PrismaClient): Promise<number> {
     create: { slug: 'dev-hospital', name: 'Dev Hospital', cityId: city.id },
   });
 
+  // Every development user has a phone number so the SMS and WhatsApp channels can be tried (they land in Mailpit).
+  let phoneSerial = 0;
   const create = async (email: string, role: Role, extra: { twoFactorSecret?: string } = {}) => {
     const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } });
     if (existing) return existing.id;
+    phoneSerial += 1;
     const user = await prisma.user.create({
       data: {
         email,
@@ -72,6 +75,8 @@ export async function seedDevUsers(prisma: PrismaClient): Promise<number> {
         passwordHash,
         passwordChangedAt: new Date(),
         emailVerifiedAt: new Date(),
+        phone: `+9198000${String(phoneSerial).padStart(5, '0')}`,
+        phoneVerifiedAt: new Date(),
         ...(extra.twoFactorSecret
           ? { twoFactorEnabled: true, twoFactorSecret: extra.twoFactorSecret }
           : {}),

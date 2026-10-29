@@ -7,17 +7,17 @@ import {
   AppShell,
   BrandMark,
   Input,
-  NotificationsMenu,
   Switcher,
   UserMenu,
   toast,
   type NavSection,
 } from '@medtravel/ui';
 import { useQueryClient } from '@tanstack/react-query';
-import { LogOut, Search, ShieldCheck } from 'lucide-react';
+import { Bell, LogOut, Search, ShieldCheck } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { type FormEvent, type ReactNode } from 'react';
 import { Link, usePathname, useRouter } from '../../i18n/navigation';
+import { NotificationsBell } from '../notifications/notifications-bell';
 import { PAGE_ICONS } from '../../lib/portal-icons';
 import { PORTAL_DEFINITIONS } from '../../lib/portal-pages';
 import { activePageKey, pageHref } from '../../lib/portal-routes';
@@ -116,12 +116,7 @@ export function PortalShell({
             />
           </form>
           <div className="ms-auto flex items-center gap-1">
-            <NotificationsMenu
-              items={[]}
-              label={t('shell.notifications')}
-              emptyLabel={t('shell.notificationsEmpty')}
-              unreadLabel={(count) => t('shell.unread', { count })}
-            />
+            <NotificationsBell />
             <Switcher
               label={t('shell.language')}
               value={locale}
@@ -140,6 +135,12 @@ export function PortalShell({
                   label: t('shell.accountSecurity'),
                   icon: <ShieldCheck aria-hidden="true" />,
                   href: '/account/security',
+                },
+                {
+                  id: 'notification-settings',
+                  label: t('shell.accountNotifications'),
+                  icon: <Bell aria-hidden="true" />,
+                  href: '/account/notifications',
                 },
                 {
                   id: 'sign-out',

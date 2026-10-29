@@ -453,7 +453,10 @@
       "nothingPicked": "لم يتم اختيار شيء بعد.",
       "siteNavigation": "تنقل الموقع التجريبي",
       "footerNavigation": "روابط التذييل التجريبية",
-      "legalNavigation": "الروابط القانونية التجريبية"
+      "legalNavigation": "الروابط القانونية التجريبية",
+      "actionBell": "إشعارات مع عدّاد وإجراء تحديد الكل",
+      "loadingBell": "جارٍ تحميل الإشعارات",
+      "errorBell": "تعذّر تحميل الإشعارات"
     },
     "documents": {
       "listLabel": "المستندات",
@@ -602,7 +605,8 @@
       "interpreters": "المترجمون",
       "welcome-kit": "حقيبة الترحيب",
       "flights": "حجوزات الطيران",
-      "audit": "سجل التدقيق"
+      "audit": "سجل التدقيق",
+      "notifications": "الإشعارات"
     }
   },
   "pages": {
@@ -693,7 +697,8 @@
       "interpreters": "اللغات والمدينة والأسعار والتوفر والإسناد وسجل الساعات.",
       "welcome-kit": "شرائح الاتصال والعملة ومحتويات الحقيبة المتوفرة لكل مدينة.",
       "flights": "الحجوزات عبر شريك السفر مع رقم الحجز والأوقات، وإنشاء مهمة الاستقبال تلقائيًا.",
-      "audit": "من اطّلع على أي سجل مريض أو غيّره، مع الوقت وعنوان IP."
+      "audit": "من اطّلع على أي سجل مريض أو غيّره، مع الوقت وعنوان IP.",
+      "notifications": "كل رسالة أرسلتها المنصة، وعلى أي قناة، وهل وصلت. أرسل رسالة تجريبية للتحقق من قناة."
     }
   },
   "shell": {
@@ -714,7 +719,11 @@
     "signOut": "تسجيل الخروج",
     "breadcrumb": "مسار التنقل",
     "unread": "{count, plural, zero {لا إشعارات غير مقروءة} one {إشعار واحد غير مقروء} two {إشعاران غير مقروءين} few {# إشعارات غير مقروءة} many {# إشعارًا غير مقروء} other {# إشعار غير مقروء}}",
-    "accountSecurity": "أمان الحساب"
+    "accountSecurity": "أمان الحساب",
+    "notificationsLoading": "جارٍ تحميل الإشعارات",
+    "notificationsError": "تعذّر تحميل إشعاراتك.",
+    "notificationsMarkAll": "تحديد الكل كمقروء",
+    "accountNotifications": "إعدادات الإشعارات"
   },
   "roles": {
     "patient": "مريض",
@@ -1375,6 +1384,144 @@
       "shared": "يمكن لـ {hospital} الآن رؤية {name}",
       "unshared": "لم يعد بإمكان {hospital} رؤية {name}",
       "downloadFailed": "تعذّر تنزيل الملف."
+    }
+  },
+  "notifications": {
+    "preferences": {
+      "title": "إعدادات الإشعارات",
+      "description": "اختر أين تريد أن نتواصل معك. الرسائل داخل التطبيق والتنبيهات الأمنية تصلك دائماً.",
+      "channelsTitle": "القنوات",
+      "channels": {
+        "email": {
+          "name": "البريد الإلكتروني",
+          "hint": "نسخة من كل رسالة لسجلاتك."
+        },
+        "whatsapp": {
+          "name": "واتساب",
+          "hint": "تحديثات سريعة على هاتفك. يحتاج إلى رقم هاتف في حسابك."
+        },
+        "sms": {
+          "name": "الرسائل النصية",
+          "hint": "تذكيرات برسائل نصية عند الاستعجال."
+        }
+      },
+      "inApp": "داخل التطبيق: مفعّل دائماً. تراها تحت الجرس.",
+      "saved": "تم حفظ إعداداتك.",
+      "saveFailed": "تعذّر حفظ إعداداتك. حاول مرة أخرى.",
+      "loading": "جارٍ تحميل إعداداتك",
+      "errorTitle": "تعذّر تحميل إعداداتك",
+      "errorDescription": "تحقق من اتصالك ثم حاول مرة أخرى.",
+      "retry": "حاول مرة أخرى"
+    },
+    "log": {
+      "title": "الإشعارات",
+      "description": "كل رسالة أرسلتها المنصة، وعلى أي قناة، وهل وصلت. أرسل رسالة تجريبية للتحقق من قناة.",
+      "columns": {
+        "time": "الوقت",
+        "event": "الحدث",
+        "channel": "القناة",
+        "status": "الحالة",
+        "person": "الشخص",
+        "attempts": "المحاولات",
+        "detail": "التفاصيل"
+      },
+      "filters": {
+        "event": "الحدث",
+        "allEvents": "كل الأحداث",
+        "channel": "القناة",
+        "allChannels": "كل القنوات",
+        "status": "الحالة",
+        "allStatuses": "كل الحالات",
+        "person": "ابحث بالشخص: الاسم أو البريد",
+        "from": "من",
+        "to": "إلى",
+        "clear": "مسح عوامل التصفية"
+      },
+      "channels": {
+        "in_app": "داخل التطبيق",
+        "email": "البريد الإلكتروني",
+        "whatsapp": "واتساب",
+        "sms": "رسالة نصية",
+        "push": "إشعار فوري"
+      },
+      "statuses": {
+        "queued": "في الانتظار",
+        "sent": "أُرسلت",
+        "delivered": "وصلت",
+        "read": "قُرئت",
+        "failed": "فشلت"
+      },
+      "noError": "لا يوجد",
+      "test": {
+        "button": "إرسال رسالة تجريبية",
+        "title": "إرسال إشعار تجريبي",
+        "description": "يرسل الرسالة التجريبية إلى حسابك على كل قناة أعددتها، بلغتك. تأكد من ظهورها أدناه.",
+        "send": "إرسال",
+        "sending": "جارٍ الإرسال…",
+        "close": "إغلاق",
+        "queued": "{count, plural, zero {لا رسائل في الانتظار} one {رسالة واحدة في الانتظار} two {رسالتان في الانتظار} few {# رسائل في الانتظار} many {# رسالة في الانتظار} other {# رسالة في الانتظار}}",
+        "skipped": "لم تُرسل على {channel}: {reason}",
+        "failed": "تعذّر إرسال الرسالة التجريبية.",
+        "reasons": {
+          "no_email": "لا يوجد بريد إلكتروني",
+          "no_phone": "لا يوجد رقم هاتف",
+          "account_not_active": "الحساب غير نشط",
+          "switched_off": "متوقف",
+          "duplicate": "أُرسلت من قبل"
+        }
+      },
+      "table": {
+        "caption": "سجل الإشعارات",
+        "search": "ابحث بالشخص: الاسم أو البريد",
+        "columns": "الأعمدة",
+        "selectAll": "تحديد كل الصفوف",
+        "selectRow": "تحديد {name}",
+        "previous": "الصفحة السابقة",
+        "next": "الصفحة التالية",
+        "rowsPerPage": "الصفوف في الصفحة",
+        "pageOf": "الصفحة {page} من {pages}",
+        "total": "{count, plural, zero {لا رسائل} one {رسالة واحدة} two {رسالتان} few {# رسائل} many {# رسالة} other {# رسالة}}",
+        "selected": "{count, plural, zero {لا شيء محدد} one {محدد واحد} two {محددان} few {# محددة} many {# محدداً} other {# محدد}}",
+        "loading": "جارٍ تحميل سجل الإشعارات",
+        "emptyTitle": "لا توجد إشعارات",
+        "emptyDescription": "لا شيء يطابق عوامل التصفية. امسحها أو أرسل رسالة تجريبية.",
+        "errorTitle": "تعذّر تحميل السجل",
+        "errorDescription": "تحقق من اتصالك ثم حاول مرة أخرى.",
+        "retry": "حاول مرة أخرى"
+      }
+    },
+    "events": {
+      "enquiry_received": "استلام الاستفسار",
+      "coordinator_assigned": "تعيين المنسق",
+      "reports_missing": "تقارير ناقصة",
+      "reports_received": "استلام التقارير",
+      "opinions_ready": "الآراء جاهزة",
+      "quote_sent": "إرسال عرض السعر",
+      "quote_expiring": "عرض السعر على وشك الانتهاء",
+      "payment_received": "استلام الدفعة",
+      "invitation_letter_ready": "خطاب الدعوة جاهز",
+      "visa_approved": "الموافقة على التأشيرة",
+      "visa_refused": "رفض التأشيرة",
+      "itinerary_confirmed": "تأكيد خط السفر",
+      "pickup_24h": "الاستقبال بعد 24 ساعة",
+      "pickup_2h": "الاستقبال بعد ساعتين",
+      "appointment_reminder": "تذكير بالموعد",
+      "daily_treatment_update": "تحديث العلاج اليومي",
+      "discharge_summary_uploaded": "رفع ملخص الخروج",
+      "followup_teleconsult_reminder": "تذكير باستشارة المتابعة",
+      "feedback_request": "طلب التقييم",
+      "new_lead": "عميل محتمل جديد",
+      "sla_breach": "تجاوز مهلة الخدمة",
+      "hospital_response_overdue": "تأخر رد المستشفى",
+      "bill_over_estimate": "الفاتورة أعلى من التقدير",
+      "arrival_tomorrow": "وصول غداً",
+      "incident_logged": "تسجيل حادثة",
+      "payment_failed": "فشل الدفعة",
+      "referral_stage_changed": "تغير مرحلة الإحالة",
+      "commission_earned": "كسب عمولة",
+      "payout_sent": "إرسال الدفعة",
+      "document_quarantined": "عزل ملف",
+      "test_event": "إشعار تجريبي"
     }
   }
 }

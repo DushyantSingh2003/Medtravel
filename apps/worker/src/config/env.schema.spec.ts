@@ -16,4 +16,27 @@ describe('worker env', () => {
       /REDIS_URL/,
     );
   });
+
+  it('uses the development SMS and WhatsApp stand-ins by default, and refuses them in production', () => {
+    const env = loadEnv(valid);
+    expect([env.SMS_PROVIDER, env.WHATSAPP_PROVIDER]).toEqual(['dev', 'dev']);
+    const production = {
+      ...valid,
+      NODE_ENV: 'production',
+      S3_ACCESS_KEY: 'AKIAREAL',
+      S3_SECRET_KEY: 'real-secret-key',
+      SMS_PROVIDER: 'twilio',
+      TWILIO_ACCOUNT_SID: 'AC1',
+      TWILIO_AUTH_TOKEN: 'token',
+      TWILIO_FROM: '+15550001',
+      WHATSAPP_PROVIDER: 'meta',
+      WHATSAPP_PHONE_NUMBER_ID: '555',
+      WHATSAPP_ACCESS_TOKEN: 'tok',
+      NOTIFICATION_WEBHOOK_SECRET: 'a-real-webhook-secret',
+    } as NodeJS.ProcessEnv;
+    expect(loadEnv(production).SMS_PROVIDER).toBe('twilio');
+    expect(() => loadEnv({ ...production, SMS_PROVIDER: 'dev' })).toThrow(/SMS_PROVIDER/);
+    expect(() => loadEnv({ ...production, WHATSAPP_PROVIDER: 'dev' })).toThrow(/WHATSAPP_PROVIDER/);
+    expect(() => loadEnv({ ...production, TWILIO_FROM: '' })).toThrow(/SMS_PROVIDER/);
+  });
 });

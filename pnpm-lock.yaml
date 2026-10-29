@@ -34,6 +34,9 @@ importers:
       '@medtravel/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@medtravel/notifications':
+        specifier: workspace:*
+        version: link:../../packages/notifications
       '@medtravel/storage':
         specifier: workspace:*
         version: link:../../packages/storage
@@ -286,6 +289,9 @@ importers:
       '@medtravel/emails':
         specifier: workspace:*
         version: link:../../packages/emails
+      '@medtravel/notifications':
+        specifier: workspace:*
+        version: link:../../packages/notifications
       '@medtravel/pdf':
         specifier: workspace:*
         version: link:../../packages/pdf
@@ -547,6 +553,46 @@ importers:
       '@medtravel/config':
         specifier: workspace:*
         version: link:../config
+      eslint:
+        specifier: ^9.39.5
+        version: 9.39.5(jiti@2.7.0)
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@types/node@24.19.1)(jsdom@30.1.2(@noble/hashes@2.4.0))(vite@8.3.4(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+
+  packages/notifications:
+    dependencies:
+      '@medtravel/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@medtravel/db':
+        specifier: workspace:*
+        version: link:../db
+      '@medtravel/emails':
+        specifier: workspace:*
+        version: link:../emails
+      '@medtravel/i18n':
+        specifier: workspace:*
+        version: link:../i18n
+      nodemailer:
+        specifier: ^10.2.1
+        version: 10.2.1
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+    devDependencies:
+      '@medtravel/config':
+        specifier: workspace:*
+        version: link:../config
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.1
+      '@types/nodemailer':
+        specifier: ^8.0.2
+        version: 8.0.2
       eslint:
         specifier: ^9.39.5
         version: 9.39.5(jiti@2.7.0)

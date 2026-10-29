@@ -215,6 +215,87 @@ describe('NotificationsMenu', () => {
     await userEvent.click(button);
     expect(await screen.findByText('Nothing new')).toBeInTheDocument();
   });
+
+  it('shows the true unread count when the list is only the latest page', () => {
+    render(
+      <NotificationsMenu
+        label="Notifications"
+        emptyLabel="Nothing new"
+        unreadLabel={unreadLabel}
+        unreadCount={14}
+        items={[{ id: '1', title: 'New lead', timeLabel: '5 min', unread: true }]}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Notifications, 14 unread' })).toBeInTheDocument();
+  });
+
+  it('tells the app which notification was opened, and offers to mark all as read only while some are unread', async () => {
+    const onItemSelect = vi.fn();
+    const onMarkAllRead = vi.fn();
+    const props = {
+      label: 'Notifications',
+      emptyLabel: 'Nothing new',
+      unreadLabel,
+      markAllLabel: 'Mark all as read',
+      onItemSelect,
+      onMarkAllRead,
+    };
+    const { rerender } = render(
+      <NotificationsMenu
+        {...props}
+        items={[
+          { id: 'n1', title: 'New lead', body: 'From Kenya', timeLabel: '5 min', unread: true },
+        ]}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /^Notifications/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /New lead/ }));
+    expect(onItemSelect).toHaveBeenCalledWith('n1');
+    await userEvent.click(screen.getByRole('button', { name: 'Mark all as read' }));
+    expect(onMarkAllRead).toHaveBeenCalledOnce();
+
+    rerender(
+      <NotificationsMenu
+        {...props}
+        items={[{ id: 'n1', title: 'New lead', timeLabel: '5 min', unread: false }]}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: 'Mark all as read' })).not.toBeInTheDocument();
+  });
+
+  it('shows a loading state and an error state instead of the list', async () => {
+    const { rerender } = render(
+      <NotificationsMenu
+        label="Notifications"
+        emptyLabel="Nothing new"
+        unreadLabel={unreadLabel}
+        loadingLabel="Loading notifications"
+        errorLabel="Could not load your notifications."
+        status="loading"
+        items={[]}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Notifications' }));
+    expect(
+      await screen.findByRole('status', { name: 'Loading notifications' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Nothing new')).not.toBeInTheDocument();
+
+    rerender(
+      <NotificationsMenu
+        label="Notifications"
+        emptyLabel="Nothing new"
+        unreadLabel={unreadLabel}
+        loadingLabel="Loading notifications"
+        errorLabel="Could not load your notifications."
+        status="error"
+        items={[]}
+      />,
+    );
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Could not load your notifications.',
+    );
+  });
 });
 
 describe('SiteHeader and SiteFooter', () => {

@@ -139,6 +139,7 @@ const DOMAINS: { title: string; blurb: string; models: string[] }[] = [
       'Message',
       'MessageAttachment',
       'Notification',
+      'NotificationPreference',
       'Feedback',
       'Incident',
     ],

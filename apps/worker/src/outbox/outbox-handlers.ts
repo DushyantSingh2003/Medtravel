@@ -1,12 +1,15 @@
 import type { OutboxHandlers, PrismaClient } from '@medtravel/db';
+import type { Providers } from '@medtravel/notifications';
 import type { ClamdOptions, ObjectStore } from '@medtravel/storage';
 import { processUploadedDocument } from '../documents/process-document.js';
+import { deliverQueuedNotification } from './handlers/notification-deliver.handler.js';
 import { notifyAdminsOfIncident } from './handlers/incident-created.handler.js';
 
 export interface HandlerDeps {
   prisma: PrismaClient;
   store: ObjectStore;
   clamd: ClamdOptions;
+  providers: Providers;
 }
 
 /**
@@ -17,5 +20,6 @@ export function outboxHandlers(deps: HandlerDeps): OutboxHandlers {
   return {
     'incident.created': async (event) => void (await notifyAdminsOfIncident(deps.prisma, event)),
     'document.uploaded': (event) => processUploadedDocument(deps, event),
+    'notification.deliver': (event) => deliverQueuedNotification(deps, event),
   };
 }
