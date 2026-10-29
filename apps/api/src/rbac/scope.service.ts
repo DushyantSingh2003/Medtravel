@@ -253,6 +253,12 @@ export class ScopeService {
     return { AND: [base, { cases: { some: await this.caseWhere(actor) } }] };
   }
 
+  /** Whether the actor works for this hospital (a live staff link): the condition for its realtime room. */
+  async isHospitalStaff(actor: Actor, hospitalId: string): Promise<boolean> {
+    const links = await this.linksOf(actor.userId);
+    return links.active && links.hospitalIds.includes(hospitalId);
+  }
+
   /** Whether the actor may act on this subject at all for the case; use before loading anything from a case's children. */
   async assertCaseAccess(
     actor: Actor,

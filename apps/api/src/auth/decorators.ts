@@ -56,3 +56,10 @@ export const CurrentActor = createParamDecorator(
     return actor;
   },
 );
+
+export const WS_GATEWAY_KEY = 'wsGateway';
+/**
+ * Marks a WebSocket gateway that authenticates its connections itself (in its connection middleware) and checks every message
+ * against the rooms the socket joined. The global guards refuse any other non-HTTP handler.
+ */
+export const WsGateway = () => SetMetadata(WS_GATEWAY_KEY, true);

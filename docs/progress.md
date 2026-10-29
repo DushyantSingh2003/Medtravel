@@ -4,7 +4,7 @@ Tick a task here when it is finished and `pnpm check` is green. The task queue t
 build loop is `loop/cloud-state.json`; this file is the human-readable view and also records
 what each task deferred.
 
-Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-07.
+Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-08.
 
 ### Phase 0 — Scaffold (week 1)
 
@@ -24,7 +24,7 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-07.
 - [x] **F-05** Audit log and domain events
 - [x] **F-06** Secure file service
 - [x] **F-07** Notification engine
-- [ ] **F-08** Realtime gateway
+- [x] **F-08** Realtime gateway
 - [ ] **F-09** Money, currencies and languages
 - [ ] **F-10** Case core and stage machine
 - [ ] **F-11** Seed data and test factories
@@ -166,11 +166,46 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-07.
 
 ## Notes and deferred work
 
+### Deferred from F-08
+
+- **Local browser runs on a long-used database:** the two audit-log browser tests look for the seeded sample events on the first
+  page of the newest-first list, so they fail on a development database that has since collected more than 25 newer audit
+  events (the full run on this machine did: 1,090 newer rows). On the fresh database CI uses they pass; make the tests search
+  for the sample events instead of relying on their position.
+
+- **Only the notification bell and the typing signal use it so far.** Nothing publishes `case.updated`, `message.created` or
+  `task.assigned` yet: the case, messaging and task tasks (C-04, C-10, C-09) queue them with `enqueueRealtime(tx, ...)` and
+  subscribe with `useRealtimeEvent` / `useCaseRoom` / `useTyping`. The acceptance sentence ("two browsers on the same case see
+  each other's changes live") is proven at the gateway (two real socket clients: join, typing, a published change, catch-up)
+  and in the browser for the bell (two contexts); there is no case screen to show it on yet.
+- **Latency of pushes from business code is the outbox's poll (about 2 seconds)**, because they are published by the worker after
+  the commit. Typing goes straight through the gateway.
+- Catch-up is best effort: a log of the last 200 events and one hour per room in Redis; beyond that the browser is told to refetch.
+- Needs a load balancer that passes WebSocket upgrades on `/realtime` with an idle timeout above 30 seconds (Socket.IO pings every
+  25 s). The client uses WebSocket only, so no sticky sessions are required. Redis down: the API still serves the sockets of its
+  own instance, and the worker's pushes are retried by the outbox.
+- A connected session is re-checked once a minute, so a revoked session can stay connected for up to a minute.
+- Case rooms follow the case scope when joined; a case that leaves a person's scope later (reassigned, consent withdrawn) does not
+  remove them from a room they already joined until they reconnect.
+- **Redis must be private and authenticated in staging and production** (a password or ACL user and TLS in `REDIS_URL`; the
+  development compose file now binds it to localhost only). Whoever can reach Redis can publish events to any room and write the
+  catch-up log; the API refuses malformed log lines and the worker re-validates payloads, but it cannot tell a forged valid one.
+  `env.schema` does not yet require this (the image smoke test runs production mode against an open Redis).
+- Access is re-checked once a minute: a socket that no longer may be in a case or hospital room is taken out of it (and nothing is
+  replayed to it); an immediate "room revoked" push when consent is withdrawn or a link removed is a follow-up.
+- Limits: 60 messages per 10 seconds per socket, 10 sockets per person, 8 KB per message. They are per instance (in memory), not
+  shared across API instances.
+- `typing` shows the typist's user id to everyone in the room (agents and patients included); a display-safe label is a follow-up
+  for when the case screens exist. `case.updated.fields` takes free strings: make it a closed list before a screen publishes it.
+- `case:` rooms will also carry `message.created`; when messaging is built, agents' sockets must not receive message events
+  (use a separate room per audience).
+- Pinned `@nestjs/websockets` and `@nestjs/platform-socket.io` to 12.1.x to match the installed `@nestjs/common` 12.1.2.
+
 ### Deferred from F-07
 
 - **CI:** the first run of the F-07 merge passed lint, typecheck, unit tests, API/db/worker e2e and all browser tests, but the API and
   worker image boot tests failed because production refuses the development SMS/WhatsApp stand-ins; `scripts/smoke-image.sh` now
-  supplies throwaway real-provider settings (result of the re-run recorded below once known).
+  supplies throwaway real-provider settings. The re-run (CI run 26 on `develop`) passed all jobs, including the API and worker image boots.
 
 - **Never sent through a real provider.** Amazon SES (over SMTP), MSG91, Twilio and the Meta WhatsApp Cloud API were exercised
   only against local HTTP/SMTP doubles (`providers.spec.ts`, `smtp.spec.ts`); request shapes follow each provider's public

@@ -19,6 +19,8 @@ export class PermissionsGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
+    // WebSocket messages are checked by the gateway against the room a socket has joined.
+    if (context.getType() !== 'http') return true;
     const targets = [context.getHandler(), context.getClass()];
     const required = this.reflector.getAllAndOverride<RequiredPermission | undefined>(
       PERMISSION_KEY,

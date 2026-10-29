@@ -13,6 +13,8 @@ export class ThrottleGuard implements CanActivate {
   ) {}
 
   canActivate(context: ExecutionContext): boolean {
+    // WebSocket messages are not HTTP requests; the gateway limits what a socket may send itself.
+    if (context.getType() !== 'http') return true;
     const options = this.reflector.getAllAndOverride<ThrottleOptions | undefined>(THROTTLE_KEY, [
       context.getHandler(),
       context.getClass(),

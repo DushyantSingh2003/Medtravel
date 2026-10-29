@@ -10,3 +10,4 @@ export * from './audit.js';
 export * from './documents.js';
 export * from './notification-events.js';
 export * from './notifications.js';
+export * from './realtime.js';

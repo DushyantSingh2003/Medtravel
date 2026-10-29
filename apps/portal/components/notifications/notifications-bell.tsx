@@ -11,8 +11,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'next-intl';
 import { relativeTime } from '../../lib/notifications/relative-time';
 
-/** How often the bell asks for news while the tab is open; live push arrives with the realtime gateway (F-08). */
-const POLL_MS = 30_000;
+/** The bell is refreshed by the realtime push; this slow poll only covers a connection that is down. */
+const POLL_MS = 5 * 60_000;
 
 /** The bell in the top bar: the person's latest notifications and how many are unread. */
 export function NotificationsBell() {

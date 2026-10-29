@@ -7,12 +7,12 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { requiresTwoFactor } from '@medtravel/contracts';
+import { requiresTwoFactor, type Role } from '@medtravel/contracts';
 import type { FastifyRequest } from 'fastify';
 import { ENV } from '../config/config.module.js';
 import type { Env } from '../config/env.schema.js';
 import { ACCESS_COOKIE, CSRF_COOKIE, CSRF_HEADER, readCookie } from './cookies.js';
-import { LIMITED_KEY, ALLOW_MAGIC_LINK_KEY, PUBLIC_KEY } from './decorators.js';
+import { LIMITED_KEY, ALLOW_MAGIC_LINK_KEY, PUBLIC_KEY, WS_GATEWAY_KEY } from './decorators.js';
 import { SessionService } from './session.service.js';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
@@ -20,6 +20,25 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 /** Whether the mandatory second factor is switched on: always, except for local development with the skip flag. */
 export const twoFactorEnforced = (env: Env): boolean =>
   !(env.NODE_ENV === 'development' && env.AUTH_DEV_SKIP_2FA);
+
+/**
+ * Whether a session still owes its second factor (it can then use only the set-up page): shared by the HTTP guard and the
+ * realtime gateway so the two cannot drift apart.
+ */
+export function secondFactorOwed(
+  auth: {
+    twoFactorVerified: boolean;
+    actor: { scopeCaseId: string | null };
+    user: { role: Role; twoFactorEnabled: boolean };
+  },
+  env: Env,
+): boolean {
+  return (
+    auth.actor.scopeCaseId === null &&
+    !auth.twoFactorVerified &&
+    ((requiresTwoFactor(auth.user.role) && twoFactorEnforced(env)) || auth.user.twoFactorEnabled)
+  );
+}
 
 /**
  * Who is calling? Reads the access token (cookie, or `Authorization: Bearer`), checks the session behind it, and
@@ -35,6 +54,12 @@ export class AuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    // A WebSocket connection is authenticated once, when it connects, by the gateway itself; only a class that says so
+    // (`@WsGateway()`) is let through. Any other non-HTTP handler (a future microservice or gateway) is refused until it is
+    // given its own authentication.
+    if (context.getType() !== 'http') {
+      return this.reflector.get<boolean>(WS_GATEWAY_KEY, context.getClass()) === true;
+    }
     const request = context.switchToHttp().getRequest<FastifyRequest>();
     const targets = [context.getHandler(), context.getClass()];
     const unsafe = !SAFE_METHODS.has(request.method);
@@ -78,12 +103,8 @@ export class AuthGuard implements CanActivate {
       throw new ForbiddenException('This link only opens one case');
     }
 
-    const secondFactorOwed =
-      !magicLink &&
-      !auth.twoFactorVerified &&
-      ((requiresTwoFactor(auth.user.role) && twoFactorEnforced(this.env)) ||
-        auth.user.twoFactorEnabled);
-    if (secondFactorOwed && !this.reflector.getAllAndOverride<boolean>(LIMITED_KEY, targets)) {
+    const owed = secondFactorOwed(auth, this.env);
+    if (owed && !this.reflector.getAllAndOverride<boolean>(LIMITED_KEY, targets)) {
       throw new ForbiddenException({
         statusCode: 403,
         message: 'Finish setting up two-factor authentication to continue',
@@ -91,7 +112,7 @@ export class AuthGuard implements CanActivate {
       });
     }
     request.actor = auth.actor;
-    request.limitedSession = secondFactorOwed;
+    request.limitedSession = owed;
     return true;
   }
 }

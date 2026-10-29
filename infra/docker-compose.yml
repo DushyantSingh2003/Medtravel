@@ -35,7 +35,8 @@ services:
     # AOF so queued jobs survive a container restart during development.
     command: ['redis-server', '--appendonly', 'yes']
     ports:
-      - '${REDIS_PORT:-6379}:6379'
+      # Bound to this machine only: Redis carries realtime events and queue jobs and has no password in development.
+      - '127.0.0.1:${REDIS_PORT:-6379}:6379'
     volumes:
       - redis-data:/data
     healthcheck:

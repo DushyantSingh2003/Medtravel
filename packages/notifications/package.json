@@ -29,6 +29,7 @@
     "@medtravel/db": "workspace:*",
     "@medtravel/emails": "workspace:*",
     "@medtravel/i18n": "workspace:*",
+    "@medtravel/realtime": "workspace:*",
     "nodemailer": "^10.2.1",
     "zod": "^4.6.5"
   },

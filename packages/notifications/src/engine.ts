@@ -1,6 +1,7 @@
 import {
   NOTIFICATION_EVENTS,
   NOTIFICATION_MAX_ATTEMPTS,
+  roomOf,
   STATUS_RANK,
   WHATSAPP_SESSION_HOURS,
   type DeliverableChannel,
@@ -9,6 +10,7 @@ import {
   type StatusUpdate,
 } from '@medtravel/contracts';
 import { Prisma, type PrismaClient } from '@medtravel/db';
+import { enqueueRealtime } from '@medtravel/realtime';
 import { renderEmail, renderText, whatsappTemplate, type TemplateData } from './render.js';
 import { PermanentDeliveryError, type Providers } from './providers/index.js';
 
@@ -144,6 +146,14 @@ export async function enqueueNotification(db: Db, input: SendInput): Promise<Sen
             payload: { notificationId: row.id },
             dedupeKey: `notification.deliver:${row.id}`,
           },
+        });
+      else
+        // Tell the person's open browsers, after the commit, so the bell updates without a refresh.
+        await enqueueRealtime(db, {
+          room: roomOf.user(user.id),
+          event: 'notification.created',
+          payload: { notificationId: row.id },
+          dedupeKey: `realtime:notification:${row.id}`,
         });
       result.queued.push({ userId: user.id, channel, id: row.id });
     }
