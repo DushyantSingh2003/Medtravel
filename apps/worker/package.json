@@ -20,6 +20,7 @@
     "@medtravel/db": "workspace:*",
     "@medtravel/emails": "workspace:*",
     "@medtravel/pdf": "workspace:*",
+    "@medtravel/storage": "workspace:*",
     "@nestjs/bullmq": "^12.0.0",
     "@nestjs/common": "^12.1.2",
     "@nestjs/core": "^12.1.2",
@@ -41,6 +42,8 @@
     "pino-pretty": "^13.1.2",
     "typescript": "^6.0.2",
     "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "pdf-lib": "^1.17.1",
+    "sharp": "^0.35.5"
   }
 }

@@ -81,6 +81,11 @@ export const SCAN_STATUSES = ['pending', 'clean', 'infected', 'failed'] as const
 export const scanStatusSchema = z.enum(SCAN_STATUSES);
 export type ScanStatus = z.infer<typeof scanStatusSchema>;
 
+/** Where a browser upload of a file stands. */
+export const FILE_UPLOAD_STATUSES = ['open', 'completed', 'aborted', 'expired'] as const;
+export const fileUploadStatusSchema = z.enum(FILE_UPLOAD_STATUSES);
+export type FileUploadStatus = z.infer<typeof fileUploadStatusSchema>;
+
 /** What a patient agreed to. */
 export const CONSENT_TYPES = [
   'data_processing',

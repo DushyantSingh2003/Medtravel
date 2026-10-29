@@ -1,12 +1,21 @@
 import type { OutboxHandlers, PrismaClient } from '@medtravel/db';
+import type { ClamdOptions, ObjectStore } from '@medtravel/storage';
+import { processUploadedDocument } from '../documents/process-document.js';
 import { notifyAdminsOfIncident } from './handlers/incident-created.handler.js';
+
+export interface HandlerDeps {
+  prisma: PrismaClient;
+  store: ObjectStore;
+  clamd: ClamdOptions;
+}
 
 /**
  * Which handler runs for which event type. Later tasks add theirs here (notifications, SLA timers, search refresh). Every
  * handler must be idempotent: an event can be delivered more than once.
  */
-export function outboxHandlers(prisma: PrismaClient): OutboxHandlers {
+export function outboxHandlers(deps: HandlerDeps): OutboxHandlers {
   return {
-    'incident.created': async (event) => void (await notifyAdminsOfIncident(prisma, event)),
+    'incident.created': async (event) => void (await notifyAdminsOfIncident(deps.prisma, event)),
+    'document.uploaded': (event) => processUploadedDocument(deps, event),
   };
 }

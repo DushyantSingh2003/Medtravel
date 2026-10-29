@@ -102,6 +102,7 @@ services:
       - '${CLAMAV_PORT:-3310}:3310'
     volumes:
       - clamav-data:/var/lib/clamav
+      - ./clamav/clamd.conf:/etc/clamav/clamd.conf:ro
     healthcheck:
       test: ['CMD', '/usr/local/bin/clamdcheck.sh']
       interval: 15s

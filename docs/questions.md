@@ -78,3 +78,8 @@ Appended by build tasks. Format: `- [<TASK-ID>] <question> — assumed: <what wa
 - [F-05] Who reads the audit log — assumed: super admin only (read and export); the PRD names no other role.
 - [F-05] Retries — assumed: an outbox event is tried 6 times with 5 s, 10 s, 20 s ... waits before it is marked failed.
 - [F-05] "Automatically for every create/update/delete" — assumed: detailed rows are written by each service in its transaction; an interceptor guarantees a plain route-level row for any signed-in change that wrote none. A database-level hook was not built (see docs/progress.md).
+- [F-06] Which files and how big — assumed: PDF, JPG, PNG, HEIC, DOCX and ZIP, up to 500 MiB each; a ZIP is taken to be DICOM and is only scanned, not opened.
+- [F-06] "Quarantined" — assumed: an infected file (or one that is not what it declares, or cannot be read) is moved to `quarantine/` in the bucket, never offered again, and the uploader is told in the app.
+- [F-06] Watermark — assumed: PDF and JPEG/PNG up to 50 MB carry the viewer's name, the date and the case number on every download and preview; other types are delivered unmarked and say so in the audit row.
+- [F-06] Who shares — assumed: only the patient who owns the document decides which hospital sees it; turning a hospital on is their consent for that case and hospital (wording version `share-medical-v1`); the hospitals offered are those with an opinion request for the case.
+- [F-06] Who uploads where — assumed: a patient to their own file or a case of theirs, an attendant only a passport to an attached case, staff to a case they may see (hospital desks tag the file with their hospital); only staff may mark a file internal.

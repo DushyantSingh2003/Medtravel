@@ -42,3 +42,9 @@ message, which must stay deliberately vague.
 
 The whole `audit.*` namespace is machine-drafted Arabic. Worth a native speaker's eye: "سجل التدقيق" (audit log), the action
 names in `audit.actions` (view, download, export of a document or patient record) and the plural forms of the event count.
+
+## F-06 (files)
+
+`gallery.documents.*` and the sections `documentList` and `shareToggleList` are machine-drafted Arabic; the `documents.*` namespace of the
+portal (upload, scan states, sharing consent wording) is too. The consent wording of the share toggle deserves a native
+reader and a legal check before launch.

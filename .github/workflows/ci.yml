@@ -114,6 +114,15 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 12
+      # The worker (scanning uploaded files, the outbox) needs Redis for its queues.
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
     env:
       NEXT_PUBLIC_API_URL: http://localhost:3001
       # The website hides its WhatsApp button without a number; the browser tests expect it.
@@ -152,7 +161,11 @@ jobs:
           # Production refuses the development secrets, so the API runs as "test" here (two-step verification still
           # enforced). The portal is on another port, so it must be an allowed origin. The browser tests sign in
           # as the same few users many times, hence the relaxed rate limits.
-          (cd apps/api && PORT=3001 NODE_ENV=test AUTH_RATE_LIMIT_MULTIPLIER=100 CORS_ORIGINS=http://localhost:3000,http://localhost:3002 node dist/main.js > "$RUNNER_TEMP/api.log" 2>&1 &)
+          (cd apps/api && PORT=3001 NODE_ENV=test S3_ENDPOINT=http://localhost:9000 S3_FORCE_PATH_STYLE=true AUTH_RATE_LIMIT_MULTIPLIER=100 CORS_ORIGINS=http://localhost:3000,http://localhost:3002 node dist/main.js > "$RUNNER_TEMP/api.log" 2>&1 &)
+          # MinIO and ClamAV are not run here: the in-memory bucket and the test scanner from @medtravel/storage stand in.
+          (PORT=9000 node packages/storage/dist/testing/fake-s3-cli.js > "$RUNNER_TEMP/fake-s3.log" 2>&1 &)
+          (PORT=3310 node packages/storage/dist/testing/fake-clamd-cli.js > "$RUNNER_TEMP/fake-clamd.log" 2>&1 &)
+          (cd apps/worker && NODE_ENV=test S3_ENDPOINT=http://localhost:9000 S3_FORCE_PATH_STYLE=true CLAMAV_HOST=localhost CLAMAV_PORT=3310 node dist/main.js > "$RUNNER_TEMP/worker.log" 2>&1 &)
           (cd apps/web && npx next start --port 3000 > "$RUNNER_TEMP/web.log" 2>&1 &)
           # The component gallery and its mock S3 endpoint are off in production unless enabled.
           (cd apps/portal && ENABLE_UI_GALLERY=true npx next start --port 3002 > "$RUNNER_TEMP/portal.log" 2>&1 &)
@@ -165,7 +178,7 @@ jobs:
           done
           curl -fsS http://localhost:3001/docs -o /dev/null
       - run: pnpm --filter @medtravel/e2e exec playwright install --with-deps chromium
-      - name: Playwright tests (website, portal sign-in, master data and component gallery)
+      - name: Playwright tests (website, portal sign-in, master data, audit log, medical records and component gallery)
         run: pnpm e2e
         env:
           WEB_BASE_URL: http://localhost:3000

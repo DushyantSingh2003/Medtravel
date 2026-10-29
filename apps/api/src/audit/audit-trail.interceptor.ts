@@ -6,10 +6,11 @@ import {
   type NestInterceptor,
 } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
+import { Reflector } from '@nestjs/core';
 import { defer, mergeMap, type Observable } from 'rxjs';
 import { contextOf } from '../common/request-context.js';
 import { AuditService } from './audit.service.js';
-import { auditTrail, type AuditTrailState } from './audit-trail.js';
+import { NO_AUDIT_FALLBACK_KEY, auditTrail, type AuditTrailState } from './audit-trail.js';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -21,11 +22,21 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
  */
 @Injectable()
 export class AuditTrailInterceptor implements NestInterceptor {
-  constructor(@Inject(AuditService) private readonly audit: AuditService) {}
+  constructor(
+    @Inject(AuditService) private readonly audit: AuditService,
+    private readonly reflector: Reflector,
+  ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const request = context.switchToHttp().getRequest<FastifyRequest>();
     if (SAFE_METHODS.has(request.method) || !request.actor) return next.handle();
+    if (
+      this.reflector.getAllAndOverride<boolean>(NO_AUDIT_FALLBACK_KEY, [
+        context.getHandler(),
+        context.getClass(),
+      ])
+    )
+      return next.handle();
 
     const state: AuditTrailState = { recorded: false };
     return defer(() => auditTrail.run(state, () => next.handle())).pipe(

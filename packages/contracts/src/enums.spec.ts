@@ -18,6 +18,8 @@ describe('database enums', () => {
           'MASTER_RESOURCES',
           'PERMISSION_SUBJECTS',
           'AUDIT_ACCESS_ACTIONS',
+          'DOCUMENT_ACCEPT',
+          'DOCUMENT_TYPES',
         ].includes(name)
       )
         continue;

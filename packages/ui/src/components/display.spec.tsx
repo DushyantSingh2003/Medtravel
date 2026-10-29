@@ -4,7 +4,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { CASE_STAGES, type CaseStage } from '@medtravel/contracts';
 import { initialsOf } from './avatar';
 import { Breadcrumbs } from './breadcrumbs';
+import { DocumentList } from './document-list';
 import { EmptyState, ErrorState } from './empty-state';
+import { ShareToggleList } from './share-toggle-list';
 import { StageTracker } from './stage-tracker';
 import { StatCard } from './stat-card';
 import { StatusBadge } from './status-badge';
@@ -180,5 +182,148 @@ describe('StatCard', () => {
   it('shows a placeholder, not the value, while loading', () => {
     render(<StatCard label="Revenue" value="$5" loading />);
     expect(screen.queryByText('$5')).toBeNull();
+  });
+});
+
+describe('DocumentList', () => {
+  const labels = {
+    listLabel: 'Documents',
+    status: {
+      pending: 'Scanning',
+      clean: 'Clean',
+      infected: 'Removed',
+      failed: 'Could not be checked',
+    },
+    preview: (n: string) => `Preview ${n}`,
+    download: (n: string) => `Download ${n}`,
+    share: (n: string) => `Share ${n}`,
+    remove: (n: string) => `Delete ${n}`,
+    pages: (c: number) => `${c} pages`,
+    uploadedBy: (n: string) => `by ${n}`,
+    sharedWith: (n: string) => `Shared with ${n}`,
+    notShared: 'Not shared',
+  };
+  const item = (id: string, scanStatus: 'pending' | 'clean' | 'infected' | 'failed') => ({
+    id,
+    fileName: `${id}.pdf`,
+    typeLabel: 'Report',
+    mimeType: 'application/pdf',
+    sizeBytes: 2048,
+    scanStatus,
+    uploadedBy: 'Asha',
+    createdAt: '2026-10-29T10:00:00Z',
+    dateLabel: '29 Oct 2026',
+    pageCount: 3,
+    sharedWith: id === 'a' ? ['Hospital A', 'Hospital B'] : [],
+  });
+
+  it('shows each file with its tag, size, pages, uploader, scan state and who it is shared with', () => {
+    render(
+      <DocumentList
+        items={[item('a', 'clean'), item('b', 'pending')]}
+        labels={labels}
+        onPreview={() => undefined}
+      />,
+    );
+    const rows = within(screen.getByRole('list', { name: 'Documents' })).getAllByRole('listitem');
+    expect(rows).toHaveLength(2);
+    expect(within(rows[0]!).getByText('Report')).toBeInTheDocument();
+    expect(within(rows[0]!).getByText('2 KB')).toBeInTheDocument();
+    expect(within(rows[0]!).getByText('3 pages')).toBeInTheDocument();
+    expect(within(rows[0]!).getByText('by Asha')).toBeInTheDocument();
+    expect(within(rows[0]!).getByText('Clean')).toBeInTheDocument();
+    expect(within(rows[0]!).getByText('Shared with Hospital A, Hospital B')).toBeInTheDocument();
+    expect(within(rows[1]!).getByText('Scanning')).toBeInTheDocument();
+    expect(within(rows[1]!).getByText('Not shared')).toBeInTheDocument();
+  });
+
+  it('opens and downloads only files that passed the scan, and offers only the actions it was given', async () => {
+    const onPreview = vi.fn();
+    const onDownload = vi.fn();
+    const onRemove = vi.fn();
+    render(
+      <DocumentList
+        items={[
+          item('a', 'clean'),
+          item('b', 'pending'),
+          item('c', 'infected'),
+          item('d', 'failed'),
+        ]}
+        labels={labels}
+        onPreview={onPreview}
+        onDownload={onDownload}
+        onRemove={onRemove}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Preview a.pdf' })).not.toBeDisabled();
+    for (const id of ['b', 'c', 'd']) {
+      expect(screen.getByRole('button', { name: `Preview ${id}.pdf` })).toBeDisabled();
+      expect(screen.getByRole('button', { name: `Download ${id}.pdf` })).toBeDisabled();
+      expect(screen.getByRole('button', { name: `Delete ${id}.pdf` })).not.toBeDisabled();
+    }
+    expect(screen.queryByRole('button', { name: /^Share/ })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Download a.pdf' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Delete b.pdf' }));
+    expect(onDownload).toHaveBeenCalledWith(expect.objectContaining({ id: 'a' }));
+    expect(onRemove).toHaveBeenCalledWith(expect.objectContaining({ id: 'b' }));
+    expect(onPreview).not.toHaveBeenCalled();
+  });
+
+  it("disables a row's buttons while an action runs for it", () => {
+    render(
+      <DocumentList
+        items={[item('a', 'clean')]}
+        labels={labels}
+        busyId="a"
+        onDownload={() => undefined}
+        onShare={() => undefined}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Download a.pdf' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Share a.pdf' })).toBeDisabled();
+  });
+});
+
+describe('ShareToggleList', () => {
+  const labels = {
+    listLabel: 'Hospitals',
+    toggle: (n: string) => `Share with ${n}`,
+    shared: 'Can see it',
+    notShared: 'Cannot see it',
+    empty: 'No hospital yet',
+  };
+
+  it('has one switch per hospital that says whether it is on, and reports a change', async () => {
+    const onToggle = vi.fn();
+    render(
+      <ShareToggleList
+        targets={[
+          { id: '1', name: 'Hospital A', shared: true },
+          { id: '2', name: 'Hospital B', shared: false },
+        ]}
+        labels={labels}
+        onToggle={onToggle}
+      />,
+    );
+    expect(screen.getByRole('switch', { name: 'Share with Hospital A' })).toBeChecked();
+    expect(screen.getByRole('switch', { name: 'Share with Hospital B' })).not.toBeChecked();
+    await userEvent.click(screen.getByRole('switch', { name: 'Share with Hospital B' }));
+    expect(onToggle).toHaveBeenCalledWith('2', true);
+  });
+
+  it('says so when there is no one to share with, and disables the switch being saved', () => {
+    const { rerender } = render(
+      <ShareToggleList targets={[]} labels={labels} onToggle={() => undefined} />,
+    );
+    expect(screen.getByText('No hospital yet')).toBeInTheDocument();
+    rerender(
+      <ShareToggleList
+        targets={[{ id: '1', name: 'Hospital A', shared: false }]}
+        labels={labels}
+        busyId="1"
+        onToggle={() => undefined}
+      />,
+    );
+    expect(screen.getByRole('switch', { name: 'Share with Hospital A' })).toBeDisabled();
   });
 });

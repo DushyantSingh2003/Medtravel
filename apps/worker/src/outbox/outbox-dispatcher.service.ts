@@ -6,7 +6,11 @@ import {
   type OnApplicationShutdown,
 } from '@nestjs/common';
 import { processOutbox, type PrismaClient } from '@medtravel/db';
+import type { ObjectStore } from '@medtravel/storage';
+import { ENV } from '../config/config.module.js';
+import type { Env } from '../config/env.schema.js';
 import { PRISMA } from '../database/database.module.js';
+import { OBJECT_STORE } from '../storage/storage.module.js';
 import { outboxHandlers } from './outbox-handlers.js';
 
 const POLL_INTERVAL_MS = 2_000;
@@ -25,7 +29,11 @@ export class OutboxDispatcher implements OnApplicationBootstrap, OnApplicationSh
   private running: Promise<void> = Promise.resolve();
   private stopped = false;
 
-  constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
+  constructor(
+    @Inject(PRISMA) private readonly prisma: PrismaClient,
+    @Inject(OBJECT_STORE) private readonly store: ObjectStore,
+    @Inject(ENV) private readonly env: Pick<Env, 'CLAMAV_HOST' | 'CLAMAV_PORT'>,
+  ) {}
 
   onApplicationBootstrap(): void {
     this.schedule();
@@ -47,17 +55,25 @@ export class OutboxDispatcher implements OnApplicationBootstrap, OnApplicationSh
   }
 
   private async round(): Promise<number> {
-    const result = await processOutbox(this.prisma, outboxHandlers(this.prisma), {
-      limit: BATCH_SIZE,
-      onError: (event, error) =>
-        // The event id and type only: payloads can hold personal data.
-        this.logger.warn(
-          `outbox ${event.type} ${event.id} failed (attempt ${event.attempts}): ${
-            error instanceof Error ? error.message : 'unknown error'
-          }`,
-        ),
-    });
-    if (result.claimed > 0)
+    const result = await processOutbox(
+      this.prisma,
+      outboxHandlers({
+        prisma: this.prisma,
+        store: this.store,
+        clamd: { host: this.env.CLAMAV_HOST, port: this.env.CLAMAV_PORT },
+      }),
+      {
+        limit: BATCH_SIZE,
+        onError: (event, error) =>
+          // The event id and type only: payloads can hold personal data.
+          this.logger.warn(
+            `outbox ${event.type} ${event.id} failed (attempt ${event.attempts}): ${
+              error instanceof Error ? error.message : 'unknown error'
+            }`,
+          ),
+      },
+    );
+    if (result.processed + result.retried + result.failed > 0)
       this.logger.log(
         `outbox: ${result.processed} processed, ${result.retried} to retry, ${result.failed} failed`,
       );

@@ -5,6 +5,7 @@ import { Test } from '@nestjs/testing';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { createPrismaClient, type PrismaClient } from '@medtravel/db';
 import type { Role } from '@medtravel/contracts';
+import { FakeS3Server } from '@medtravel/storage/testing';
 import { AppModule } from '../../src/app.module.js';
 import { SessionService } from '../../src/auth/session.service.js';
 import { Mailer, type Mail } from '../../src/modules/auth/mail/mailer.js';
@@ -39,13 +40,13 @@ export interface TestApp {
   /** Sends a request as a signed-in user of `role` (or not signed in when `role` is null) and parses the JSON answer. */
   call(
     role: Role | null,
-    method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+    method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE',
     url: string,
     body?: unknown,
   ): Promise<{ status: number; body: unknown }>;
   /** A request with exactly the headers and cookies given: for the sign-in, CSRF and cookie tests. */
   raw(
-    method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+    method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE',
     url: string,
     request?: RawRequest,
   ): Promise<RawResponse>;
@@ -62,6 +63,10 @@ export interface TestApp {
     userId: string,
     options?: { twoFactorVerified?: boolean },
   ): Promise<{ accessToken: string; sessionId: string }>;
+  /** The in-memory S3 server the API stores files in. */
+  s3: FakeS3Server;
+  /** The private bucket's name. */
+  bucket: string;
   close(): Promise<void>;
 }
 
@@ -91,6 +96,14 @@ export async function createTestApp(
   process.env['REDIS_URL'] ??= 'redis://localhost:6379';
   process.env['NODE_ENV'] = 'test';
   process.env['CORS_ORIGINS'] = 'http://localhost:3002';
+  // Files go to an in-memory S3 server, so tests exercise the real SDK, presigned URLs and multipart uploads without MinIO.
+  const s3 = new FakeS3Server();
+  const bucket = 'test-private';
+  process.env['S3_ENDPOINT'] = (await s3.start()).url;
+  process.env['S3_PRIVATE_BUCKET'] = bucket;
+  process.env['S3_FORCE_PATH_STYLE'] = 'true';
+  process.env['S3_ACCESS_KEY'] = 'test-key';
+  process.env['S3_SECRET_KEY'] = 'test-secret';
   Object.assign(process.env, options.env);
 
   const moduleRef = await Test.createTestingModule({
@@ -204,8 +217,11 @@ export async function createTestApp(
       });
       return { status: response.status, body: response.body };
     },
+    s3,
+    bucket,
     async close() {
       await app.close();
+      await s3.close();
       await db.$disconnect();
       await admin.$executeRawUnsafe(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
       await admin.$disconnect();

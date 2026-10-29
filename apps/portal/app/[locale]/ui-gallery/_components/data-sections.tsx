@@ -3,7 +3,9 @@
 import {
   Button,
   DataTable,
+  DocumentList,
   FileUploader,
+  ShareToggleList,
   FormCheckbox,
   FormCombobox,
   FormCurrencyInput,
@@ -200,6 +202,7 @@ export function DataSections({ locale }: { locale: Locale }) {
 
       <FormDemo locale={locale} />
       <UploaderDemo locale={locale} />
+      <DocumentsDemo locale={locale} />
     </>
   );
 }
@@ -439,5 +442,88 @@ function UploaderDemo({ locale }: { locale: Locale }) {
         </p>
       </div>
     </Section>
+  );
+}
+
+function DocumentsDemo({ locale }: { locale: Locale }) {
+  const t = useTranslations('gallery');
+  const [targets, setTargets] = useState([
+    { id: 'a', name: 'Apollo Hospitals', shared: true },
+    { id: 'b', name: 'مستشفى الأمل', shared: false },
+  ]);
+  const dateFormat = useMemo(
+    () => new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: 'medium' }),
+    [locale],
+  );
+  const items = (['clean', 'pending', 'infected', 'failed'] as const).map((scanStatus, i) => ({
+    id: `d${i}`,
+    fileName: ['MRI knee.pdf', 'Passport.png', 'dicom-study.zip', 'Old report.pdf'][i] ?? '',
+    typeLabel: t(
+      `documents.types.${(['report', 'passport', 'scan', 'other'] as const)[i] ?? 'other'}`,
+    ),
+    mimeType: ['application/pdf', 'image/png', 'application/zip', 'application/pdf'][i] ?? '',
+    sizeBytes: [2_400_000, 840_000, 310_000_000, 95_000][i] ?? 0,
+    scanStatus,
+    uploadedBy: t('documents.sampleBy'),
+    createdAt: '2026-10-29T10:00:00Z',
+    dateLabel: dateFormat.format(new Date('2026-10-29T10:00:00Z')),
+    pageCount: i === 0 || i === 3 ? 12 : null,
+    sharedWith: i === 0 ? [targets[0]?.name ?? ''].filter(() => targets[0]?.shared) : [],
+  }));
+  return (
+    <>
+      <Section
+        id="document-list"
+        title={t('sections.documentList')}
+        description={t('descriptions.documentList')}
+      >
+        <DocumentList
+          items={items}
+          locale={locale}
+          onPreview={() => undefined}
+          onDownload={() => undefined}
+          onShare={() => undefined}
+          onRemove={() => undefined}
+          labels={{
+            listLabel: t('documents.listLabel'),
+            status: {
+              pending: t('documents.status.pending'),
+              clean: t('documents.status.clean'),
+              infected: t('documents.status.infected'),
+              failed: t('documents.status.failed'),
+            },
+            preview: (name) => t('documents.preview', { name }),
+            download: (name) => t('documents.download', { name }),
+            share: (name) => t('documents.share', { name }),
+            remove: (name) => t('documents.remove', { name }),
+            pages: (count) => t('documents.pages', { count }),
+            uploadedBy: (name) => t('documents.uploadedBy', { name }),
+            sharedWith: (names) => t('documents.sharedWith', { names }),
+            notShared: t('documents.notShared'),
+          }}
+        />
+      </Section>
+      <Section
+        id="share-toggle-list"
+        title={t('sections.shareToggleList')}
+        description={t('descriptions.shareToggleList')}
+      >
+        <ShareToggleList
+          targets={targets}
+          onToggle={(id, shared) =>
+            setTargets((list) =>
+              list.map((target) => (target.id === id ? { ...target, shared } : target)),
+            )
+          }
+          labels={{
+            listLabel: t('documents.targetsLabel'),
+            toggle: (name) => t('documents.toggle', { name }),
+            shared: t('documents.sharedOn'),
+            notShared: t('documents.sharedOff'),
+            empty: t('documents.noTargets'),
+          }}
+        />
+      </Section>
+    </>
   );
 }
