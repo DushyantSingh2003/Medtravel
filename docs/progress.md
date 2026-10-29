@@ -188,7 +188,7 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-08.
 
 - **CI:** the first run of the F-07 merge passed lint, typecheck, unit tests, API/db/worker e2e and all browser tests, but the API and
   worker image boot tests failed because production refuses the development SMS/WhatsApp stand-ins; `scripts/smoke-image.sh` now
-  supplies throwaway real-provider settings (result of the re-run recorded below once known).
+  supplies throwaway real-provider settings The re-run (CI run 26 on `develop`) passed all jobs, including the API and worker image boots.
 
 - **Never sent through a real provider.** Amazon SES (over SMTP), MSG91, Twilio and the Meta WhatsApp Cloud API were exercised
   only against local HTTP/SMTP doubles (`providers.spec.ts`, `smtp.spec.ts`); request shapes follow each provider's public
