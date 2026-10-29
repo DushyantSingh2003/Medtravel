@@ -3,8 +3,9 @@ import { notificationJobSchema } from './notifications.queue.js';
 
 describe('notificationJobSchema', () => {
   it('defaults locale to English and data to an empty object', () => {
-    expect(notificationJobSchema.parse({ channel: 'email', to: 'a@b.test', template: 'welcome' }))
-      .toEqual({ channel: 'email', to: 'a@b.test', template: 'welcome', locale: 'en', data: {} });
+    expect(
+      notificationJobSchema.parse({ channel: 'email', to: 'a@b.test', template: 'welcome' }),
+    ).toEqual({ channel: 'email', to: 'a@b.test', template: 'welcome', locale: 'en', data: {} });
   });
 
   it('rejects an unknown channel', () => {

@@ -17,6 +17,7 @@ describe('database enums', () => {
           'DISPLAY_CURRENCIES',
           'MASTER_RESOURCES',
           'PERMISSION_SUBJECTS',
+          'AUDIT_ACCESS_ACTIONS',
         ].includes(name)
       )
         continue;

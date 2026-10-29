@@ -104,7 +104,15 @@ export async function createTestApp(
   const mailer = app.get(Mailer);
   const tokens = new Map<string, string>();
 
-  const parse = (text: string): unknown => (text ? JSON.parse(text) : undefined);
+  const parse = (text: string): unknown => {
+    if (!text) return undefined;
+    try {
+      return JSON.parse(text);
+    } catch {
+      // Not JSON (a CSV export): hand back the text.
+      return text;
+    }
+  };
 
   const makeUser: TestApp['makeUser'] = async ({
     email,
