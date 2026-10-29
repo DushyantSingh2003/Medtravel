@@ -12,13 +12,7 @@ export const REALTIME_OUTBOX_TYPE = 'realtime.publish';
 
 export const realtimeOutboxPayloadSchema = z.object({
   room: z.string().min(3).max(80),
-  event: z.enum([
-    'notification.created',
-    'case.updated',
-    'message.created',
-    'task.assigned',
-    'typing',
-  ]),
+  event: z.enum(REALTIME_EVENTS),
   payload: z.record(z.string(), z.unknown()),
 });
 
