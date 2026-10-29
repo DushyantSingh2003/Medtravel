@@ -67,6 +67,8 @@ test('a browser without a session cannot hold a realtime connection', async ({ b
         const ws = new WebSocket(
           `${api.replace('http', 'ws')}/realtime/?EIO=4&transport=websocket`,
         );
+        // Engine.IO opens with a "0{...}" packet; the client then asks to join the default namespace with "40".
+        ws.onopen = () => ws.send('40');
         ws.onmessage = (event) => {
           // Socket.IO answers the handshake with a CONNECT_ERROR packet ("44...") when the session is missing.
           if (String(event.data).startsWith('44')) resolve('refused');
