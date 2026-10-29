@@ -182,6 +182,18 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-08.
 - A connected session is re-checked once a minute, so a revoked session can stay connected for up to a minute.
 - Case rooms follow the case scope when joined; a case that leaves a person's scope later (reassigned, consent withdrawn) does not
   remove them from a room they already joined until they reconnect.
+- **Redis must be private and authenticated in staging and production** (a password or ACL user and TLS in `REDIS_URL`; the
+  development compose file now binds it to localhost only). Whoever can reach Redis can publish events to any room and write the
+  catch-up log; the API refuses malformed log lines and the worker re-validates payloads, but it cannot tell a forged valid one.
+  `env.schema` does not yet require this (the image smoke test runs production mode against an open Redis).
+- Access is re-checked once a minute: a socket that no longer may be in a case or hospital room is taken out of it (and nothing is
+  replayed to it); an immediate "room revoked" push when consent is withdrawn or a link removed is a follow-up.
+- Limits: 60 messages per 10 seconds per socket, 10 sockets per person, 8 KB per message. They are per instance (in memory), not
+  shared across API instances.
+- `typing` shows the typist's user id to everyone in the room (agents and patients included); a display-safe label is a follow-up
+  for when the case screens exist. `case.updated.fields` takes free strings: make it a closed list before a screen publishes it.
+- `case:` rooms will also carry `message.created`; when messaging is built, agents' sockets must not receive message events
+  (use a separate room per audience).
 - Pinned `@nestjs/websockets` and `@nestjs/platform-socket.io` to 12.1.x to match the installed `@nestjs/common` 12.1.2.
 
 ### Deferred from F-07

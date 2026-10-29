@@ -17,11 +17,11 @@ import {
   type RealtimeMessage,
 } from '@medtravel/contracts';
 import { randomUUID } from 'node:crypto';
-import { requiresTwoFactor } from '@medtravel/contracts';
 import type { DefaultEventsMap, Server, Socket } from 'socket.io';
 import type { Actor } from '../auth/actor.js';
 import { ACCESS_COOKIE, readCookie } from '../auth/cookies.js';
-import { twoFactorEnforced } from '../auth/auth.guard.js';
+import { WsGateway } from '../auth/decorators.js';
+import { secondFactorOwed } from '../auth/auth.guard.js';
 import { SessionService } from '../auth/session.service.js';
 import { ENV } from '../config/config.module.js';
 import type { Env } from '../config/env.schema.js';
@@ -33,10 +33,14 @@ interface SocketData {
   token: string;
   /** Typing messages in the current window, to keep one socket from flooding a room. */
   typing: { count: number; resetsAt: number };
+  /** All messages together, so join, leave and sync cannot be used to hammer the database. */
+  messages: { count: number; resetsAt: number };
 }
 type RealtimeSocket = Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, SocketData>;
 
 const MAX_ROOMS = 50;
+const MAX_SOCKETS_PER_USER = 10;
+const MESSAGES_PER_WINDOW = 60;
 const TYPING_PER_WINDOW = 30;
 const TYPING_WINDOW_MS = 10_000;
 /** How often a connected session is checked to still be valid. */
@@ -47,11 +51,13 @@ const RECHECK_MS = 60_000;
  * own room at once and may join case and hospital rooms the permission rules allow. Events are pushed to rooms by
  * `RealtimeService`/the worker; the one thing a client sends is `typing`.
  */
+@WsGateway()
 @WebSocketGateway({ path: '/realtime' })
 export class RealtimeGateway implements OnGatewayInit {
   private readonly logger = new Logger(RealtimeGateway.name);
   @WebSocketServer() private server!: Server;
   private timer: NodeJS.Timeout | undefined;
+  private rechecking = false;
 
   constructor(
     @Inject(SessionService) private readonly sessions: SessionService,
@@ -88,29 +94,64 @@ export class RealtimeGateway implements OnGatewayInit {
     const session = await this.sessions.authenticate(token);
     if (!session) return false;
     // A session that still owes its second factor can use nothing but the set-up page, which does not need a live connection.
-    const owed =
-      session.actor.scopeCaseId === null &&
-      !session.twoFactorVerified &&
-      ((requiresTwoFactor(session.user.role) && twoFactorEnforced(this.env)) ||
-        session.user.twoFactorEnabled);
-    if (owed) return false;
+    if (secondFactorOwed(session, this.env)) return false;
+    // One person may hold only so many connections (a script opening thousands multiplies every cost below).
+    const open = await this.server.in(roomOf.user(session.actor.userId)).fetchSockets();
+    if (open.length >= MAX_SOCKETS_PER_USER) return false;
     socket.data = {
       actor: session.actor,
       token,
       typing: { count: 0, resetsAt: 0 },
+      messages: { count: 0, resetsAt: 0 },
     };
     return true;
   }
 
-  /** Disconnects every socket whose session is no longer valid; runs every minute. */
+  /**
+   * Runs every minute: disconnects sockets whose session is no longer valid, and takes each remaining socket out of the case
+   * and hospital rooms it no longer has access to (consent withdrawn, case reassigned, staff link removed).
+   */
   async recheck(): Promise<void> {
-    for (const socket of this.server.sockets.sockets.values() as Iterable<RealtimeSocket>) {
-      const valid = await this.sessions.authenticate(socket.data.token).catch(() => null);
-      if (!valid) {
-        socket.emit('session_expired');
-        socket.disconnect(true);
+    if (this.rechecking) return;
+    this.rechecking = true;
+    try {
+      const sessions = new Map<string, boolean>();
+      for (const socket of this.server.sockets.sockets.values() as Iterable<RealtimeSocket>) {
+        let valid = sessions.get(socket.data.token);
+        if (valid === undefined) {
+          valid = (await this.sessions.authenticate(socket.data.token).catch(() => null)) !== null;
+          sessions.set(socket.data.token, valid);
+        }
+        if (!valid) {
+          socket.emit('session_expired');
+          socket.disconnect(true);
+          continue;
+        }
+        await this.revalidateRooms(socket);
       }
+    } finally {
+      this.rechecking = false;
     }
+  }
+
+  /** Leaves every case and hospital room the socket's owner may no longer join. */
+  private async revalidateRooms(socket: RealtimeSocket): Promise<void> {
+    for (const room of [...socket.rooms]) {
+      const match = /^(case|hospital):([0-9a-f-]{36})$/.exec(room);
+      if (!match) continue;
+      const request = { kind: match[1] as 'case' | 'hospital', id: match[2] as string };
+      if (!(await this.mayJoin(socket.data.actor, request))) await socket.leave(room);
+    }
+  }
+
+  /** False once a socket has sent more than its share of messages in the window. */
+  private allow(socket: RealtimeSocket): boolean {
+    const now = Date.now();
+    const window = socket.data.messages;
+    if (window.resetsAt <= now)
+      Object.assign(window, { count: 0, resetsAt: now + TYPING_WINDOW_MS });
+    window.count += 1;
+    return window.count <= MESSAGES_PER_WINDOW;
   }
 
   private async mayJoin(actor: Actor, request: JoinRequest): Promise<boolean> {
@@ -123,22 +164,27 @@ export class RealtimeGateway implements OnGatewayInit {
       );
     }
     if (actor.scopeCaseId) return false;
-    return this.scope.isHospitalStaff(actor, request.id);
+    // A database error is a refusal, not a missing answer.
+    return this.scope.isHospitalStaff(actor, request.id).catch(() => false);
   }
 
   @SubscribeMessage('join')
   async join(@ConnectedSocket() socket: RealtimeSocket, @MessageBody() body: unknown) {
+    if (!this.allow(socket)) return { ok: false };
     const request = joinRequestSchema.safeParse(body);
     if (!request.success) return { ok: false };
     if (socket.rooms.size >= MAX_ROOMS) return { ok: false };
     // One answer for "no such room" and "not yours".
     if (!(await this.mayJoin(socket.data.actor, request.data))) return { ok: false };
+    // Checked again after the wait: several joins in flight at once must not pass the cap together.
+    if (socket.rooms.size >= MAX_ROOMS) return { ok: false };
     await socket.join(roomOf[request.data.kind](request.data.id));
     return { ok: true };
   }
 
   @SubscribeMessage('leave')
   async leave(@ConnectedSocket() socket: RealtimeSocket, @MessageBody() body: unknown) {
+    if (!this.allow(socket)) return { ok: false };
     const request = joinRequestSchema.safeParse(body);
     if (!request.success) return { ok: false };
     await socket.leave(roomOf[request.data.kind](request.data.id));
@@ -177,8 +223,11 @@ export class RealtimeGateway implements OnGatewayInit {
   /** After a reconnect: replay what happened in the rooms this socket is in since the time of the last event it saw. */
   @SubscribeMessage('sync')
   async sync(@ConnectedSocket() socket: RealtimeSocket, @MessageBody() body: unknown) {
+    if (!this.allow(socket)) return { ok: false, replayed: 0 };
     const request = syncRequestSchema.safeParse(body);
     if (!request.success) return { ok: false, replayed: 0 };
+    // Only what the person may still see is replayed.
+    await this.revalidateRooms(socket);
     const rooms = [...socket.rooms].filter((room) => room !== socket.id);
     const { events, truncated } = await this.realtime.publisher
       .missed(rooms, new Date(request.data.since))

@@ -1,6 +1,6 @@
 'use client';
 
-import { getMe } from '@medtravel/api-client';
+import { ApiError, getMe } from '@medtravel/api-client';
 import { REALTIME_PATH, type RealtimeEventName, type RealtimeMessage } from '@medtravel/contracts';
 import { useQueryClient } from '@tanstack/react-query';
 import { io } from 'socket.io-client';
@@ -22,12 +22,13 @@ const RealtimeContext = createContext<RealtimeClient | null>(null);
 const apiUrl = (): string => process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 /** Gets a fresh session cookie: any API call does it when the old one has expired. False when the person is signed out. */
-async function refreshSession(): Promise<boolean> {
+async function refreshSession(): Promise<'ok' | 'signed_out' | 'error'> {
   try {
     await getMe();
-    return true;
-  } catch {
-    return false;
+    return 'ok';
+  } catch (error) {
+    // Only the API saying "not signed in" ends the attempts; a network failure or a 5xx is worth retrying.
+    return error instanceof ApiError && error.status === 401 ? 'signed_out' : 'error';
   }
 }
 
@@ -103,7 +104,11 @@ const TYPING_SHOWN_MS = 5000;
  * Who else is typing in a case, and a function to say you are. Typing shows for five seconds after the last sign of it, and
  * your own signal is sent when you start and again when you stop.
  */
-export function useTyping(caseId: string | undefined): {
+export function useTyping(
+  caseId: string | undefined,
+  /** The signed-in person: their other tabs and devices are not "someone else typing". */
+  selfUserId?: string,
+): {
   typingUserIds: string[];
   setTyping: (typing: boolean) => void;
 } {
@@ -114,6 +119,7 @@ export function useTyping(caseId: string | undefined): {
   useRealtimeEvent('typing', (message) => {
     if (message.payload['caseId'] !== caseId) return;
     const userId = String(message.payload['userId']);
+    if (userId === selfUserId) return;
     setTypingState((current) => {
       const next = { ...current };
       if (message.payload['typing'] === true) next[userId] = Date.now() + TYPING_SHOWN_MS;

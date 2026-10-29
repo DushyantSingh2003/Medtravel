@@ -11,9 +11,19 @@ class FakeSocket implements SocketLike {
     this.handlers.set(event, listener as never);
     return this;
   }
+  /** Acknowledgement callbacks of what was sent, in order; a test answers them when the server would. */
+  acks: { event: string; answer: (value: unknown) => void }[] = [];
   emit(event: string, ...args: unknown[]) {
     this.sent.push({ event, args });
+    const ack = args.at(-1);
+    if (typeof ack === 'function')
+      this.acks.push({ event, answer: ack as (value: unknown) => void });
     return this;
+  }
+  /** Answers every outstanding join (or other) acknowledgement. */
+  answer(event: string, value: unknown = { ok: true }) {
+    for (const ack of this.acks.filter((entry) => entry.event === event)) ack.answer(value);
+    this.acks = this.acks.filter((entry) => entry.event !== event);
   }
   connect() {
     this.connects += 1;
@@ -47,7 +57,7 @@ const message = (
   payload: { caseId: 'c1' },
 });
 
-function setup(refresh: () => Promise<boolean> = async () => true) {
+function setup(refresh: () => Promise<'ok' | 'signed_out' | 'error'> = async () => 'ok') {
   const socket = new FakeSocket();
   const timers: { callback: () => void; ms: number }[] = [];
   const client = new RealtimeClient({
@@ -106,7 +116,7 @@ describe('RealtimeClient', () => {
     expect(socket.sentOf('join')).toEqual([{ kind: 'hospital', id: 'h1' }]);
   });
 
-  it('after a reconnect rejoins its rooms and asks for what it missed since the last event; not on the first connection', () => {
+  it('after a reconnect rejoins its rooms, waits for the answers, then asks for what it missed since the last event; not on the first connection', async () => {
     const { socket, client } = setup();
     client.join('case', 'c1');
     socket.open();
@@ -119,7 +129,12 @@ describe('RealtimeClient', () => {
     socket.sent.length = 0;
     socket.open();
     expect(socket.sentOf('join')).toEqual([{ kind: 'case', id: 'c1' }]);
-    expect(socket.sentOf('sync')).toEqual([{ since: '2026-10-29T12:05:00.000Z' }]);
+    // The server replays only the rooms the socket is in by then: asking before the join is answered would miss the case room.
+    expect(socket.sentOf('sync')).toEqual([]);
+    socket.answer('join');
+    await vi.waitFor(() =>
+      expect(socket.sentOf('sync')).toEqual([{ since: '2026-10-29T12:05:00.000Z' }]),
+    );
   });
 
   it('tells listeners to refetch when the server says too much was missed', () => {
@@ -132,7 +147,7 @@ describe('RealtimeClient', () => {
   });
 
   it('gets a fresh session and reconnects when the server drops an expired one, backing off each time', async () => {
-    const refresh = vi.fn(async () => true);
+    const refresh = vi.fn(async () => 'ok' as const);
     const { socket, timers } = setup(refresh);
     socket.open();
     socket.fire('disconnect', 'io server disconnect');
@@ -141,25 +156,80 @@ describe('RealtimeClient', () => {
     await vi.waitFor(() => expect(socket.connects).toBe(1));
     expect(refresh).toHaveBeenCalledOnce();
     // The connection is refused again: the next wait is longer.
-    socket.fire('connect_error', new Error('unauthorized'));
+    socket.fire('connect_error', { message: 'unauthorized' });
     expect(timers.map((t) => t.ms)).toEqual([1000, 2000]);
   });
 
   it('stops trying when the person is signed out', async () => {
-    const { socket, timers } = setup(async () => false);
-    socket.fire('connect_error', new Error('unauthorized'));
+    const { socket, timers } = setup(async () => 'signed_out');
+    socket.fire('connect_error', { message: 'unauthorized' });
     timers[0]?.callback();
     await Promise.resolve();
     await Promise.resolve();
     expect(socket.connects).toBe(0);
   });
 
+  it('does not touch the session for a network failure, which Socket.IO retries by itself', () => {
+    const refresh = vi.fn(async () => 'ok' as const);
+    const { socket, timers } = setup(refresh);
+    socket.fire('connect_error', { message: 'websocket error' });
+    expect(timers).toEqual([]);
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it('tries again later when the API cannot say whether the person is signed in', async () => {
+    const outcomes: ('error' | 'ok')[] = ['error', 'ok'];
+    const refresh = vi.fn(async () => outcomes.shift() ?? 'ok');
+    const { socket, timers } = setup(refresh);
+    socket.fire('connect_error', { message: 'unauthorized' });
+    timers[0]?.callback();
+    await vi.waitFor(() => expect(timers).toHaveLength(2));
+    expect(socket.connects).toBe(0);
+    timers[1]?.callback();
+    await vi.waitFor(() => expect(socket.connects).toBe(1));
+    expect(refresh).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignores a late report from a socket it has closed, even after starting again', () => {
+    const sockets: FakeSocket[] = [];
+    const timers: (() => void)[] = [];
+    const client = new RealtimeClient({
+      createSocket: () => {
+        const created = new FakeSocket();
+        sockets.push(created);
+        return created;
+      },
+      refreshSession: async () => 'ok',
+      setTimer: (callback) => timers.push(callback),
+      clearTimer: () => undefined,
+    });
+    client.start();
+    client.close();
+    client.start();
+    sockets[0]?.fire('connect_error', { message: 'unauthorized' });
+    sockets[0]?.fire('event', message('late', '2026-10-29T12:00:00.000Z'));
+    expect(timers).toEqual([]);
+  });
+
+  it('forgets the oldest event ids past its limit, so memory stays bounded', () => {
+    const { socket, client } = setup();
+    const heard: string[] = [];
+    client.subscribe((m) => heard.push(m.id));
+    for (let i = 0; i < 520; i += 1)
+      socket.fire('event', message(`e${i}`, '2026-10-29T12:00:00.000Z'));
+    socket.fire('event', message('e0', '2026-10-29T12:00:00.000Z'));
+    socket.fire('event', message('e519', '2026-10-29T12:00:00.000Z'));
+    // e0 was forgotten (heard again); e519 is still remembered (not heard again).
+    expect(heard.filter((id) => id === 'e0')).toHaveLength(2);
+    expect(heard.filter((id) => id === 'e519')).toHaveLength(1);
+  });
+
   it('resets the backoff once connected, and says what it does when typing', () => {
     const { socket, client, timers } = setup();
-    socket.fire('connect_error', new Error('unauthorized'));
+    socket.fire('connect_error', { message: 'unauthorized' });
     timers[0]?.callback();
     socket.open();
-    socket.fire('connect_error', new Error('unauthorized'));
+    socket.fire('connect_error', { message: 'unauthorized' });
     expect(timers.map((t) => t.ms)).toEqual([1000, 1000]);
     client.sendTyping('c1', true);
     expect(socket.sentOf('typing')).toEqual([{ caseId: 'c1', typing: true }]);
@@ -183,7 +253,7 @@ describe('RealtimeClient restart', () => {
         sockets.push(socket);
         return socket;
       },
-      refreshSession: async () => true,
+      refreshSession: async () => 'ok',
     });
     client.join('case', 'c1');
     client.start();

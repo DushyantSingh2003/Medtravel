@@ -11,8 +11,11 @@ export interface SocketLike {
 
 export interface RealtimeClientOptions {
   createSocket: () => SocketLike;
-  /** Gets a fresh session cookie (the REST client refreshes it on its own when it has expired). Resolves false when signed out. */
-  refreshSession: () => Promise<boolean>;
+  /**
+   * Gets a fresh session cookie (the REST client refreshes it on its own when it has expired). `signed_out` only when the API
+   * says the person is not signed in; `error` for anything else (a network failure, a deploy in progress): worth retrying.
+   */
+  refreshSession: () => Promise<'ok' | 'signed_out' | 'error'>;
   random?: () => number;
   setTimer?: (callback: () => void, ms: number) => unknown;
   clearTimer?: (handle: unknown) => void;
@@ -23,6 +26,7 @@ type Listener = (message: RealtimeMessage) => void;
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_MAX_MS = 30_000;
 const SEEN_LIMIT = 500;
+const ACK_TIMEOUT_MS = 5000;
 
 /** Exponential backoff with jitter: 1 s, 2 s, 4 s ... up to 30 s, each between half and all of that. */
 export function backoffDelay(attempt: number, random: () => number = Math.random): number {
@@ -59,15 +63,41 @@ export class RealtimeClient {
     this.attempt = 0;
     const socket = this.options.createSocket();
     this.socket = socket;
-    socket.on('connect', () => void this.onConnect());
-    socket.on('event', ((message: RealtimeMessage) => this.onEvent(message)) as never);
-    socket.on('resync', (() => this.resyncListeners.forEach((listener) => listener())) as never);
-    socket.on('session_expired', (() => this.reconnectLater(true)) as never);
-    socket.on('connect_error', (() => this.reconnectLater(true)) as never);
-    socket.on('disconnect', ((reason: string) => {
-      // The server closed it (expired session): Socket.IO does not retry that by itself. A network drop it retries by itself.
-      if (reason === 'io server disconnect') this.reconnectLater(true);
-    }) as never);
+    // Everything a socket reports is ignored once it is no longer the current one (after `close()`, or a restart).
+    const current = <A extends unknown[]>(handler: (...args: A) => void) =>
+      ((...args: A) => {
+        if (this.socket === socket) handler(...args);
+      }) as never;
+    socket.on(
+      'connect',
+      current(() => void this.onConnect()),
+    );
+    socket.on(
+      'event',
+      current((message: RealtimeMessage) => this.onEvent(message)),
+    );
+    socket.on(
+      'resync',
+      current(() => this.resyncListeners.forEach((listener) => listener())),
+    );
+    socket.on(
+      'session_expired',
+      current(() => this.reconnectLater(true)),
+    );
+    // Only a refused session needs our help; a network failure is retried by Socket.IO itself, with its own backoff.
+    socket.on(
+      'connect_error',
+      current((error: { message?: string }) => {
+        if (error?.message === 'unauthorized') this.reconnectLater(true);
+      }),
+    );
+    socket.on(
+      'disconnect',
+      current((reason: string) => {
+        // The server closed it (expired session): Socket.IO does not retry that by itself. A network drop it retries by itself.
+        if (reason === 'io server disconnect') this.reconnectLater(true);
+      }),
+    );
   }
 
   close(): void {
@@ -118,15 +148,31 @@ export class RealtimeClient {
     return this.socket?.connected === true;
   }
 
+  /** Sends a message and waits for the server's answer (or gives up after a few seconds). */
+  private ask(socket: SocketLike, event: string, payload: unknown): Promise<unknown> {
+    return new Promise((resolve) => {
+      const give = (this.options.setTimer ?? setTimeout)(() => resolve(undefined), ACK_TIMEOUT_MS);
+      socket.emit(event, payload, (answer: unknown) => {
+        (this.options.clearTimer ?? clearTimeout)(give as never);
+        resolve(answer);
+      });
+    });
+  }
+
   private async onConnect(): Promise<void> {
     this.attempt = 0;
     const socket = this.socket;
     if (!socket) return;
-    for (const room of this.rooms.values())
-      socket.emit('join', { kind: room.kind, id: room.id }, () => undefined);
+    // Rejoin first and wait for every answer: the server replays only the rooms the socket is in when it asks.
+    await Promise.all(
+      [...this.rooms.values()].map((room) =>
+        this.ask(socket, 'join', { kind: room.kind, id: room.id }),
+      ),
+    );
+    if (this.socket !== socket) return;
     // Back after being away: ask for what happened meanwhile (the first connection has nothing to catch up on).
     if (this.hasConnected && this.lastSeen)
-      socket.emit('sync', { since: this.lastSeen }, () => undefined);
+      await this.ask(socket, 'sync', { since: this.lastSeen });
     this.hasConnected = true;
   }
 
@@ -149,7 +195,13 @@ export class RealtimeClient {
       void (async () => {
         if (this.closed) return;
         // Signed out: stop trying until the page is loaded again signed in.
-        if (refresh && !(await this.options.refreshSession())) return;
+        if (refresh) {
+          const outcome = await this.options.refreshSession();
+          // Signed out: stop trying until the page is loaded again signed in.
+          if (outcome === 'signed_out') return;
+          // The API could not say (a network failure, a deploy): try again later, with a longer wait.
+          if (outcome === 'error') return this.reconnectLater(true);
+        }
         this.socket?.connect();
       })();
     }, delay);

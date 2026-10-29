@@ -23,6 +23,8 @@ export class RealtimeAdapter extends IoAdapter {
       ...options,
       path: REALTIME_PATH,
       serveClient: false,
+      // Nothing a client sends is larger than a few hundred bytes.
+      maxHttpBufferSize: 8 * 1024,
       // A browser always sends its Origin on a WebSocket handshake: refuse any site that is not one of ours (a page on another
       // site must not be able to open a connection with the visitor's cookies). Clients without an Origin (servers, tests)
       // still need a valid token.

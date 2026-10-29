@@ -363,6 +363,141 @@ describe('two browsers on the same case', () => {
   });
 });
 
+describe('access that is withdrawn while connected', () => {
+  it('takes a socket out of a case room when its access goes, and stops replaying that room to it', async () => {
+    const desk = await t.makeUser({ email: `deskx-${next()}@rt.test`, role: 'hospital_desk' });
+    const { accessToken } = await t.tokenFor(desk.id);
+    const link = await t.db.hospitalStaff.create({
+      data: { userId: desk.id, hospitalId: ids['hospitalA'] as string },
+    });
+    const socket = await connectAs(accessToken);
+    expect((await join(socket, 'case', ids['case1'] as string)).ok).toBe(true);
+    expect((await join(socket, 'hospital', ids['hospitalA'] as string)).ok).toBe(true);
+    const seen = listen(socket);
+
+    // The hospital's staff link is removed: neither room is theirs any more.
+    await t.db.hospitalStaff.update({ where: { id: link.id }, data: { deletedAt: new Date() } });
+    const gateway = t.app.get(
+      (await import('../src/realtime/realtime.gateway.js')).RealtimeGateway,
+    ) as unknown as {
+      recheck: () => Promise<void>;
+    };
+    await gateway.recheck();
+
+    await publisher.publish(roomOf.case(ids['case1'] as string), 'case.updated', {
+      caseId: ids['case1'] as string,
+    });
+    await publisher.publish(roomOf.hospital(ids['hospitalA'] as string), 'case.updated', {
+      caseId: ids['case1'] as string,
+    });
+    await settle();
+    expect(seen).toEqual([]);
+    const answer = await socket
+      .timeout(3000)
+      .emitWithAck('sync', { since: new Date(Date.now() - 60_000).toISOString() });
+    expect(answer.ok).toBe(true);
+    await settle();
+    expect(
+      seen.filter((m) => m.room.startsWith('case:') || m.room.startsWith('hospital:')),
+    ).toEqual([]);
+  });
+
+  it('keeps a socket in the rooms it may still join', async () => {
+    const socket = await connectAs(people['cm1']?.token as string);
+    await join(socket, 'case', ids['case1'] as string);
+    const gateway = t.app.get(
+      (await import('../src/realtime/realtime.gateway.js')).RealtimeGateway,
+    ) as unknown as {
+      recheck: () => Promise<void>;
+    };
+    await gateway.recheck();
+    const seen = listen(socket);
+    await publisher.publish(roomOf.case(ids['case1'] as string), 'case.updated', {
+      caseId: ids['case1'] as string,
+    });
+    await waitFor(() => seen.length === 1);
+  });
+});
+
+describe('limits', () => {
+  it('stops answering a socket that floods join, leave and sync', async () => {
+    const socket = await connectAs(people['patient1']?.token as string);
+    let refused = 0;
+    for (let i = 0; i < 80; i += 1) {
+      const answer = await socket
+        .timeout(3000)
+        .emitWithAck('join', { kind: 'case', id: ids['case1'] });
+      if (!answer.ok) refused += 1;
+    }
+    expect(refused).toBeGreaterThanOrEqual(15);
+  });
+
+  it('allows only so many connections per person', async () => {
+    const holder = await t.makeUser({ email: `many-${next()}@rt.test`, role: 'patient' });
+    const { accessToken } = await t.tokenFor(holder.id);
+    const sockets: Socket[] = [];
+    for (let i = 0; i < 10; i += 1) sockets.push(await connectAs(accessToken));
+    await expect(connectAs(accessToken)).rejects.toThrow('unauthorized');
+    sockets[0]?.disconnect();
+    await settle(200);
+    expect((await connectAs(accessToken)).connected).toBe(true);
+  });
+
+  it('refuses a message bigger than a few kilobytes', async () => {
+    const socket = await connectAs(people['patient1']?.token as string);
+    const closed = new Promise<string>((resolve) => socket.once('disconnect', resolve));
+    socket.emit('join', { kind: 'case', id: ids['case1'], padding: 'x'.repeat(20_000) });
+    expect(await closed).toBeTruthy();
+  });
+});
+
+describe('the publisher', () => {
+  it('replays an event stamped exactly at the time asked for, and ignores log lines that are not events', async () => {
+    const room = roomOf.user(randomUUID());
+    const first = await publisher.publish(room, 'notification.created', {
+      notificationId: randomUUID(),
+    });
+    await redis.lpush(
+      `rt:log:${room}`,
+      'not json',
+      JSON.stringify({
+        id: 'x',
+        room: 'user:other',
+        event: 'typing',
+        at: new Date().toISOString(),
+        payload: {},
+      }),
+    );
+    const { events } = await publisher.missed([room], new Date(first.at));
+    expect(events.map((e) => e.id)).toEqual([first.id]);
+  });
+
+  it('logs an event with a given id once however many times it is sent', async () => {
+    const room = roomOf.user(randomUUID());
+    const id = randomUUID();
+    const notificationId = randomUUID();
+    await publisher.publish(room, 'notification.created', { notificationId }, { id });
+    await publisher.publish(room, 'notification.created', { notificationId }, { id });
+    const { events } = await publisher.missed([room], new Date(Date.now() - 60_000));
+    expect(events.map((e) => e.id)).toEqual([id]);
+  });
+
+  it('rejects when Redis cannot take the event, so the outbox retries', async () => {
+    const down = new Redis('redis://127.0.0.1:1', {
+      maxRetriesPerRequest: 1,
+      retryStrategy: () => null,
+      lazyConnect: true,
+    });
+    down.on('error', () => undefined);
+    await expect(
+      new RealtimePublisher(down).publish(roomOf.user(randomUUID()), 'notification.created', {
+        notificationId: randomUUID(),
+      }),
+    ).rejects.toThrow();
+    down.disconnect();
+  });
+});
+
 describe('several API instances', () => {
   it('delivers an event published through Redis to a browser connected to another instance', async () => {
     const room = `user:${randomUUID()}`;
@@ -420,10 +555,11 @@ describe('catching up after a reconnect', () => {
     await join(back, 'case', ids['case1'] as string);
     const caught = listen(back);
     const answer = await back.timeout(3000).emitWithAck('sync', { since: lastSeen });
-    expect(answer).toMatchObject({ ok: true, replayed: 2, truncated: false });
-    await waitFor(() => caught.length === 2);
-    expect(caught.map((m) => m.id)).toEqual([second.id, third.id]);
-    expect(caught.some((m) => m.id === first.id)).toBe(false);
+    // The event stamped exactly at the time asked for comes again (two events can share a millisecond); the browser drops
+    // it by id.
+    expect(answer).toMatchObject({ ok: true, replayed: 3, truncated: false });
+    await waitFor(() => caught.length === 3);
+    expect(caught.map((m) => m.id)).toEqual([first.id, second.id, third.id]);
   });
 
   it('does not replay another room’s events, and refuses a bad time', async () => {

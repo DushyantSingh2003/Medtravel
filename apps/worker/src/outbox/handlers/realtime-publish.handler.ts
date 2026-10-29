@@ -12,5 +12,6 @@ export async function publishRealtime(
 ): Promise<void> {
   const { room, event: name, payload } = realtimeOutboxPayloadSchema.parse(event.payload);
   const checked = realtimePayloadSchemas[name].parse(payload);
-  await deps.publisher.publish(room, name, checked as never);
+  // The outbox event id names the push: a retry after a partial failure logs and sends the same event, not a second one.
+  await deps.publisher.publish(room, name, checked as never, { id: event.id });
 }

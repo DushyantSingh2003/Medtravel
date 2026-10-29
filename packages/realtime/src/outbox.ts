@@ -1,4 +1,5 @@
 import {
+  REALTIME_EVENTS,
   realtimePayloadSchemas,
   type RealtimeEventName,
   type RealtimePayload,
@@ -40,7 +41,11 @@ export async function enqueueRealtime<E extends RealtimeEventName>(
         type: REALTIME_OUTBOX_TYPE,
         aggregateType: 'Realtime',
         aggregateId: input.room,
-        payload: { room: input.room, event: input.event, payload },
+        payload: {
+          room: input.room,
+          event: input.event,
+          payload: payload as Prisma.InputJsonObject,
+        },
         ...(input.dedupeKey ? { dedupeKey: input.dedupeKey } : {}),
       },
     ],
