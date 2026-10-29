@@ -9,6 +9,7 @@ import { AuditModule } from './audit/audit.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { HealthModule } from './health/health.module.js';
+import { RbacModule } from './rbac/rbac.module.js';
 import { MastersModule } from './modules/masters/masters.module.js';
 
 @Module({
@@ -22,6 +23,7 @@ import { MastersModule } from './modules/masters/masters.module.js';
     DatabaseModule,
     AuditModule,
     AuthModule,
+    RbacModule,
     HealthModule,
     MastersModule,
   ],

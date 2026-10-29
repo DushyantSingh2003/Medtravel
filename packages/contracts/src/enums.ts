@@ -12,7 +12,13 @@ export const sessionKindSchema = z.enum(SESSION_KINDS);
 export type SessionKind = z.infer<typeof sessionKindSchema>;
 
 /** What a one-time secret in `AuthChallenge` is for. */
-export const AUTH_CHALLENGE_KINDS = ['email_verification', 'password_reset', 'login_code', 'invitation', 'magic_link'] as const;
+export const AUTH_CHALLENGE_KINDS = [
+  'email_verification',
+  'password_reset',
+  'login_code',
+  'invitation',
+  'magic_link',
+] as const;
 export const authChallengeKindSchema = z.enum(AUTH_CHALLENGE_KINDS);
 export type AuthChallengeKind = z.infer<typeof authChallengeKindSchema>;
 

@@ -4,7 +4,7 @@ Tick a task here when it is finished and `pnpm check` is green. The task queue t
 build loop is `loop/cloud-state.json`; this file is the human-readable view and also records
 what each task deferred.
 
-Tasks: 116 in the plan. Done: S-01 to S-06, F-01, F-02, F-03.
+Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-04.
 
 ### Phase 0 — Scaffold (week 1)
 
@@ -20,7 +20,7 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01, F-02, F-03.
 - [x] **F-01** Database schema
 - [x] **F-02** Master data module (the reference pattern)
 - [x] **F-03** Authentication
-- [ ] **F-04** Roles, permissions and data scoping
+- [x] **F-04** Roles, permissions and data scoping
 - [ ] **F-05** Audit log and domain events
 - [ ] **F-06** Secure file service
 - [ ] **F-07** Notification engine
@@ -165,6 +165,24 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01, F-02, F-03.
 - [ ] **G-08** Advanced analytics
 
 ## Notes and deferred work
+
+### Deferred from F-04
+
+- **Not yet verified on GitHub:** first CI result for this task (recorded here once it has run).
+- No endpoint uses `ScopeService` yet (the case, document and patient endpoints arrive in F-06, F-10 and later); it is proven
+  against a real database by `apps/api/test/rbac.e2e-spec.ts`. Every new list endpoint must AND `caseWhere` / `documentWhere` /
+  `patientWhere` into its query, and call `assertCaseAccess` before loading a case's children. Magic-link sessions are
+  narrowed to their one case inside `caseWhere`.
+- The document endpoints do not exist, so "an agent gets 403 on any document endpoint" is proven on a test-only controller
+  declared with `@Can('read'|'create', 'Document')`; F-06 must keep those decorators.
+- Field rules (`pickReadable`) are not applied to any response yet: the Case and Patient response schemas arrive with F-10.
+  The field names in `FIELD_GROUPS` are the planned ones and must follow the schemas.
+- Matrix cells for subjects without a table or module yet (Setting, Report, Incident, Feedback, Notification) are
+  placeholders to be revised by the tasks that build them. `hospital_desk` scope `hospital` for `Hospital` means "their own
+  hospital"; the check by hospital id belongs to the hospital module.
+- Rows beyond the case (quotes, invoices, bookings, tasks, conversations) are scoped through their case with `caseWhere`;
+  the exceptions (own notifications, an agent's commissions) are scoped in their modules.
+- The portal hides buttons with `useCan` only on the master data screen so far; each later screen uses it.
 
 ### Deferred from F-03
 
