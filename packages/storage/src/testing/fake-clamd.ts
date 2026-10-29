@@ -13,6 +13,8 @@ export class FakeClamd {
   private server: Server | undefined;
   /** When set, every scan fails like an overloaded scanner. */
   failing = false;
+  /** Answer every scan as ClamAV does for a stream above its `StreamMaxLength`. */
+  sizeLimit = false;
   scans = 0;
 
   async start(port = 0): Promise<{ port: number }> {
@@ -39,8 +41,12 @@ export class FakeClamd {
             socket.end('UNKNOWN COMMAND\0');
             return;
           }
-          if (this.failing) {
+          if (this.sizeLimit) {
             socket.end('INSTREAM size limit exceeded. ERROR\0');
+            return;
+          }
+          if (this.failing) {
+            socket.end('Scanner is busy. ERROR\0');
             return;
           }
           streaming = true;

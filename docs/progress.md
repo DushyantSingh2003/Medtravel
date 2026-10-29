@@ -192,6 +192,14 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-06.
 - Documents of a case can be shared only with hospitals that already have an opinion request for it; the patient file
   screen for staff, the hospital's own upload flow and the case 360 documents tab use the same API but have no screen yet.
 - Only the patient's own screen (`/patient/records`) exists; attendants see the same page but cannot delete or share.
+- **From the F-06 reviews, not done:** nothing expires an upload that was started and never finished (a cap of 20 open uploads
+  per person limits the damage; the row's `expired` state is unused and no job aborts its multipart upload; add a bucket rule
+  for incomplete multipart uploads); part sizes are checked only when the upload is completed; the watermark is stamped inside
+  the request (a worker job or a semaphore is the follow-up); a failed stamp leaves an audit row for a download that never
+  happened; the records screen shows only the first 50 files (no "load more"); the quarantine notification text is English
+  only; rate limits are per IP, not per user; a hospital desk with several hospitals uploads for the first; sharing a document
+  that is still scanning is allowed (it cannot be downloaded until clean); consent is recorded on toggle without a separate
+  "I agree" step in the request.
 - The worker handles the scan one file at a time inside the outbox's two-minute lock: a very large file on a slow scanner can
   outlive the lock and be scanned twice (the second run finds it no longer `pending` and stops).
 

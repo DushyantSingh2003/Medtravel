@@ -28,3 +28,10 @@ letting the browser choose the key would let one user write into another's objec
 
 The bucket needs CORS and lifecycle rules (see docs/progress.md); the real MinIO and ClamAV paths are verified only in
 development and staging.
+
+## Added after review
+
+Patients, attendants and hospital desks may change or delete only documents they uploaded themselves; hospitals and attendants
+are not told which other hospitals a case is consulting. The scanner (`infra/clamav/clamd.conf`) is set to read 500 MB and to
+report files it cannot fully read; a file it still refuses is quarantined as `scan_limit` rather than retried. The `watermarked/`
+prefix expires after a day through a MinIO rule in `infra/minio/init-buckets.sh` (real S3 needs the same rule).

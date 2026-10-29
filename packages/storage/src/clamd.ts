@@ -16,6 +16,14 @@ const CHUNK = 64 * 1024;
  * Scans a stream with ClamAV's `clamd` over TCP (the `INSTREAM` command): the file is sent in length-prefixed chunks and
  * never held in memory. Rejects when the scanner cannot be reached, says ERROR, or does not answer; the caller retries.
  */
+/** The scanner refused the file because it is larger than it is set up to read; retrying cannot help. */
+export class ScanLimitError extends Error {
+  constructor() {
+    super('The file is larger than the virus scanner will read');
+    this.name = 'ScanLimitError';
+  }
+}
+
 export function scanStream(stream: Readable, options: ClamdOptions): Promise<ScanVerdict> {
   return new Promise((resolve, reject) => {
     const socket = connect({ host: options.host, port: options.port });
@@ -41,6 +49,7 @@ export function scanStream(stream: Readable, options: ClamdOptions): Promise<Sca
       if (/\bOK$/.test(text)) return resolve({ clean: true });
       const found = /^stream: (.+) FOUND$/.exec(text);
       if (found?.[1]) return resolve({ clean: false, signature: found[1] });
+      if (/size limit exceeded/i.test(text)) return reject(new ScanLimitError());
       reject(
         new Error(`The virus scanner gave an unexpected answer: ${text.slice(0, 120) || '(none)'}`),
       );

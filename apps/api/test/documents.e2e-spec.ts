@@ -141,7 +141,7 @@ async function seedDocument(options: {
       visibility: options.visibility ?? 'private',
       patientId: ids[options.owner],
       caseId,
-      ...(options.uploadedBy ? { uploadedById: options.uploadedBy } : {}),
+      uploadedById: options.uploadedBy ?? users[options.owner]?.id ?? null,
     },
   });
   return { id: doc.id, body, key };
@@ -718,6 +718,14 @@ describe('sharing with a hospital', () => {
       (await call(users['deskA'] as Who, 'POST', `/documents/${doc.id}/download`)).status,
     ).toBe(200);
     expect((await call(users['deskB'] as Who, 'GET', `/documents/${doc.id}`)).status).toBe(404);
+    // A hospital cannot learn who else is consulted, nor rewrite or remove the patient's file.
+    expect((await call(users['deskA'] as Who, 'GET', `/documents/${doc.id}/shares`)).body).toEqual({
+      targets: [],
+    });
+    expect(
+      (await call(users['deskA'] as Who, 'PATCH', `/documents/${doc.id}`, { notes: 'x' })).status,
+    ).toBe(403);
+    expect((await call(users['deskA'] as Who, 'DELETE', `/documents/${doc.id}`)).status).toBe(403);
     expect(
       await t.db.auditEvent.count({ where: { action: 'document.shared', entityId: doc.id } }),
     ).toBe(1);
@@ -802,6 +810,14 @@ describe('changing and deleting', () => {
       (await call(users['patient2'] as Who, 'PATCH', `/documents/${doc.id}`, { notes: 'x' }))
         .status,
     ).toBe(404);
+  });
+
+  it("does not let a patient change or delete a document that a hospital's staff uploaded", async () => {
+    const doc = await seedDocument({ owner: 'patient1', uploadedBy: users['deskA']?.id as string });
+    const patient = users['patient1'] as Who;
+    expect((await call(patient, 'PATCH', `/documents/${doc.id}`, { notes: 'x' })).status).toBe(403);
+    expect((await call(patient, 'DELETE', `/documents/${doc.id}`)).status).toBe(403);
+    expect((await t.db.document.findUniqueOrThrow({ where: { id: doc.id } })).deletedAt).toBeNull();
   });
 
   it('removes a document from every list when it is deleted, and only roles that may delete can', async () => {

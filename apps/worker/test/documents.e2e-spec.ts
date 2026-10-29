@@ -104,6 +104,7 @@ afterAll(async () => {
 
 beforeEach(() => {
   clamd.failing = false;
+  clamd.sizeLimit = false;
 });
 
 describe('document.uploaded', () => {
@@ -217,6 +218,16 @@ describe('document.uploaded', () => {
     await prisma.outboxEvent.update({ where: { id: event.id }, data: { availableAt: new Date() } });
     await dispatcher.runOnce();
     expect((await reload(doc.id)).scanStatus).toBe('clean');
+  });
+
+  it('quarantines a file the scanner will not read, instead of retrying forever or offering it unscanned', async () => {
+    const { doc, event } = await uploaded(await pdf(1), 'application/pdf');
+    clamd.sizeLimit = true;
+    await dispatcher.runOnce();
+    expect(await reload(doc.id)).toMatchObject({ scanStatus: 'failed', scanDetail: 'scan_limit' });
+    expect(
+      (await prisma.outboxEvent.findUniqueOrThrow({ where: { id: event.id } })).status,
+    ).not.toBe('pending');
   });
 
   it('marks a document whose object is gone as failed, and ignores a repeated or deleted one', async () => {

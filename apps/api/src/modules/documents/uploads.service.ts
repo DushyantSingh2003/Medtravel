@@ -1,4 +1,5 @@
 import {
+  HttpException,
   BadRequestException,
   ConflictException,
   ForbiddenException,
@@ -35,6 +36,9 @@ const UPLOAD_LIFETIME_MS = 24 * 3_600_000;
  * The browser uploads straight to the bucket, but only through requests this service signs. It chooses the object key, checks
  * what may be uploaded where, and only signs later requests (parts, listing, abort) for uploads it started for the same user.
  */
+/** Uploads one person may have started and not finished at a time. */
+const MAX_OPEN_UPLOADS = 20;
+
 @Injectable()
 export class UploadsService {
   constructor(
@@ -131,6 +135,12 @@ export class UploadsService {
       throw new ForbiddenException('Only our staff can add an internal document');
     if (actor.role === 'attendant' && file.kind !== 'passport')
       throw new ForbiddenException('An attendant can upload a passport');
+
+    const open = await this.prisma.fileUpload.count({
+      where: { userId: actor.userId, status: 'open', expiresAt: { gt: new Date() } },
+    });
+    if (open >= MAX_OPEN_UPLOADS)
+      throw new HttpException('Too many uploads are in progress; finish or wait for them', 429);
 
     let caseId: string | null = null;
     let patientId: string | null = null;

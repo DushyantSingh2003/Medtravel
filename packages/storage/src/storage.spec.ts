@@ -8,6 +8,7 @@ import {
   matchesDeclaredType,
   makeThumbnail,
   pdfPageCount,
+  ScanLimitError,
   scanStream,
   sniffFileType,
   watermarkImage,
@@ -223,6 +224,14 @@ describe('scanStream against clamd', () => {
       clean: false,
       signature: 'Eicar-Test-Signature',
     });
+  });
+
+  it('says so, instead of failing like an outage, when the scanner will not read a file that large', async () => {
+    clamd.sizeLimit = true;
+    await expect(scanStream(Readable.from([Buffer.from('x')]), options())).rejects.toBeInstanceOf(
+      ScanLimitError,
+    );
+    clamd.sizeLimit = false;
   });
 
   it('fails, so the caller retries, when the scanner errors or is not there', async () => {

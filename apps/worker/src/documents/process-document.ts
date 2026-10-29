@@ -3,6 +3,8 @@ import {
   makeThumbnail,
   matchesDeclaredType,
   pdfPageCount,
+  ScanLimitError,
+  type ScanVerdict,
   scanStream,
   sniffFileType,
   type ClamdOptions,
@@ -37,8 +39,7 @@ async function quarantine(
   detail: string,
 ): Promise<void> {
   const quarantined = `quarantine/${doc.storageKey}`;
-  await deps.store.copy(doc.storageKey, quarantined);
-  await deps.store.delete(doc.storageKey);
+  if (await deps.store.head(doc.storageKey)) await deps.store.copy(doc.storageKey, quarantined);
   await deps.prisma.$transaction(async (tx) => {
     await tx.document.update({
       where: { id: doc.id },
@@ -78,6 +79,7 @@ async function quarantine(
       });
     }
   });
+  await deps.store.delete(doc.storageKey);
 }
 
 /**
@@ -114,7 +116,14 @@ export async function processUploadedDocument(
     return;
   }
 
-  const verdict = await scanStream(await deps.store.getStream(doc.storageKey), deps.clamd);
+  let verdict: ScanVerdict;
+  try {
+    verdict = await scanStream(await deps.store.getStream(doc.storageKey), deps.clamd);
+  } catch (error) {
+    // Retrying cannot help a file the scanner will not read, and it must not be offered unscanned.
+    if (error instanceof ScanLimitError) return quarantine(deps, doc, 'failed', 'scan_limit');
+    throw error;
+  }
   if (!verdict.clean) return quarantine(deps, doc, 'infected', verdict.signature);
 
   const sniffed: SniffedType | null = sniffFileType(await readHead(deps.store, doc.storageKey));

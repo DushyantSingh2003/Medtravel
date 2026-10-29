@@ -35,6 +35,8 @@ export class SharesService {
     id: string,
   ): Promise<{ hospitalId: string; hospitalName: string; shared: boolean }[]> {
     const doc = await this.documents.findVisible(actor, id, { id: true, caseId: true });
+    // Which other hospitals are consulted is not for a hospital or an attendant to learn.
+    if (actor.role === 'hospital_desk' || actor.role === 'attendant') return [];
     if (!doc.caseId) return [];
     const [requests, shares] = await Promise.all([
       this.prisma.opinionRequest.findMany({
