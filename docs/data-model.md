@@ -2,7 +2,7 @@
 
 > Generated from `packages/db/prisma/schema.prisma` by `pnpm --filter @medtravel/db docs:model`. Do not edit by hand: a test fails when this file is out of date.
 
-The database holds **77 tables** and **50 enums** (PRD section 11). The central entity is the **Case**: one patient, one treatment episode, and everything else hangs off it.
+The database holds **78 tables** and **51 enums** (PRD section 11). The central entity is the **Case**: one patient, one treatment episode, and everything else hangs off it.
 
 ## Overview
 
@@ -98,7 +98,7 @@ One `User` per login. What a user is linked to depends on the role: a Patient, a
 
 | Entity | What it is | Belongs to | Has | Notes |
 | --- | --- | --- | --- | --- |
-| **User** | One row per login. Linked to a Patient, Agent (AgentUser), HospitalStaff or StaffProfile by role. |  | Session (sessions), AuthChallenge (authChallenges), AuthChallenge (createdChallenges), BackupCode (backupCodes), StaffProfile (managedStaff), Case (ownedCases), Case (reviewedCases), CaseStageHistory (stageChanges), MedicalSummary (medicalSummaries), Document (uploadedDocuments), DocumentShare (documentShares), CaseNote (caseNotes), HospitalStaff (hospitalStaffs), OpinionRequest (sentOpinionRequests), Opinion (submittedOpinions), Quote (acceptedQuotes), Quote (createdQuotes), Refund (requestedRefunds), Refund (approvedRefunds), Task (assignedTasks), Task (createdTasks), Message (sentMessages), Notification (notifications), Incident (reportedIncidents), Incident (assignedIncidents), Incident (escalatedIncidents), StaffProfile (staffProfile), AgentUser (agentUser), Patient (patient), Attendant (attendant), Interpreter (interpreter) | soft delete |
+| **User** | One row per login. Linked to a Patient, Agent (AgentUser), HospitalStaff or StaffProfile by role. |  | Session (sessions), AuthChallenge (authChallenges), AuthChallenge (createdChallenges), BackupCode (backupCodes), StaffProfile (managedStaff), Case (ownedCases), Case (reviewedCases), CaseStageHistory (stageChanges), MedicalSummary (medicalSummaries), Document (uploadedDocuments), FileUpload (fileUploads), DocumentShare (documentShares), CaseNote (caseNotes), HospitalStaff (hospitalStaffs), OpinionRequest (sentOpinionRequests), Opinion (submittedOpinions), Quote (acceptedQuotes), Quote (createdQuotes), Refund (requestedRefunds), Refund (approvedRefunds), Task (assignedTasks), Task (createdTasks), Message (sentMessages), Notification (notifications), Incident (reportedIncidents), Incident (assignedIncidents), Incident (escalatedIncidents), StaffProfile (staffProfile), AgentUser (agentUser), Patient (patient), Attendant (attendant), Interpreter (interpreter) | soft delete |
 | **Session** | A signed-in browser or device. Only a hash of the token is stored. One sign-in on one device. `tokenHash` is the hash of the current refresh token; it rotates on every refresh and the previous hash is kept so that a replayed (stolen) refresh token revokes the whole session. | User (user), Case (scopeCase, optional) |  |  |
 | **AuthChallenge** | A one-time secret sent to a person: email verification, password reset, a sign-in code, an invitation or a magic link. Only hashes are stored; the token or code itself exists in the email and nowhere else. | User (user, optional), User (createdBy, optional) |  |  |
 | **BackupCode** | A single-use recovery code for a user who lost their authenticator app. Stored hashed. | User (user) |  |  |
@@ -129,6 +129,7 @@ The central entity: one patient, one treatment episode. Everything else hangs of
 | **CaseStageHistory** | Every stage change of a case, who made it and when. | Case (case), User (actor, optional) |  |  |
 | **MedicalSummary** | The reviewer's structured summary. One current version per case; older versions are kept. | Case (case), User (reviewer, optional), Speciality (recommendedSpeciality, optional) | OpinionRequest (opinionRequests) | unique: caseId + version |
 | **Document** | A file in the private bucket. Only metadata is here; downloads go through presigned URLs and are audited. | Patient (patient, optional), Case (case, optional), Agent (agent, optional), Hospital (hospital, optional), DocumentType (type, optional), User (uploadedBy, optional) | DocumentShare (shares), Admission (admissionsDischarged), Accreditation (accreditations), Quote (quotes), Invoice (invoices), VisaApplication (visaInvitations), MessageAttachment (messageAttachments) | soft delete |
+| **FileUpload** | One browser upload of a file to the private bucket. The API creates it when it signs the start of the multipart upload and only signs later requests for keys it knows, for the same user, while it is open. | User (user) |  |  |
 | **DocumentShare** | A patient-consented share of one document with one hospital. A hospital sees a document only through a live row here. | Document (document), Hospital (hospital), Consent (consent), User (sharedBy, optional) |  | soft delete; unique: documentId + hospitalId |
 
 ## Hospitals and doctors
@@ -239,6 +240,7 @@ Audit trail, the event outbox and the counters behind human-readable numbers.
 | **CaseSource** | `website`, `whatsapp`, `phone`, `email`, `agent`, `referral`, `walk_in`, `other` |
 | **DocumentKind** | `report`, `scan`, `prescription`, `passport`, `visa`, `invoice`, `bill`, `discharge`, `invitation_letter`, `photo`, `pickup_photo`, `kyc`, `agreement`, `other` |
 | **DocumentVisibility** | `private`, `internal` |
+| **FileUploadStatus** | `open`, `completed`, `aborted`, `expired` |
 | **ScanStatus** | `pending`, `clean`, `infected`, `failed` |
 | **ConsentType** | `data_processing`, `share_medical_with_hospital`, `share_stage_with_agent`, `marketing`, `public_review`, `whatsapp_contact` |
 | **HospitalStatus** | `draft`, `pending_review`, `approved`, `published`, `unpublished`, `suspended` |

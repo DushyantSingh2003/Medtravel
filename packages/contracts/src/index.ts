@@ -7,3 +7,4 @@ export * from './masters.js';
 export * from './permissions.js';
 export * from './auth.js';
 export * from './audit.js';
+export * from './documents.js';

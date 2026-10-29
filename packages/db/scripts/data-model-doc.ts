@@ -78,6 +78,7 @@ const DOMAINS: { title: string; blurb: string; models: string[] }[] = [
       'CaseStageHistory',
       'MedicalSummary',
       'Document',
+      'FileUpload',
       'DocumentShare',
     ],
   },

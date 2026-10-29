@@ -157,6 +157,14 @@ enum DocumentVisibility {
   internal
 }
 
+/// Where a browser upload stands: the API tracks each one so it only signs requests for uploads it started.
+enum FileUploadStatus {
+  open
+  completed
+  aborted
+  expired
+}
+
 /// Result of the virus scan on an uploaded file.
 enum ScanStatus {
   pending
@@ -782,6 +790,7 @@ model User {
   stageChanges        CaseStageHistory[]
   medicalSummaries    MedicalSummary[]
   uploadedDocuments   Document[]         @relation("DocumentUploader")
+  fileUploads         FileUpload[]
   documentShares      DocumentShare[]
   caseNotes           CaseNote[]
   hospitalStaffs      HospitalStaff[]
@@ -1160,6 +1169,13 @@ model Document {
   storageKey           String              @unique
   checksum             String?             @db.VarChar(64)
   scanStatus           ScanStatus          @default(pending)
+  /// When the scan finished (clean, infected or failed).
+  scannedAt            DateTime?           @db.Timestamptz(3)
+  /// Why a file is not clean: the virus signature, or `type_mismatch`.
+  scanDetail           String?             @db.VarChar(200)
+  pageCount            Int?
+  /// Object key of the thumbnail in the private bucket.
+  thumbnailKey         String?
   takenAt              DateTime?           @db.Date
   notes                String?             @db.Text
   patientId            String?             @db.Uuid
@@ -2366,4 +2382,34 @@ model NumberSequence {
   value  Int    @default(0)
 
   @@id([key, period])
+}
+
+/// One browser upload of a file to the private bucket. The API creates it when it signs the start of the multipart upload
+/// and only signs later requests for keys it knows, for the same user, while it is open.
+model FileUpload {
+  id          String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Object key in the private bucket, chosen by the API (`files/<uuid>`); never the file name.
+  key         String             @unique
+  /// S3 multipart upload id, set when the first part is signed.
+  uploadId    String?
+  status      FileUploadStatus   @default(open)
+  fileName    String
+  mimeType    String             @db.VarChar(127)
+  sizeBytes   Int
+  kind        DocumentKind       @default(other)
+  visibility  DocumentVisibility @default(private)
+  typeId      String?            @db.Uuid
+  caseId      String?            @db.Uuid
+  patientId   String?            @db.Uuid
+  hospitalId  String?            @db.Uuid
+  expiresAt   DateTime           @db.Timestamptz(3)
+  completedAt DateTime?          @db.Timestamptz(3)
+  documentId  String?            @unique @db.Uuid
+  userId      String             @db.Uuid
+  user        User               @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt   DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime           @updatedAt @db.Timestamptz(3)
+
+  @@index([userId, status])
+  @@index([status, expiresAt])
 }
