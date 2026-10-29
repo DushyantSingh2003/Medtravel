@@ -28,6 +28,7 @@ export const PERMISSION_SUBJECTS = [
   'Consent',
   'Feedback',
   'Notification',
+  'NotificationLog',
   'User',
   'AuditLog',
   'Report',

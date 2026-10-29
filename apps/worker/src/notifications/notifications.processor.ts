@@ -6,9 +6,9 @@ import { NOTIFICATIONS_QUEUE, notificationJobSchema } from './notifications.queu
 /**
  * Example processor that proves the BullMQ wiring end to end.
  *
- * Real delivery (SES, WhatsApp, SMS) arrives with the notifications task; until then this
- * validates the payload and logs, which is enough to see jobs flow from the API to Redis
- * to the worker.
+ * Notifications are not delivered here: the notification engine (F-07) queues each message as an outbox
+ * event and `outbox/handlers/notification-deliver.handler.ts` sends it. This stays as the minimal example
+ * of a BullMQ job for work that is not a domain event.
  */
 @Processor(NOTIFICATIONS_QUEUE)
 export class NotificationsProcessor extends WorkerHost {

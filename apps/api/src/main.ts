@@ -18,7 +18,7 @@ async function bootstrap(): Promise<void> {
       trustProxy: (_address: string, hop: number) => hop < TRUST_PROXY_HOPS,
       bodyLimit: 10 * 1024 * 1024,
     }),
-    { bufferLogs: true },
+    { bufferLogs: true, rawBody: true },
   );
 
   app.useLogger(app.get(Logger));
@@ -33,7 +33,7 @@ async function bootstrap(): Promise<void> {
   app.enableCors({
     origin: env.CORS_ORIGINS,
     // The default allows only GET, HEAD and POST, which would make the browser refuse every PATCH and DELETE.
-    methods: ['GET', 'HEAD', 'POST', 'PATCH', 'DELETE'],
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'],
     // Sessions are httpOnly cookies, so the browser must be allowed to send them.
     credentials: true,
   });

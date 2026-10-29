@@ -68,6 +68,7 @@ role sees only part of a record, the **field groups**. A dash means no access. D
 | Consent | read, create, update (own) |
 | Feedback | read, create (own) |
 | Notification | read, update (own) |
+| NotificationLog | — |
 | User | — |
 | AuditLog | — |
 | Report | — |
@@ -100,6 +101,7 @@ role sees only part of a record, the **field groups**. A dash means no access. D
 | Consent | — |
 | Feedback | — |
 | Notification | read, update (own) |
+| NotificationLog | — |
 | User | — |
 | AuditLog | — |
 | Report | — |
@@ -132,6 +134,7 @@ role sees only part of a record, the **field groups**. A dash means no access. D
 | Consent | — |
 | Feedback | — |
 | Notification | read, update (own) |
+| NotificationLog | — |
 | User | — |
 | AuditLog | — |
 | Report | — |
@@ -164,6 +167,7 @@ role sees only part of a record, the **field groups**. A dash means no access. D
 | Consent | read (team) |
 | Feedback | read (team) |
 | Notification | read, update (own) |
+| NotificationLog | — |
 | User | — |
 | AuditLog | — |
 | Report | read, export (team) |
@@ -196,6 +200,7 @@ role sees only part of a record, the **field groups**. A dash means no access. D
 | Consent | — |
 | Feedback | — |
 | Notification | read, update (own) |
+| NotificationLog | — |
 | User | — |
 | AuditLog | — |
 | Report | — |
@@ -228,6 +233,7 @@ role sees only part of a record, the **field groups**. A dash means no access. D
 | Consent | — |
 | Feedback | — |
 | Notification | read, update (own) |
+| NotificationLog | — |
 | User | — |
 | AuditLog | — |
 | Report | — |
@@ -260,6 +266,7 @@ role sees only part of a record, the **field groups**. A dash means no access. D
 | Consent | — |
 | Feedback | — |
 | Notification | read, update (own) |
+| NotificationLog | — |
 | User | — |
 | AuditLog | — |
 | Report | — |
@@ -292,6 +299,7 @@ role sees only part of a record, the **field groups**. A dash means no access. D
 | Consent | read (hospital) |
 | Feedback | — |
 | Notification | read, update (own) |
+| NotificationLog | — |
 | User | — |
 | AuditLog | — |
 | Report | read (hospital) |
@@ -324,6 +332,7 @@ role sees only part of a record, the **field groups**. A dash means no access. D
 | Consent | — |
 | Feedback | — |
 | Notification | read, update (own) |
+| NotificationLog | — |
 | User | — |
 | AuditLog | — |
 | Report | — |
@@ -356,6 +365,7 @@ role sees only part of a record, the **field groups**. A dash means no access. D
 | Consent | — |
 | Feedback | — |
 | Notification | read, update (own) |
+| NotificationLog | — |
 | User | — |
 | AuditLog | — |
 | Report | read, export (all) |
@@ -388,6 +398,7 @@ role sees only part of a record, the **field groups**. A dash means no access. D
 | Consent | read, create, update, delete, export (all) |
 | Feedback | read, create, update, delete, export (all) |
 | Notification | read, create, update, delete, export (own) |
+| NotificationLog | read, create, update, delete, export (all) |
 | User | read, create, update, delete, export (all) |
 | AuditLog | read, export (all) |
 | Report | read, create, update, delete, export (all) |

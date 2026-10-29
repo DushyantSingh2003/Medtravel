@@ -8,6 +8,7 @@ import { StorageModule } from './storage/storage.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { OutboxModule } from './outbox/outbox.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
+import { ProvidersModule } from './notifications/providers.module.js';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { NotificationsModule } from './notifications/notifications.module.js';
     }),
     DatabaseModule,
     StorageModule,
+    ProvidersModule,
     OutboxModule,
     NotificationsModule,
   ],

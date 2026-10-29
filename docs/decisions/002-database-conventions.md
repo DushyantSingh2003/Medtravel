@@ -39,10 +39,10 @@ module relies on are fixed here, before any of them is written.
 9. **Hospital access to documents is never a flag.** A `DocumentShare` row needs a `Consent` of the right
    type, patient and hospital, enforced by a trigger; withdrawing the consent revokes its shares.
 10. **Patient search includes the passport number**, as the task asks, so staff can find a patient by it. The
-   trade-off (a searchable column holds the number in clear text) is raised in `docs/questions.md`; the
-   alternative is a blind index.
+    trade-off (a searchable column holds the number in clear text) is raised in `docs/questions.md`; the
+    alternative is a blind index.
 11. **Translations are `<Entity>Translation` tables**, one row per language, with the English text on the
-   entity itself.
+    entity itself.
 12. **A numbered migration per task**, never edited once committed (`migrations/<timestamp>_<task>_<slug>`).
 
 ## Consequences

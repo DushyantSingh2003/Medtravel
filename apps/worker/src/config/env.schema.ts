@@ -1,3 +1,4 @@
+import { PROVIDER_ENV_SHAPE, refineProviderEnv } from '@medtravel/notifications';
 import { z } from 'zod';
 
 const urlString = (message: string) =>
@@ -31,6 +32,7 @@ export const envSchema = z
     CLAMAV_HOST: z.string().default('localhost'),
     CLAMAV_PORT: z.coerce.number().int().min(1).max(65_535).default(3310),
     WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(100).default(5),
+    ...PROVIDER_ENV_SHAPE,
   })
   .superRefine((env, ctx) => {
     if (
@@ -42,6 +44,11 @@ export const envSchema = z
         path: ['S3_SECRET_KEY'],
         message: 'Set real S3 keys in production',
       });
+    refineProviderEnv(
+      env,
+      (path, message) => ctx.addIssue({ code: 'custom', path: [path], message }),
+      { webhooks: false },
+    );
   });
 
 export type Env = z.infer<typeof envSchema>;

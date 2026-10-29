@@ -11,6 +11,7 @@ import {
   type ObjectStore,
   type SniffedType,
 } from '@medtravel/storage';
+import { enqueueNotification } from '@medtravel/notifications';
 import { z } from 'zod';
 
 const payloadSchema = z.object({ documentId: z.uuid() });
@@ -60,24 +61,12 @@ async function quarantine(
         requestId: 'worker',
       },
     });
-    if (doc.uploadedById) {
-      await tx.notification.createMany({
-        skipDuplicates: true,
-        data: [
-          {
-            userId: doc.uploadedById,
-            channel: 'in_app',
-            status: 'sent',
-            sentAt: new Date(),
-            templateKey: 'document.quarantined',
-            title: 'A file could not be accepted',
-            body: 'A file you uploaded did not pass our safety check and was removed. Please check it and upload it again.',
-            data: { documentId: doc.id },
-            dedupeKey: `document-quarantined:${doc.id}`,
-          },
-        ],
+    if (doc.uploadedById)
+      await enqueueNotification(tx, {
+        eventKey: 'document_quarantined',
+        recipients: [doc.uploadedById],
+        dedupeKey: `document-quarantined:${doc.id}`,
       });
-    }
   });
   await deps.store.delete(doc.storageKey);
 }

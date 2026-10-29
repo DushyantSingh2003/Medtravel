@@ -39,9 +39,13 @@ export const REDACTED_PATHS = [
 
 /** Hides one-time tokens in a request address (`/auth/invitations/<token>`, `?token=`). */
 export function scrubUrl(url: string): string {
-  return url
-    .replace(/(\/auth\/invitations\/)[^/?#]+/, '$1[redacted]')
-    .replace(/([?&]token=)[^&#]*/g, '$1[redacted]');
+  return (
+    url
+      .replace(/(\/auth\/invitations\/)[^/?#]+/, '$1[redacted]')
+      .replace(/([?&]token=)[^&#]*/g, '$1[redacted]')
+      // WhatsApp's subscription check carries its verify token and a challenge in the address.
+      .replace(/([?&]hub\.(?:verify_token|challenge)=)[^&#]*/g, '$1[redacted]')
+  );
 }
 
 /** pino configuration: pretty and chatty locally, JSON for CloudWatch in production. */

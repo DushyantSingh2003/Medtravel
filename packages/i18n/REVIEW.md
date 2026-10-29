@@ -48,3 +48,11 @@ names in `audit.actions` (view, download, export of a document or patient record
 `gallery.documents.*` and the sections `documentList` and `shareToggleList` are machine-drafted Arabic; the `documents.*` namespace of the
 portal (upload, scan states, sharing consent wording) is too. The consent wording of the share toggle deserves a native
 reader and a legal check before launch.
+
+## F-07 (notifications)
+
+Every message text in `packages/notifications/src/templates/ar.ts` (31 events: what patients, staff and agents are told) is
+machine-drafted Arabic, and so are the `notifications.*` namespace of the portal (settings page, admin log, event names) and the
+new bell strings in `shell.*`. These texts reach patients on WhatsApp, so a native reader should check tone and the
+formal/informal address before launch, and the WhatsApp templates (`mt_<event>`) must be submitted for approval in each
+language with the same wording.

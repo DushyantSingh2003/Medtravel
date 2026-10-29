@@ -28,7 +28,7 @@ You build the whole platform as 116 small tasks. Each task is one Claude Code pr
 
 The MVP (every P0 feature in the PRD) goes live after about 16 weeks with one or two developers working full-time with Claude Code; Phase 2 runs in months 5–8 and Phase 3 in months 9–12. Admin, finance and logistics tasks (1G) run alongside the other modules because those modules depend on them.
 
-*(Diagram in the build plan doc: MVP timeline · 8 workstreams over 16 weeks)*
+_(Diagram in the build plan doc: MVP timeline · 8 workstreams over 16 weeks)_
 
 **Order dependencies to respect:** build LG-01 to LG-04 before C-12, FI-02 before P-05, AD-04 before W-02, and finish all of Phase 1A before any module task. Week ranges are estimates; your real pace will show after Phase 1A, so re-plan then.
 
@@ -36,7 +36,7 @@ The MVP (every P0 feature in the PRD) goes live after about 16 weeks with one or
 
 One TypeScript monorepo with four deployable apps: the API, a background worker, the public website, and one portal app that holds all five logged-in portals as role-based sections. Building the five portals as one app instead of five is the biggest time saver in this plan: login, layout, tables, forms, chat and file upload are built once and reused everywhere. Shared Zod schemas give end-to-end types, so the front end and API can never drift apart.
 
-*(Diagram in the build plan doc: runtime architecture · 4 apps, 3 data stores, providers via the worker)*
+_(Diagram in the build plan doc: runtime architecture · 4 apps, 3 data stores, providers via the worker)_
 
 This is why the platform feels fast: visitors get pages straight from the CDN, files never pass through the API, and anything that waits on WhatsApp, email, PDFs or scans happens in the worker while realtime pushes the result to the screen.
 
@@ -71,27 +71,27 @@ medtravel/
 └─ .claude/         CLAUDE.md lives at repo root; skills/, agents/, hooks/, settings.json
 ```
 
-| Layer | Choice | Why it is fast to build and fast to run |
-| --- | --- | --- |
-| Monorepo | pnpm workspaces + Turborepo | One repo Claude Code can see whole; cached builds and tests |
-| API | NestJS on Fastify adapter, nestjs-zod, OpenAPI | Clear module pattern Claude Code repeats well; Fastify is \~2× Express throughput |
-| ORM / DB | Prisma + PostgreSQL 16, pg\_trgm + full-text search | Type-safe queries, migrations; no separate search engine at MVP |
-| Validation / types | Zod in `packages/contracts`, shared by API and UI | One schema = API validation + form validation + types |
-| API client | orval generates TanStack Query hooks from OpenAPI | No hand-written fetch code; caching and refetching built in |
-| Queues / jobs | Redis + BullMQ in `apps/worker` | Slow work (WhatsApp, PDFs, scans) never blocks a request |
-| Realtime | Socket.IO with Redis adapter | Live chat, case updates and notifications in portals |
-| Website | Next.js App Router, static generation + ISR, next/image | Pages served from CDN; top Core Web Vitals and SEO |
-| Portal | Next.js App Router, client components + TanStack Query/Table, React Hook Form | Snappy SPA-like feel, virtualised tables, optimistic updates |
-| UI | Tailwind + shadcn/ui + lucide icons, RTL via logical CSS properties | Claude Code generates these components fluently |
-| i18n | next-intl (UI text) + translation tables (DB content) | Arabic RTL from day one |
-| Auth | Own module: argon2 passwords, OTP (email/SMS/WhatsApp), TOTP 2FA, httpOnly cookie sessions with refresh rotation | Full control over 11 roles and 5 portals on one domain |
-| Permissions | CASL abilities from one permission matrix in `contracts` | Same rules checked in API and used to hide UI |
-| Files | S3 presigned multipart upload (Uppy), ClamAV scan, pdf-lib watermark | 500 MB uploads go straight to S3, not through the API |
-| PDFs | @react-pdf/renderer in worker | Branded quotes, invoices, statements |
-| Email | React Email + Amazon SES | Templates in code, versioned |
-| Testing | Vitest, Testcontainers (real Postgres), Playwright, MSW | Claude Code can run every test locally |
-| Infra | Docker; AWS ECS Fargate, RDS, ElastiCache, S3, CloudFront, SES; Terraform | India data residency; infra as code Claude Code can write |
-| Observability | Sentry, pino JSON logs → CloudWatch, uptime checks | Errors visible in minutes |
+| Layer              | Choice                                                                                                           | Why it is fast to build and fast to run                                           |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Monorepo           | pnpm workspaces + Turborepo                                                                                      | One repo Claude Code can see whole; cached builds and tests                       |
+| API                | NestJS on Fastify adapter, nestjs-zod, OpenAPI                                                                   | Clear module pattern Claude Code repeats well; Fastify is \~2× Express throughput |
+| ORM / DB           | Prisma + PostgreSQL 16, pg\_trgm + full-text search                                                              | Type-safe queries, migrations; no separate search engine at MVP                   |
+| Validation / types | Zod in `packages/contracts`, shared by API and UI                                                                | One schema = API validation + form validation + types                             |
+| API client         | orval generates TanStack Query hooks from OpenAPI                                                                | No hand-written fetch code; caching and refetching built in                       |
+| Queues / jobs      | Redis + BullMQ in `apps/worker`                                                                                  | Slow work (WhatsApp, PDFs, scans) never blocks a request                          |
+| Realtime           | Socket.IO with Redis adapter                                                                                     | Live chat, case updates and notifications in portals                              |
+| Website            | Next.js App Router, static generation + ISR, next/image                                                          | Pages served from CDN; top Core Web Vitals and SEO                                |
+| Portal             | Next.js App Router, client components + TanStack Query/Table, React Hook Form                                    | Snappy SPA-like feel, virtualised tables, optimistic updates                      |
+| UI                 | Tailwind + shadcn/ui + lucide icons, RTL via logical CSS properties                                              | Claude Code generates these components fluently                                   |
+| i18n               | next-intl (UI text) + translation tables (DB content)                                                            | Arabic RTL from day one                                                           |
+| Auth               | Own module: argon2 passwords, OTP (email/SMS/WhatsApp), TOTP 2FA, httpOnly cookie sessions with refresh rotation | Full control over 11 roles and 5 portals on one domain                            |
+| Permissions        | CASL abilities from one permission matrix in `contracts`                                                         | Same rules checked in API and used to hide UI                                     |
+| Files              | S3 presigned multipart upload (Uppy), ClamAV scan, pdf-lib watermark                                             | 500 MB uploads go straight to S3, not through the API                             |
+| PDFs               | @react-pdf/renderer in worker                                                                                    | Branded quotes, invoices, statements                                              |
+| Email              | React Email + Amazon SES                                                                                         | Templates in code, versioned                                                      |
+| Testing            | Vitest, Testcontainers (real Postgres), Playwright, MSW                                                          | Claude Code can run every test locally                                            |
+| Infra              | Docker; AWS ECS Fargate, RDS, ElastiCache, S3, CloudFront, SES; Terraform                                        | India data residency; infra as code Claude Code can write                         |
+| Observability      | Sentry, pino JSON logs → CloudWatch, uptime checks                                                               | Errors visible in minutes                                                         |
 
 ## 4. Before you start (human tasks)
 
@@ -142,19 +142,23 @@ These files make every session follow the same rules without you repeating them:
 # MedTravel platform — rules for Claude Code
 
 ## What this is
+
 End-to-end medical travel platform: international patients → accredited Indian hospitals, from enquiry to return home.
 Requirements: docs/PRD.md (read only the sections a task names). Task list and prompts: docs/BUILD_PLAN.md. Status: docs/progress.md.
 
 ## Layout
+
 apps/api (NestJS+Fastify) · apps/worker (BullMQ) · apps/web (Next.js public site) · apps/portal (Next.js: /patient /ops /hospital /agent /admin)
 packages/db (Prisma) · contracts (Zod, enums, stage machine, permission matrix) · api-client (orval) · ui · i18n · emails · pdf · config
 
 ## Commands
+
 pnpm dev (all apps + docker services) · pnpm check (lint + typecheck + unit + api e2e) · pnpm e2e (Playwright)
 pnpm db:migrate --name <task-id>-<slug> · pnpm db:seed · pnpm db:studio · pnpm api:generate (after any API change)
 Seed logins: see docs/dev-users.md (one user per role, password Dev@12345, 2FA disabled in dev only)
 
 ## Backend rules
+
 - Module pattern: controller (thin, no logic) → service → Prisma. Request/response schemas come from packages/contracts.
 - Every endpoint declares a permission with @Can(action, subject). Data scoping by role lives ONLY in the rbac module.
 - Lists: cursor pagination, server-side filters and sorting, select only needed fields, no N+1 (use include/select or batched queries).
@@ -167,6 +171,7 @@ Seed logins: see docs/dev-users.md (one user per role, password Dev@12345, 2FA d
 - Never edit a migration that has been committed; create a new one.
 
 ## Security rules (non-negotiable)
+
 - Agents never receive medical documents, diagnosis or bills — only stage and name, and only with patient consent.
 - Hospitals see only cases sent to them, and only documents the patient consented to share with them.
 - All files are in a private bucket. Downloads via presigned URLs valid ≤ 5 minutes; every view/download writes an audit event.
@@ -175,6 +180,7 @@ Seed logins: see docs/dev-users.md (one user per role, password Dev@12345, 2FA d
 - Validate every input with Zod. Rate-limit auth, OTP and public forms. Helmet, CSRF protection for cookie auth, strict CORS.
 
 ## Frontend rules
+
 - Use packages/ui components (PageHeader, DataTable, FormField*, FileUploader, StageTracker, EmptyState, ConfirmDialog). Add new shared components there, not in apps.
 - RTL-safe Tailwind only: ms-/me-/ps-/pe-/start-/end-, never ml-/mr-/pl-/pr-/left-/right-.
 - All visible text via next-intl keys. Add en and ar for every key (mark machine-drafted ar in packages/i18n/REVIEW.md).
@@ -185,11 +191,13 @@ Seed logins: see docs/dev-users.md (one user per role, password Dev@12345, 2FA d
 - Mobile-first: every portal screen must work at 360 px width.
 
 ## Testing rules
+
 - Service logic: Vitest unit tests. Every endpoint: API e2e test against Testcontainers Postgres, including one forbidden-role test.
 - New user-facing flows: Playwright test. Never skip, delete or weaken a test to make it pass.
 - A task is done only when pnpm check is green.
 
 ## Workflow
+
 - Plan first, wait for approval, then implement. Ask when the PRD is ambiguous instead of guessing.
 - Follow existing patterns; look at the most similar existing module before creating something new.
 - Explain any new dependency in the plan. Prefer what is already installed.
@@ -209,6 +217,7 @@ description: Implement one build-plan task end to end with plan, tests and check
 disable-model-invocation: true
 argument-hint: <TASK-ID> <task details>
 ---
+
 Implement this build task: $ARGUMENTS
 
 1. Re-read the rules in CLAUDE.md. Find the task ID in docs/BUILD_PLAN.md and read the PRD sections it names in docs/PRD.md. Read docs/progress.md to see what exists. Open the most similar existing module and follow its pattern.
@@ -228,6 +237,7 @@ name: review-task
 description: Independent review of uncommitted changes before commit
 disable-model-invocation: true
 ---
+
 Use the code-reviewer subagent to review all uncommitted changes (git diff plus untracked files) against CLAUDE.md and the PRD sections for the current task. Then show its findings grouped High / Medium / Low, fix every High and Medium finding, and re-run pnpm check.
 ```
 
@@ -239,6 +249,7 @@ name: security-check
 description: Security and privacy review of uncommitted changes touching patient data, auth, files or money
 disable-model-invocation: true
 ---
+
 Use the security-reviewer subagent on all uncommitted changes. Fix every Critical and High finding, add a test that proves each fix, and re-run pnpm check. List any finding you did not fix and why.
 ```
 
@@ -251,10 +262,12 @@ description: Scaffold a full CRUD vertical slice for one entity following the re
 disable-model-invocation: true
 argument-hint: <EntityName> <portal route> <fields and permissions>
 ---
+
 Create a vertical slice for: $ARGUMENTS
 Follow apps/api/src/modules/masters exactly as the reference pattern.
+
 1. Zod schemas + types in packages/contracts. 2. Prisma model + migration (if missing). 3. NestJS module: controller, service, permissions, list with cursor pagination + filters + search, get, create, update, soft delete, audit events. 4. API e2e tests incl. forbidden role. 5. pnpm api:generate. 6. Portal list page (DataTable with filters, search, column sort), detail/edit page, create dialog, using packages/ui. 7. en + ar i18n keys. 8. Seed 5 realistic records. 9. pnpm check.
-Show the plan first and wait for approval.
+   Show the plan first and wait for approval.
 ```
 
 ### 5.3 Subagents
@@ -268,14 +281,16 @@ description: Reviews uncommitted changes for correctness, PRD fit, patterns, per
 tools: Read, Glob, Grep, Bash
 model: inherit
 ---
+
 You are a senior TypeScript reviewer for a medical-travel platform. Review the uncommitted changes (run git diff and git status). Check:
+
 1. Does it fully meet the PRD section and the task, nothing missing, nothing extra?
 2. CLAUDE.md rules: module pattern, permissions on every endpoint, stage machine, money as minor units, RTL-safe classes, i18n keys, ui components.
 3. Correctness: edge cases, null handling, transactions, race conditions, timezone errors.
 4. Performance: N+1 queries, missing indexes for new filters, unpaginated lists, large client bundles, unnecessary client components.
 5. Tests: forbidden-role test present, meaningful assertions, no skipped tests.
 6. UX: loading, error, empty states; mobile width; accessible labels.
-Report findings as High / Medium / Low with file:line and a concrete fix. Do not edit files.
+   Report findings as High / Medium / Low with file:line and a concrete fix. Do not edit files.
 ```
 
 `.claude/agents/security-reviewer.md`:
@@ -287,7 +302,9 @@ description: Security and privacy reviewer for changes touching patient data, do
 tools: Read, Glob, Grep, Bash
 model: inherit
 ---
+
 You are an application security engineer. The platform stores medical records and passports of foreign patients and must meet India's DPDP Act. Review the uncommitted changes for:
+
 - Broken access control: can any role (especially agent, hospital, patient) read or change data outside its scope? Check IDs taken from the request.
 - Data exposure: PII or medical data in logs, errors, URLs, analytics events, emails to the wrong person.
 - Files: public URLs, long-lived signed URLs, missing virus scan, missing audit of downloads.
@@ -295,7 +312,7 @@ You are an application security engineer. The platform stores medical records an
 - Injection and validation: raw SQL, unvalidated input, unsafe HTML (rich text must be sanitised).
 - Payments and webhooks: signature verification, idempotency, amount tampering, currency mix-ups.
 - Secrets in code; dependency risk.
-Report Critical / High / Medium / Low with file:line, an exploit scenario, and the fix. Do not edit files.
+  Report Critical / High / Medium / Low with file:line, an exploit scenario, and the fix. Do not edit files.
 ```
 
 ### 5.4 Hooks and settings
@@ -308,13 +325,20 @@ Report Critical / High / Medium / Low with file:line, an exploit scenario, and t
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
-        "hooks": [{ "type": "command", "command": "jq -r '.tool_input.file_path' | xargs npx prettier --write --ignore-unknown" }]
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | xargs npx prettier --write --ignore-unknown"
+          }
+        ]
       }
     ],
     "PreToolUse": [
       {
         "matcher": "Edit|Write",
-        "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/protect-files.sh" }]
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/protect-files.sh" }
+        ]
       }
     ]
   }
@@ -1323,19 +1347,19 @@ Done when: the founders can see cost per won case by channel for the last quarte
 
 Speed is designed in from the first task, not fixed at the end: the budgets below are enforced in CI from L-03 onward, and the techniques are already written into CLAUDE.md so Claude Code applies them in every task. If a budget fails, the task isn't done.
 
-| Area | Budget (target) | How it's measured |
-| --- | --- | --- |
-| Website LCP (mobile, slow 4G) | < 2.5 s | Lighthouse CI on 10 key pages, en + ar |
-| Website CLS / INP | < 0.1 / < 200 ms | Lighthouse CI + real-user Web Vitals to GA4 |
-| Website JS per page | < 120 KB gzipped (quote form < 180 KB) | Next.js bundle analyser in CI |
-| Portal first load | < 2 s on 4G; route changes < 300 ms | Playwright performance traces |
-| Portal JS (initial) | < 250 KB gzipped, heavy widgets lazy | Bundle analyser |
-| API reads | p95 < 300 ms, p99 < 800 ms | k6 load test + /metrics histograms |
-| API writes | p95 < 500 ms (slow work queued) | k6 + metrics |
-| Case list with filters (10k cases) | < 400 ms server time | k6 with seeded 10k-case dataset |
-| Search typeahead | < 150 ms server time | k6 |
-| Realtime update delivery | < 1 s between users | Playwright two-browser test |
-| Notification send (queued → provider) | < 10 s p95 | Queue metrics |
+| Area                                  | Budget (target)                        | How it's measured                           |
+| ------------------------------------- | -------------------------------------- | ------------------------------------------- |
+| Website LCP (mobile, slow 4G)         | < 2.5 s                                | Lighthouse CI on 10 key pages, en + ar      |
+| Website CLS / INP                     | < 0.1 / < 200 ms                       | Lighthouse CI + real-user Web Vitals to GA4 |
+| Website JS per page                   | < 120 KB gzipped (quote form < 180 KB) | Next.js bundle analyser in CI               |
+| Portal first load                     | < 2 s on 4G; route changes < 300 ms    | Playwright performance traces               |
+| Portal JS (initial)                   | < 250 KB gzipped, heavy widgets lazy   | Bundle analyser                             |
+| API reads                             | p95 < 300 ms, p99 < 800 ms             | k6 load test + /metrics histograms          |
+| API writes                            | p95 < 500 ms (slow work queued)        | k6 + metrics                                |
+| Case list with filters (10k cases)    | < 400 ms server time                   | k6 with seeded 10k-case dataset             |
+| Search typeahead                      | < 150 ms server time                   | k6                                          |
+| Realtime update delivery              | < 1 s between users                    | Playwright two-browser test                 |
+| Notification send (queued → provider) | < 10 s p95                             | Queue metrics                               |
 
 **Techniques by layer**
 
@@ -1395,15 +1419,15 @@ The platform holds foreign patients' medical records and passports, so one leak 
 
 Tests are what let you build fast with Claude Code without breaking last week's work: Claude Code runs them after every change and fixes what it broke before you ever see it. Aim for many fast unit and API tests, and a small number of end-to-end journeys.
 
-| Level | Tool | What it covers | When it runs |
-| --- | --- | --- | --- |
-| Unit | Vitest | Services, stage machine, money maths, commission and referral-fee calculations, permission matrix, validators | Every save (watch), `pnpm check`, every PR |
-| API e2e | Vitest + Supertest + Testcontainers Postgres | Every endpoint: happy path, validation error, forbidden role, not-found | `pnpm check`, every PR |
-| Component | Vitest + Testing Library | Shared ui components, complex forms | Every PR |
-| End-to-end | Playwright | Each new user flow (task level) + full journey suite (L-02) | Every PR (smoke), nightly (full) |
-| Accessibility | @axe-core/playwright | Website pages and key portal screens | Nightly |
-| Performance | Lighthouse CI, k6 | Budgets in section 17 | Every PR (Lighthouse), weekly + before release (k6) |
-| Security | gitleaks, Trivy, pnpm audit, ZAP baseline | Secrets, images, dependencies, common web vulnerabilities | Every PR / nightly |
+| Level         | Tool                                         | What it covers                                                                                                | When it runs                                        |
+| ------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| Unit          | Vitest                                       | Services, stage machine, money maths, commission and referral-fee calculations, permission matrix, validators | Every save (watch), `pnpm check`, every PR          |
+| API e2e       | Vitest + Supertest + Testcontainers Postgres | Every endpoint: happy path, validation error, forbidden role, not-found                                       | `pnpm check`, every PR                              |
+| Component     | Vitest + Testing Library                     | Shared ui components, complex forms                                                                           | Every PR                                            |
+| End-to-end    | Playwright                                   | Each new user flow (task level) + full journey suite (L-02)                                                   | Every PR (smoke), nightly (full)                    |
+| Accessibility | @axe-core/playwright                         | Website pages and key portal screens                                                                          | Nightly                                             |
+| Performance   | Lighthouse CI, k6                            | Budgets in section 17                                                                                         | Every PR (Lighthouse), weekly + before release (k6) |
+| Security      | gitleaks, Trivy, pnpm audit, ZAP baseline    | Secrets, images, dependencies, common web vulnerabilities                                                     | Every PR / nightly                                  |
 
 **Definition of done for every task**
 
@@ -1439,15 +1463,15 @@ These habits make the difference between Claude Code saving you months and Claud
 
 **When things go wrong**
 
-| Symptom | What to do |
-| --- | --- |
+| Symptom                                 | What to do                                                                                                                                    |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | Claude Code keeps failing the same test | Stop. `git restore .`, split the task into smaller steps, give it the failing test output and ask for a root-cause explanation before any fix |
-| Output ignores project patterns | Point to the exact reference file: "follow apps/api/src/modules/masters exactly"; add the missing rule to CLAUDE.md |
-| Session getting slow or confused | Commit what works, `/clear`, start a fresh session with the task ID; it will re-read progress.md |
-| Production bug | Paste the Sentry error and steps to reproduce: "write a failing test that reproduces this, then fix it" |
-| Slow page or query | "Profile /ops/cases with 10k seeded cases; show EXPLAIN ANALYZE for the slowest queries; propose indexes and query changes" |
-| Migration problem | Never edit a committed migration; ask for a new corrective migration and test it on a copy of staging data |
-| Integration not working | Ask Claude Code to write a small script that calls the provider sandbox directly and logs the raw response, then fix the adapter |
+| Output ignores project patterns         | Point to the exact reference file: "follow apps/api/src/modules/masters exactly"; add the missing rule to CLAUDE.md                           |
+| Session getting slow or confused        | Commit what works, `/clear`, start a fresh session with the task ID; it will re-read progress.md                                              |
+| Production bug                          | Paste the Sentry error and steps to reproduce: "write a failing test that reproduces this, then fix it"                                       |
+| Slow page or query                      | "Profile /ops/cases with 10k seeded cases; show EXPLAIN ANALYZE for the slowest queries; propose indexes and query changes"                   |
+| Migration problem                       | Never edit a committed migration; ask for a new corrective migration and test it on a copy of staging data                                    |
+| Integration not working                 | Ask Claude Code to write a small script that calls the provider sandbox directly and logs the raw response, then fix the adapter              |
 
 **Daily rhythm that works**
 

@@ -1,7 +1,13 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import type { Providers } from '@medtravel/notifications';
 import nodemailer from 'nodemailer';
 import { ENV } from '../../../config/config.module.js';
 import type { Env } from '../../../config/env.schema.js';
+import { RateLimiter } from '../../../auth/rate-limiter.js';
+import { NOTIFICATION_PROVIDERS } from '../../notifications/notifications.providers.js';
+
+/** Most sign-in SMS the whole API sends in an hour. */
+const SMS_PER_HOUR = 1000;
 
 export interface Mail {
   to: string;
@@ -22,8 +28,8 @@ export interface Mail {
 }
 
 /**
- * Sends one message. F-07 (the notification engine) puts real templates, languages and channels behind the same call;
- * until then these are plain-text messages in English.
+ * Sends one sign-in message (a code, a link). These carry secrets, so they bypass the notification log of F-07 and go straight
+ * to the email or SMS provider; everything else the platform says goes through `NotificationsService`.
  */
 @Injectable()
 export class Mailer {
@@ -32,7 +38,11 @@ export class Mailer {
   /** Messages kept by the `capture` transport, newest last. Only used in development and tests. */
   readonly captured: Mail[] = [];
 
-  constructor(@Inject(ENV) private readonly env: Env) {
+  constructor(
+    @Inject(ENV) private readonly env: Env,
+    @Inject(NOTIFICATION_PROVIDERS) private readonly providers: Providers,
+    private readonly limiter: RateLimiter,
+  ) {
     this.transport =
       env.EMAIL_TRANSPORT === 'smtp'
         ? nodemailer.createTransport({ host: env.SMTP_HOST, port: env.SMTP_PORT, secure: false })
@@ -48,7 +58,12 @@ export class Mailer {
       return;
     }
     if (mail.channel === 'sms') {
-      this.logger.warn('SMS is not available until F-07; the code was not sent');
+      // Each SMS costs money and can be pointed at a stranger: cap one number, and the whole platform, so a flood of
+      // made-up numbers cannot run up a bill.
+      this.limiter.consume(`sms:to:${mail.to.replace(/\D/g, '')}`, 5, 3600);
+      this.limiter.consume('sms:all', SMS_PER_HOUR, 3600);
+      // A code is a secret: it goes straight to the provider and is not written to the notification log.
+      await this.providers.sms.send({ to: mail.to, text: mail.text });
       return;
     }
     await this.transport.sendMail({

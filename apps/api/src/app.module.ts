@@ -11,6 +11,7 @@ import { DatabaseModule } from './database/database.module.js';
 import { HealthModule } from './health/health.module.js';
 import { RbacModule } from './rbac/rbac.module.js';
 import { DocumentsModule } from './modules/documents/documents.module.js';
+import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { StorageModule } from './storage/storage.module.js';
 import { MastersModule } from './modules/masters/masters.module.js';
 
@@ -30,6 +31,7 @@ import { MastersModule } from './modules/masters/masters.module.js';
     HealthModule,
     MastersModule,
     DocumentsModule,
+    NotificationsModule,
   ],
   providers: [
     // Every request body, query and param is validated against the Zod schema on its DTO.

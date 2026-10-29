@@ -3,6 +3,7 @@
 import { Bell } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { Button } from './button';
+import { Skeleton } from './skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
 
 export interface NotificationItem {
@@ -21,6 +22,17 @@ export interface NotificationsMenuProps {
   emptyLabel: string;
   /** Spoken with the count, e.g. "3 unread". */
   unreadLabel: (count: number) => string;
+  /** The true number unread when `items` is only the latest page; counted from `items` when not given. */
+  unreadCount?: number;
+  /** Shown instead of the list while it loads or when it could not be loaded. */
+  status?: 'ready' | 'loading' | 'error';
+  loadingLabel?: string;
+  errorLabel?: string;
+  /** Called with the id of the notification a person opened. */
+  onItemSelect?: (id: string) => void;
+  /** "Mark all as read" in the panel heading; shown only when `onMarkAllRead` is given and something is unread. */
+  markAllLabel?: string;
+  onMarkAllRead?: () => void;
 }
 
 /** The bell in the top bar: a count, and a panel listing the latest notifications. */
@@ -29,8 +41,15 @@ export function NotificationsMenu({
   label,
   emptyLabel,
   unreadLabel,
+  unreadCount,
+  status = 'ready',
+  loadingLabel,
+  errorLabel,
+  onItemSelect,
+  markAllLabel,
+  onMarkAllRead,
 }: NotificationsMenuProps) {
-  const unread = items.filter((item) => item.unread).length;
+  const unread = unreadCount ?? items.filter((item) => item.unread).length;
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -51,20 +70,48 @@ export function NotificationsMenu({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-0" aria-label={label}>
-        <h2 className="border-b px-4 py-3 text-sm font-semibold">{label}</h2>
-        {items.length === 0 ? (
+        <div className="flex items-center justify-between gap-2 border-b px-4 py-3">
+          <h2 className="text-sm font-semibold">{label}</h2>
+          {onMarkAllRead && markAllLabel && unread > 0 ? (
+            <Button variant="link" size="sm" className="h-auto p-0" onClick={onMarkAllRead}>
+              {markAllLabel}
+            </Button>
+          ) : null}
+        </div>
+        {status === 'loading' ? (
+          <div className="space-y-3 px-4 py-4" role="status" aria-label={loadingLabel}>
+            {[0, 1, 2].map((row) => (
+              <Skeleton key={row} className="h-10 w-full" />
+            ))}
+          </div>
+        ) : status === 'error' ? (
+          <p role="alert" className="px-4 py-8 text-center text-sm text-destructive">
+            {errorLabel}
+          </p>
+        ) : items.length === 0 ? (
           <p className="px-4 py-8 text-center text-sm text-muted-foreground">{emptyLabel}</p>
         ) : (
           <ul className="max-h-80 divide-y overflow-y-auto">
             {items.map((item) => (
-              <li key={item.id} className={cn('px-4 py-3 text-sm', item.unread && 'bg-accent/50')}>
-                <p className="font-medium">
-                  <bdi>{item.title}</bdi>
-                </p>
-                {item.body ? <p className="text-muted-foreground">{item.body}</p> : null}
-                <p className="mt-1 text-xs text-muted-foreground">
-                  <bdi>{item.timeLabel}</bdi>
-                </p>
+              <li key={item.id} className={cn('text-sm', item.unread && 'bg-accent/50')}>
+                <button
+                  type="button"
+                  disabled={!onItemSelect}
+                  onClick={() => onItemSelect?.(item.id)}
+                  className="block w-full px-4 py-3 text-start focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none enabled:hover:bg-accent/70 disabled:cursor-default"
+                >
+                  <span className="block font-medium">
+                    <bdi>{item.title}</bdi>
+                  </span>
+                  {item.body ? (
+                    <span className="block text-muted-foreground">
+                      <bdi>{item.body}</bdi>
+                    </span>
+                  ) : null}
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    <bdi>{item.timeLabel}</bdi>
+                  </span>
+                </button>
               </li>
             ))}
           </ul>

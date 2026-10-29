@@ -109,7 +109,9 @@ export async function createTestApp(
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule, ...(options.imports ?? [])],
   }).compile();
-  const app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
+  const app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter(), {
+    rawBody: true,
+  });
   await app.init();
   await app.getHttpAdapter().getInstance().ready();
   const db = createPrismaClient({ connectionString: urlFor(name) });

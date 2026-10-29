@@ -1,3 +1,4 @@
+import { PROVIDER_ENV_SHAPE, refineProviderEnv } from '@medtravel/notifications';
 import { z } from 'zod';
 
 /** A string that parses as a URL. Written without `z.url()` so it behaves the same on Zod 3 and 4. */
@@ -58,9 +59,7 @@ export const envSchema = z
     AUTH_RATE_LIMIT_MULTIPLIER: z.coerce.number().int().min(1).max(1000).default(1),
     /** `capture` keeps mail in memory (development, tests); `smtp` sends it. */
     EMAIL_TRANSPORT: z.enum(['capture', 'smtp']).default('capture'),
-    SMTP_HOST: z.string().default('localhost'),
-    SMTP_PORT: z.coerce.number().int().default(1025),
-    EMAIL_FROM: z.string().default('MedTravel <noreply@medtravel.local>'),
+    ...PROVIDER_ENV_SHAPE,
     /** Object storage: MinIO locally, S3 in production. Files are only ever in the private bucket. */
     S3_ENDPOINT: urlString('S3_ENDPOINT must be a URL').optional(),
     /** The address browsers use to reach the bucket when it differs from `S3_ENDPOINT` (a container name versus localhost). */
@@ -82,6 +81,7 @@ export const envSchema = z
   .superRefine((env, ctx) => {
     const issue = (path: string, message: string) =>
       ctx.addIssue({ code: 'custom', path: [path], message });
+    refineProviderEnv(env, issue);
     if (env.AUTH_RATE_LIMIT_MULTIPLIER > 1 && env.NODE_ENV === 'production') {
       issue('AUTH_RATE_LIMIT_MULTIPLIER', 'Relaxing the rate limits is not allowed in production');
     }

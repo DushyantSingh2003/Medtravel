@@ -21,6 +21,7 @@
     "@fastify/static": "^10.1.5",
     "@medtravel/contracts": "workspace:*",
     "@medtravel/db": "workspace:*",
+    "@medtravel/notifications": "workspace:*",
     "@medtravel/storage": "workspace:*",
     "@nestjs/common": "^12.1.2",
     "@nestjs/core": "^12.1.2",

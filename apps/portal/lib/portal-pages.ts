@@ -12,6 +12,7 @@ export type PageIcon =
   | 'BarChart3'
   | 'BedDouble'
   | 'BedSingle'
+  | 'Bell'
   | 'Briefcase'
   | 'Building2'
   | 'Calculator'
@@ -179,6 +180,7 @@ export const PORTAL_DEFINITIONS: Record<Portal, PortalDefinition> = {
       { key: 'pricing', icon: 'BadgePercent', priority: 'P0', section: 'admin' },
       { key: 'templates', icon: 'FileText', priority: 'P0', section: 'admin' },
       { key: 'audit', icon: 'History', priority: 'P0', section: 'admin' },
+      { key: 'notifications', icon: 'Bell', priority: 'P0', section: 'admin' },
       { key: 'reports', icon: 'BarChart3', priority: 'P0', section: 'admin' },
       { key: 'invoicing', icon: 'FileSpreadsheet', priority: 'P0', section: 'finance' },
       { key: 'payments', icon: 'CreditCard', priority: 'P0', section: 'finance' },

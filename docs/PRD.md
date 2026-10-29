@@ -1,6 +1,7 @@
 # Medical Tourism Platform — Product Requirements Document
 
 2026-10-09
+
 ## 1. Overview
 
 We are building an end-to-end medical travel platform that brings international patients to accredited Indian hospitals and manages every step from first enquiry in their home country to safe return and follow-up. The product is five connected portals on one backend, run by an in-house operations team. Brand name is a placeholder ("the Platform") until decided.
@@ -42,7 +43,7 @@ We are building an end-to-end medical travel platform that brings international 
 Eleven roles use the system; each sees only the portal and data their role needs (role-based access control).
 
 | Role                        | Portal                        | Who they are                                          | Main jobs                                                                                 |
-|-----------------------------|-------------------------------|-------------------------------------------------------|-------------------------------------------------------------------------------------------|
+| --------------------------- | ----------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | Patient                     | Website + patient portal/app  | Foreign national needing treatment                    | Submit case, compare quotes, pay, track journey, chat, upload documents                   |
 | Attendant                   | Patient portal (linked)       | Family member travelling with patient                 | View itinerary, chat, upload passport for visa                                            |
 | Agent / referral partner    | Agent portal                  | Freelancer, clinic or travel agency in source country | Refer patients, track their cases, see commission                                         |
@@ -91,7 +92,7 @@ Every patient is one **Case** that moves through 12 stages; each stage has an ow
 
 All six front ends talk to one backend API, which owns every business rule (who sees what, SLA timers, quote and commission maths), so an update made in one portal shows everywhere at once.
 
-*(Diagram in the PRD doc: system overview · 6 front ends, 1 API, data and external services)*
+_(Diagram in the PRD doc: system overview · 6 front ends, 1 API, data and external services)_
 
 The government Medical and Ayush Visa Portal is used by hospitals directly and is not integrated; its invitation letters are uploaded into the case.
 
@@ -102,7 +103,7 @@ The website wins trust and captures enquiries; the patient portal (web, later ap
 ### 5.1 Public website
 
 | Feature                | Requirement                                                                                                                                      | Priority            |
-|------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|---------------------|
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------- |
 | Home page              | Search by treatment/condition, trust badges (NABH/JCI partners, MVTF), patient video stories, how-it-works in 4 steps, WhatsApp and call buttons | P0                  |
 | Treatment pages        | Per procedure: overview, who needs it, India price range vs home country/USA/UK, stay length, success factors, FAQs, "Get free quote"            | P0                  |
 | Hospital pages         | Accreditations, specialities, city, international desk facilities, photos, featured doctors, packages                                            | P0                  |
@@ -120,7 +121,7 @@ The website wins trust and captures enquiries; the patient portal (web, later ap
 ### 5.2 Patient portal and app
 
 | Feature               | Requirement                                                                                                       | Priority |
-|-----------------------|-------------------------------------------------------------------------------------------------------------------|----------|
+| --------------------- | ----------------------------------------------------------------------------------------------------------------- | -------- |
 | Sign-up / login       | Email or phone OTP (WhatsApp OTP supported), social login optional; attendants invited by patient                 | P0       |
 | My case dashboard     | Current stage on a progress tracker, next action, assigned coordinator with photo and WhatsApp link               | P0       |
 | Medical records vault | Upload/download reports, scans, prescriptions, discharge summary; tags by type; share with chosen hospitals only  | P0       |
@@ -142,7 +143,7 @@ The website wins trust and captures enquiries; the patient portal (web, later ap
 This is the core of the business: a CRM and case-management tool where case managers, medical reviewers, ground coordinators and interpreters run every patient. It must work well on mobile for ground staff.
 
 | Feature              | Requirement                                                                                                                                  | Priority |
-|----------------------|----------------------------------------------------------------------------------------------------------------------------------------------|----------|
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | Lead inbox           | All leads from website, WhatsApp, calls, agents, email in one list; source and campaign captured; duplicate detection by phone/passport      | P0       |
 | Auto-assignment      | Round-robin or rule-based (language, country, speciality); SLA timer visible on each lead                                                    | P0       |
 | Case pipeline        | Kanban and list views by stage; filters by country, treatment, hospital, owner, agent                                                        | P0       |
@@ -166,7 +167,7 @@ This is the core of the business: a CRM and case-management tool where case mana
 Partner hospitals' international patient desks use this portal to answer cases fast and keep us updated; doctors get a light view for opinions and teleconsults. Hospitals must find it easier than email, or they won't use it.
 
 | Feature                   | Requirement                                                                                                                                         | Priority |
-|---------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|----------|
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | Onboarding                | Hospital profile, accreditations (NABH/JCI certificate upload with expiry), departments, doctors, rooms and tariffs, bank details, signed agreement | P0       |
 | Case requests inbox       | New opinion requests with case summary and reports; due-time countdown; accept/decline with reason                                                  | P0       |
 | Opinion and estimate form | Treatment plan, doctor assigned, stay (hospital + outside), package price, what is included/excluded, validity date                                 | P0       |
@@ -185,7 +186,7 @@ Partner hospitals' international patient desks use this portal to answer cases f
 Agents in source countries are expected to bring most early patients, so the portal must make referring simple and make commission fully transparent. Agents see only their own patients, and only the data the patient has consented to share.
 
 | Feature               | Requirement                                                                                                      | Priority |
-|-----------------------|------------------------------------------------------------------------------------------------------------------|----------|
+| --------------------- | ---------------------------------------------------------------------------------------------------------------- | -------- |
 | Agent registration    | Apply online with ID, business proof, country, languages; KYC review and approval by admin; agreement e-signed   | P0       |
 | Refer a patient       | Quick form + report upload, or share a personal referral link/QR code that tags the agent automatically          | P0       |
 | My referrals          | List of referred cases with stage (no medical details beyond what the patient allows)                            | P0       |
@@ -203,7 +204,7 @@ The admin portal configures the whole system and holds the money flows; logistic
 ### 9.1 Admin and content
 
 | Feature                      | Requirement                                                                                       | Priority |
-|------------------------------|---------------------------------------------------------------------------------------------------|----------|
+| ---------------------------- | ------------------------------------------------------------------------------------------------- | -------- |
 | User and role management     | Create staff users, assign roles and cities, deactivate, force 2FA                                | P0       |
 | Master data                  | Countries, languages, currencies, treatments, specialities, cities, document types, lost reasons  | P0       |
 | Hospital and doctor approval | Review onboarding, verify accreditation, publish/unpublish profile                                | P0       |
@@ -217,7 +218,7 @@ The admin portal configures the whole system and holds the money flows; logistic
 ### 9.2 Finance
 
 | Feature                        | Requirement                                                                                            | Priority |
-|--------------------------------|--------------------------------------------------------------------------------------------------------|----------|
+| ------------------------------ | ------------------------------------------------------------------------------------------------------ | -------- |
 | Invoicing                      | GST-compliant invoices for our service fees (export of services where applicable); credit notes        | P0       |
 | Payment collection             | Card, international wire, UPI; payment links; partial payments; multi-currency with INR settlement     | P0       |
 | Deposits on behalf of hospital | Where patient pays hospital deposit through us, track as pass-through liability, not revenue           | P1       |
@@ -231,7 +232,7 @@ The admin portal configures the whole system and holds the money flows; logistic
 ### 9.3 Logistics masters
 
 | Feature         | Requirement                                                                                                                                               | Priority |
-|-----------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------|----------|
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | Stays           | Partner guest houses/hotels/service apartments with distance to each hospital, room types, rates, availability calendar, halal kitchen, wheelchair access | P0       |
 | Transport       | Vendors, drivers, vehicles (incl. wheelchair/ambulance), city rates; job assignment                                                                       | P0       |
 | Interpreters    | Languages, city, rates, availability; assignment and hours log                                                                                            | P0       |
@@ -265,7 +266,7 @@ WhatsApp is the primary channel for patients and agents in all target markets, s
 **Agent alerts:** referral stage change, commission earned, payout sent.
 
 | Integration           | Purpose                                        | Example providers (choose at build)                                       | Priority |
-|-----------------------|------------------------------------------------|---------------------------------------------------------------------------|----------|
+| --------------------- | ---------------------------------------------- | ------------------------------------------------------------------------- | -------- |
 | WhatsApp Business API | Two-way chat, templates, OTP                   | Meta Cloud API via Gupshup / Interakt / WATI                              | P0       |
 | Email                 | Transactional mail                             | Amazon SES / SendGrid                                                     | P0       |
 | SMS                   | OTP and alerts fallback                        | MSG91 / Twilio                                                            | P0       |
@@ -285,7 +286,7 @@ WhatsApp is the primary channel for patients and agents in all target markets, s
 **Case** is the central entity: one patient, one treatment episode; everything else hangs off it. Key entities and main fields:
 
 | Entity          | Key fields                                                                                                        | Relations                                                                                        |
-|-----------------|-------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------|
+| --------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | User            | id, name, email, phone, role, language, 2FA, status                                                               | One per login; linked to Patient, Agent, HospitalStaff or Staff                                  |
 | Patient         | name, DOB, gender, nationality, passport no. + expiry, address, emergency contact, consent flags                  | Has many Cases, Attendants, Documents                                                            |
 | Attendant       | name, relation, passport, visa status                                                                             | Belongs to Patient; linked to Case travel                                                        |
@@ -362,7 +363,7 @@ We hold health records and passports of foreign nationals, so privacy and securi
 A single TypeScript stack keeps the team small: one backend API serving all five portals, with separate front-end apps per portal sharing a design system. These are recommendations; the development team can propose equivalents.
 
 | Layer                                                  | Choice                                                                 | Why                                                        |
-|--------------------------------------------------------|------------------------------------------------------------------------|------------------------------------------------------------|
+| ------------------------------------------------------ | ---------------------------------------------------------------------- | ---------------------------------------------------------- |
 | Public website                                         | Next.js (server-side rendering) + headless CMS (Strapi or Payload)     | SEO, fast pages, editors update content without developers |
 | Portals (patient, coordinator, hospital, agent, admin) | Next.js or React + Tailwind, shared component library                  | One codebase style; responsive for mobile staff            |
 | Mobile app (phase 2)                                   | React Native / Expo for patient and ground-coordinator apps            | Reuses TypeScript logic and API                            |
@@ -382,7 +383,7 @@ A single TypeScript stack keeps the team small: one backend API serving all five
 
 The MVP goes live about 4 months after kickoff with every P0 feature from sections 5 to 10; P1 features follow by month 8 and P2 by month 12.
 
-*(Diagram in the PRD doc: release plan · 4 phases, 3 gates)*
+_(Diagram in the PRD doc: release plan · 4 phases, 3 gates)_
 
 **Suggested team for the build:** 1 product manager (can be a founder), 1 UI/UX designer, 3–4 full-stack developers, 1 QA tester, part-time DevOps. Two-week sprints with a demo to the operations team at the end of each sprint, so real coordinators shape the CRM before launch.
 
@@ -391,7 +392,7 @@ The MVP goes live about 4 months after kickoff with every P0 feature from sectio
 The one number that matters is **converted patients per month**; the rest explain why it moves. Targets are set after the first 3 months of real data.
 
 | Metric                     | Definition                                                            | Where it's tracked        |
-|----------------------------|-----------------------------------------------------------------------|---------------------------|
+| -------------------------- | --------------------------------------------------------------------- | ------------------------- |
 | Leads                      | New enquiries per month, by source, country, treatment                | Coordinator portal report |
 | First response time        | Lead created → first contact (target under 2 hours)                   | SLA report                |
 | Quote turnaround           | Reports complete → quote sent (target under 48 hours)                 | SLA report                |

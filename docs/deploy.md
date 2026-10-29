@@ -2,10 +2,10 @@
 
 Two GitHub Actions workflows live in `.github/workflows/`:
 
-| Workflow | Runs on | Does |
-| --- | --- | --- |
-| `ci.yml` | every pull request, pushes to `develop`, manual | lint, typecheck, unit tests · API e2e against Postgres and Redis service containers · build all apps, boot the API and website, Playwright smoke test · build the four Docker images (not pushed) |
-| `deploy-staging.yml` | push to `main`, manual | build the four images, push to Amazon ECR, roll the staging ECS services |
+| Workflow             | Runs on                                         | Does                                                                                                                                                                                              |
+| -------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ci.yml`             | every pull request, pushes to `develop`, manual | lint, typecheck, unit tests · API e2e against Postgres and Redis service containers · build all apps, boot the API and website, Playwright smoke test · build the four Docker images (not pushed) |
+| `deploy-staging.yml` | push to `main`, manual                          | build the four images, push to Amazon ECR, roll the staging ECS services                                                                                                                          |
 
 `develop` is checked on push because the build loop merges task branches into it without a pull
 request. CI uses the pnpm store cache (through `actions/setup-node`) and a local Turborepo cache
@@ -17,10 +17,10 @@ then these pages describe what the workflows expect it to look like.
 
 ## Docker images
 
-| Image | Dockerfile | Notes |
-| --- | --- | --- |
+| Image           | Dockerfile                                                     | Notes                                                             |
+| --------------- | -------------------------------------------------------------- | ----------------------------------------------------------------- |
 | `api`, `worker` | `infra/docker/node-service.Dockerfile` (`--build-arg APP=api`) | production dependencies and compiled output only, `pnpm deploy`ed |
-| `web`, `portal` | `infra/docker/next-app.Dockerfile` (`--build-arg APP=web`) | Next.js standalone server |
+| `web`, `portal` | `infra/docker/next-app.Dockerfile` (`--build-arg APP=web`)     | Next.js standalone server                                         |
 
 All are multi-stage, based on `node:22-alpine`, and run as the unprivileged `node` user.
 Build context is the repository root:
@@ -45,31 +45,31 @@ docker build -f infra/docker/next-app.Dockerfile --build-arg APP=web \
 ## GitHub configuration
 
 Set under **Settings → Secrets and variables → Actions**. Values that are not secret are
-*variables*, not secrets. Set them as **repository** variables: the deploy job's `if` condition is
+_variables_, not secrets. Set them as **repository** variables: the deploy job's `if` condition is
 evaluated before the job's environment is applied, so a variable that exists only on the
 `staging` environment is invisible to it and the deploy silently skips.
 
 ### Required for deploy
 
-| Name | Kind | Example | Used for |
-| --- | --- | --- | --- |
-| `AWS_ROLE_ARN` | variable | `arn:aws:iam::123456789012:role/medtravel-staging-github-deploy` | IAM role the workflow assumes through GitHub OIDC. Setting it switches the deploy on. |
-| `STAGING_API_URL` | variable | `https://api.staging.example.com` | Compiled into the web and portal bundles as `NEXT_PUBLIC_API_URL`. The deploy fails fast for web and portal if it is empty. |
+| Name              | Kind     | Example                                                          | Used for                                                                                                                    |
+| ----------------- | -------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `AWS_ROLE_ARN`    | variable | `arn:aws:iam::123456789012:role/medtravel-staging-github-deploy` | IAM role the workflow assumes through GitHub OIDC. Setting it switches the deploy on.                                       |
+| `STAGING_API_URL` | variable | `https://api.staging.example.com`                                | Compiled into the web and portal bundles as `NEXT_PUBLIC_API_URL`. The deploy fails fast for web and portal if it is empty. |
 
 There are **no AWS access keys** in GitHub: the workflow uses OIDC (`id-token: write`).
 
 ### Optional (defaults shown)
 
-| Name | Kind | Default | Used for |
-| --- | --- | --- | --- |
-| `STAGING_SITE_URL` | variable | empty (`http://localhost:3000`) | Public website only. Compiled in as `NEXT_PUBLIC_SITE_URL`: the base for canonical links, `sitemap.xml` and social previews. |
-| `STAGING_WHATSAPP_NUMBER` | variable | empty (button hidden) | Public website only. Digits with country code, for example `919876543210`. Compiled in as `NEXT_PUBLIC_WHATSAPP_NUMBER`; the floating WhatsApp button appears only when it is set. |
-| `AWS_REGION` | variable | `ap-south-1` | Region of ECR and ECS |
-| `ECS_CLUSTER` | variable | `medtravel-staging` | ECS cluster name |
-| `ECS_SERVICE_PREFIX` | variable | `medtravel-staging` | Services are `<prefix>-api`, `-worker`, `-web`, `-portal` |
-| `ECR_REPOSITORY_PREFIX` | variable | `medtravel` | Repositories are `<prefix>-api`, `-worker`, `-web`, `-portal` |
-| `TURBO_TOKEN` | secret | unset | Turborepo remote cache; leave unset to use only the local cache |
-| `TURBO_TEAM` | variable | unset | Turborepo remote cache team |
+| Name                      | Kind     | Default                         | Used for                                                                                                                                                                           |
+| ------------------------- | -------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `STAGING_SITE_URL`        | variable | empty (`http://localhost:3000`) | Public website only. Compiled in as `NEXT_PUBLIC_SITE_URL`: the base for canonical links, `sitemap.xml` and social previews.                                                       |
+| `STAGING_WHATSAPP_NUMBER` | variable | empty (button hidden)           | Public website only. Digits with country code, for example `919876543210`. Compiled in as `NEXT_PUBLIC_WHATSAPP_NUMBER`; the floating WhatsApp button appears only when it is set. |
+| `AWS_REGION`              | variable | `ap-south-1`                    | Region of ECR and ECS                                                                                                                                                              |
+| `ECS_CLUSTER`             | variable | `medtravel-staging`             | ECS cluster name                                                                                                                                                                   |
+| `ECS_SERVICE_PREFIX`      | variable | `medtravel-staging`             | Services are `<prefix>-api`, `-worker`, `-web`, `-portal`                                                                                                                          |
+| `ECR_REPOSITORY_PREFIX`   | variable | `medtravel`                     | Repositories are `<prefix>-api`, `-worker`, `-web`, `-portal`                                                                                                                      |
+| `TURBO_TOKEN`             | secret   | unset                           | Turborepo remote cache; leave unset to use only the local cache                                                                                                                    |
+| `TURBO_TEAM`              | variable | unset                           | Turborepo remote cache team                                                                                                                                                        |
 
 Also create a GitHub **environment** named `staging` (Settings → Environments). Add required
 reviewers there if deploys should need approval.
@@ -99,6 +99,7 @@ Created by Terraform in L-05; listed so they can be made by hand in the meantime
      `ecr:CompleteLayerUpload`, `ecr:PutImage`, `ecr:BatchGetImage`, `ecr:GetDownloadUrlForLayer`
      on the four repositories
    - `ecs:UpdateService` and `ecs:DescribeServices` on the four services
+
 4. **Mutable image tags** on the four ECR repositories. `:staging` is pushed again on every
    deploy, so an immutable-tag repository (a common default in Terraform modules) makes the
    second deploy fail on `PutImage`.

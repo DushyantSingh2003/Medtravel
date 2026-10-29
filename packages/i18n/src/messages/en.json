@@ -453,7 +453,10 @@
       "nothingPicked": "Nothing chosen yet.",
       "siteNavigation": "Demo site navigation",
       "footerNavigation": "Demo footer links",
-      "legalNavigation": "Demo legal links"
+      "legalNavigation": "Demo legal links",
+      "actionBell": "Notifications with a count and a mark-all action",
+      "loadingBell": "Notifications loading",
+      "errorBell": "Notifications failed to load"
     },
     "documents": {
       "listLabel": "Documents",
@@ -602,7 +605,8 @@
       "interpreters": "Interpreters",
       "welcome-kit": "Welcome kit",
       "flights": "Flight bookings",
-      "audit": "Audit log"
+      "audit": "Audit log",
+      "notifications": "Notifications"
     }
   },
   "pages": {
@@ -693,7 +697,8 @@
       "interpreters": "Languages, city, rates, availability, assignment and hours log.",
       "welcome-kit": "SIM cards, currency and kit items in stock per city.",
       "flights": "Bookings made through the travel partner, with PNR and times, creating the pickup job automatically.",
-      "audit": "Who viewed or changed any patient record, with time and IP address."
+      "audit": "Who viewed or changed any patient record, with time and IP address.",
+      "notifications": "Every message the platform sent, on which channel, and whether it arrived. Send a test to check a channel."
     }
   },
   "shell": {
@@ -714,7 +719,11 @@
     "signOut": "Sign out",
     "breadcrumb": "Breadcrumb",
     "unread": "{count, plural, one {# unread} other {# unread}}",
-    "accountSecurity": "Account security"
+    "accountSecurity": "Account security",
+    "notificationsLoading": "Loading notifications",
+    "notificationsError": "Could not load your notifications.",
+    "notificationsMarkAll": "Mark all as read",
+    "accountNotifications": "Notification settings"
   },
   "roles": {
     "patient": "Patient",
@@ -1375,6 +1384,144 @@
       "shared": "{hospital} can now see {name}",
       "unshared": "{hospital} can no longer see {name}",
       "downloadFailed": "Could not download the file."
+    }
+  },
+  "notifications": {
+    "preferences": {
+      "title": "Notification settings",
+      "description": "Choose where you want to hear from us. Messages in the app and security alerts always reach you.",
+      "channelsTitle": "Channels",
+      "channels": {
+        "email": {
+          "name": "Email",
+          "hint": "A copy of every message, for your records."
+        },
+        "whatsapp": {
+          "name": "WhatsApp",
+          "hint": "Quick updates on your phone. Needs a phone number on your account."
+        },
+        "sms": {
+          "name": "SMS",
+          "hint": "Reminders as text messages when it is urgent."
+        }
+      },
+      "inApp": "In the app: always on. You see these under the bell.",
+      "saved": "Your settings were saved.",
+      "saveFailed": "Your settings could not be saved. Try again.",
+      "loading": "Loading your settings",
+      "errorTitle": "Could not load your settings",
+      "errorDescription": "Check your connection, then try again.",
+      "retry": "Try again"
+    },
+    "log": {
+      "title": "Notifications",
+      "description": "Every message the platform sent, on which channel, and whether it arrived. Send a test to check a channel.",
+      "columns": {
+        "time": "Time",
+        "event": "Event",
+        "channel": "Channel",
+        "status": "Status",
+        "person": "Person",
+        "attempts": "Tries",
+        "detail": "Detail"
+      },
+      "filters": {
+        "event": "Event",
+        "allEvents": "All events",
+        "channel": "Channel",
+        "allChannels": "All channels",
+        "status": "Status",
+        "allStatuses": "All statuses",
+        "person": "Search by person: name or email",
+        "from": "From",
+        "to": "To",
+        "clear": "Clear filters"
+      },
+      "channels": {
+        "in_app": "In the app",
+        "email": "Email",
+        "whatsapp": "WhatsApp",
+        "sms": "SMS",
+        "push": "Push"
+      },
+      "statuses": {
+        "queued": "Queued",
+        "sent": "Sent",
+        "delivered": "Delivered",
+        "read": "Read",
+        "failed": "Failed"
+      },
+      "noError": "None",
+      "test": {
+        "button": "Send a test",
+        "title": "Send a test notification",
+        "description": "Sends the test message to your own account on every channel you have set up, in your language. Check it appears below.",
+        "send": "Send",
+        "sending": "Sending…",
+        "close": "Close",
+        "queued": "{count, plural, one {# message queued} other {# messages queued}}",
+        "skipped": "Not sent on {channel}: {reason}",
+        "failed": "The test could not be sent.",
+        "reasons": {
+          "no_email": "no email address",
+          "no_phone": "no phone number",
+          "account_not_active": "account is not active",
+          "switched_off": "switched off",
+          "duplicate": "already sent"
+        }
+      },
+      "table": {
+        "caption": "Notification log",
+        "search": "Search by person: name or email",
+        "columns": "Columns",
+        "selectAll": "Select all rows",
+        "selectRow": "Select {name}",
+        "previous": "Previous page",
+        "next": "Next page",
+        "rowsPerPage": "Rows per page",
+        "pageOf": "Page {page} of {pages}",
+        "total": "{count, plural, one {# message} other {# messages}}",
+        "selected": "{count, plural, one {# selected} other {# selected}}",
+        "loading": "Loading the notification log",
+        "emptyTitle": "No notifications",
+        "emptyDescription": "Nothing matches these filters. Clear them or send a test.",
+        "errorTitle": "Could not load the log",
+        "errorDescription": "Check your connection, then try again.",
+        "retry": "Try again"
+      }
+    },
+    "events": {
+      "enquiry_received": "Enquiry received",
+      "coordinator_assigned": "Coordinator assigned",
+      "reports_missing": "Reports missing",
+      "reports_received": "Reports received",
+      "opinions_ready": "Opinions ready",
+      "quote_sent": "Quote sent",
+      "quote_expiring": "Quote expiring",
+      "payment_received": "Payment received",
+      "invitation_letter_ready": "Invitation letter ready",
+      "visa_approved": "Visa approved",
+      "visa_refused": "Visa refused",
+      "itinerary_confirmed": "Itinerary confirmed",
+      "pickup_24h": "Pickup in 24 hours",
+      "pickup_2h": "Pickup in 2 hours",
+      "appointment_reminder": "Appointment reminder",
+      "daily_treatment_update": "Daily treatment update",
+      "discharge_summary_uploaded": "Discharge summary uploaded",
+      "followup_teleconsult_reminder": "Follow-up consultation reminder",
+      "feedback_request": "Feedback request",
+      "new_lead": "New lead",
+      "sla_breach": "SLA breach",
+      "hospital_response_overdue": "Hospital response overdue",
+      "bill_over_estimate": "Bill over estimate",
+      "arrival_tomorrow": "Arrival tomorrow",
+      "incident_logged": "Incident logged",
+      "payment_failed": "Payment failed",
+      "referral_stage_changed": "Referral stage changed",
+      "commission_earned": "Commission earned",
+      "payout_sent": "Payout sent",
+      "document_quarantined": "File quarantined",
+      "test_event": "Test notification"
     }
   }
 }

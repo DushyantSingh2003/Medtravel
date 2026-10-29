@@ -236,6 +236,32 @@ export function ShellSections({ locale }: { locale: Locale }) {
             emptyLabel={root('shell.notificationsEmpty')}
             unreadLabel={(count) => t('shellDemo.unread', { count })}
           />
+          <NotificationsMenu
+            items={notifications}
+            label={t('shellDemo.actionBell')}
+            emptyLabel={root('shell.notificationsEmpty')}
+            unreadLabel={(count) => t('shellDemo.unread', { count })}
+            unreadCount={12}
+            markAllLabel={root('shell.notificationsMarkAll')}
+            onMarkAllRead={() => undefined}
+            onItemSelect={() => undefined}
+          />
+          <NotificationsMenu
+            items={[]}
+            status="loading"
+            label={t('shellDemo.loadingBell')}
+            emptyLabel={root('shell.notificationsEmpty')}
+            loadingLabel={root('shell.notificationsLoading')}
+            unreadLabel={(count) => t('shellDemo.unread', { count })}
+          />
+          <NotificationsMenu
+            items={[]}
+            status="error"
+            label={t('shellDemo.errorBell')}
+            emptyLabel={root('shell.notificationsEmpty')}
+            errorLabel={root('shell.notificationsError')}
+            unreadLabel={(count) => t('shellDemo.unread', { count })}
+          />
         </div>
       </Section>
 

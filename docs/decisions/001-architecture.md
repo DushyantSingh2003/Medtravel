@@ -17,27 +17,27 @@ so the structure favours patterns that are easy to repeat and a codebase one ses
 One TypeScript monorepo (pnpm workspaces + Turborepo) with four deployable apps and shared
 packages.
 
-| Layer | Choice | Why |
-| --- | --- | --- |
-| Monorepo | pnpm + Turborepo | One repo to read; cached builds and tests |
-| API | NestJS on Fastify, `nestjs-zod`, OpenAPI | A module pattern that repeats well; Fastify is faster than Express |
-| ORM / database | Prisma + PostgreSQL 16, `pg_trgm` and full-text search | Type-safe queries and migrations; no separate search engine at MVP |
-| Validation / types | Zod in `packages/contracts`, shared by API and UI | One schema is the API validation, the form validation and the type |
-| API client | orval generates TanStack Query hooks from the OpenAPI document | No hand-written fetch code; the front end cannot drift from the API |
-| Queues | Redis + BullMQ in `apps/worker` | Slow work never blocks a request |
-| Realtime | Socket.IO with the Redis adapter | Live chat, case updates, notifications |
-| Website | Next.js App Router, static generation + ISR | Served from a CDN; strong Core Web Vitals and SEO |
-| Portal | One Next.js app, role-based route groups (`/patient /ops /hospital /agent /admin`) | Login, layout, tables, forms, chat and uploads are built once and reused by all five portals |
-| UI | Tailwind + shadcn/ui + lucide, RTL through logical CSS properties | Fluent to generate; Arabic right-to-left from day one |
-| i18n | next-intl for UI text, translation tables for database content | |
-| Auth | Own module: argon2, OTP (email/SMS/WhatsApp), TOTP 2FA, httpOnly cookie sessions with refresh rotation | Full control over 11 roles on one domain |
-| Permissions | CASL abilities from one permission matrix in `contracts` | The same rules are enforced in the API and used to hide UI |
-| Files | S3 presigned multipart upload, ClamAV scan, pdf-lib watermark | Large uploads go straight to S3; medical files only ever via short-lived signed links |
-| PDFs | `@react-pdf/renderer` in the worker | Branded quotes, invoices, statements |
-| Email | React Email + Amazon SES | Templates in code, versioned |
-| Testing | Vitest, Testcontainers (real Postgres), Playwright, MSW | Every test can run locally |
-| Infrastructure | Docker; AWS ECS Fargate, RDS, ElastiCache, S3, CloudFront, SES; Terraform | India data residency; infrastructure as code |
-| Observability | Sentry, pino JSON logs to CloudWatch, uptime checks | Errors visible within minutes |
+| Layer              | Choice                                                                                                 | Why                                                                                          |
+| ------------------ | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| Monorepo           | pnpm + Turborepo                                                                                       | One repo to read; cached builds and tests                                                    |
+| API                | NestJS on Fastify, `nestjs-zod`, OpenAPI                                                               | A module pattern that repeats well; Fastify is faster than Express                           |
+| ORM / database     | Prisma + PostgreSQL 16, `pg_trgm` and full-text search                                                 | Type-safe queries and migrations; no separate search engine at MVP                           |
+| Validation / types | Zod in `packages/contracts`, shared by API and UI                                                      | One schema is the API validation, the form validation and the type                           |
+| API client         | orval generates TanStack Query hooks from the OpenAPI document                                         | No hand-written fetch code; the front end cannot drift from the API                          |
+| Queues             | Redis + BullMQ in `apps/worker`                                                                        | Slow work never blocks a request                                                             |
+| Realtime           | Socket.IO with the Redis adapter                                                                       | Live chat, case updates, notifications                                                       |
+| Website            | Next.js App Router, static generation + ISR                                                            | Served from a CDN; strong Core Web Vitals and SEO                                            |
+| Portal             | One Next.js app, role-based route groups (`/patient /ops /hospital /agent /admin`)                     | Login, layout, tables, forms, chat and uploads are built once and reused by all five portals |
+| UI                 | Tailwind + shadcn/ui + lucide, RTL through logical CSS properties                                      | Fluent to generate; Arabic right-to-left from day one                                        |
+| i18n               | next-intl for UI text, translation tables for database content                                         |                                                                                              |
+| Auth               | Own module: argon2, OTP (email/SMS/WhatsApp), TOTP 2FA, httpOnly cookie sessions with refresh rotation | Full control over 11 roles on one domain                                                     |
+| Permissions        | CASL abilities from one permission matrix in `contracts`                                               | The same rules are enforced in the API and used to hide UI                                   |
+| Files              | S3 presigned multipart upload, ClamAV scan, pdf-lib watermark                                          | Large uploads go straight to S3; medical files only ever via short-lived signed links        |
+| PDFs               | `@react-pdf/renderer` in the worker                                                                    | Branded quotes, invoices, statements                                                         |
+| Email              | React Email + Amazon SES                                                                               | Templates in code, versioned                                                                 |
+| Testing            | Vitest, Testcontainers (real Postgres), Playwright, MSW                                                | Every test can run locally                                                                   |
+| Infrastructure     | Docker; AWS ECS Fargate, RDS, ElastiCache, S3, CloudFront, SES; Terraform                              | India data residency; infrastructure as code                                                 |
+| Observability      | Sentry, pino JSON logs to CloudWatch, uptime checks                                                    | Errors visible within minutes                                                                |
 
 Domains: `www` (website), `app` (all portals), `api` (API + WebSocket), `files` (CDN for public
 images only; medical files always through signed links).

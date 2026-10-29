@@ -91,6 +91,8 @@ describe('schema.prisma enums', () => {
           'permissionSubject',
           'auditAccessAction',
           'identifier',
+          'notificationEventKey',
+          'preferenceChannel',
         ].includes(base)
       )
         continue;
@@ -148,6 +150,7 @@ describe('schema.prisma conventions', () => {
       'Message',
       'Conversation',
       'Notification',
+      'NotificationPreference',
       'Feedback',
       'Incident',
       'Consent',
@@ -255,6 +258,7 @@ describe('schema.prisma conventions', () => {
       'AuthChallenge',
       'BackupCode',
       'FileUpload',
+      'NotificationPreference',
       'CaseStageHistory',
       'MedicalSummary',
       'QuoteLine',
