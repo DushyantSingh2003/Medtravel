@@ -104,8 +104,9 @@ export const auditEventSchema = z.object({
   entityType: z.string().max(100),
   entityId: z.string().max(100),
   patientId: z.uuid().nullable(),
-  before: z.record(z.string(), z.unknown()).nullable(),
-  after: z.record(z.string(), z.unknown()).nullable(),
+  // `catchall` rather than `record`: nestjs-zod renders a record's key schema as `propertyNames`, which orval rejects.
+  before: z.object({}).catchall(z.unknown()).nullable(),
+  after: z.object({}).catchall(z.unknown()).nullable(),
   ip: z.string().max(45).nullable(),
   userAgent: z.string().max(500).nullable(),
   requestId: z.string().max(100).nullable(),

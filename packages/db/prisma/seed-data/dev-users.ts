@@ -145,6 +145,8 @@ export async function seedDevUsers(prisma: PrismaClient): Promise<number> {
       DEV_TWO_FACTOR_SECRET,
     ),
   });
+  await seedSampleAudit(prisma, ids.get('case_manager'), ids.get('super_admin'));
+
   const unenrolledId = await create(DEV_UNENROLLED_EMAIL, 'case_manager');
   await prisma.staffProfile.upsert({
     where: { userId: unenrolledId },
@@ -152,4 +154,49 @@ export async function seedDevUsers(prisma: PrismaClient): Promise<number> {
     create: { userId: unenrolledId },
   });
   return ROLES.length + 2;
+}
+
+/** A few audit events so the admin audit screen has something to show on a fresh database (marked with request id `seed`). */
+async function seedSampleAudit(
+  prisma: PrismaClient,
+  caseManagerId: string | undefined,
+  adminId: string | undefined,
+): Promise<void> {
+  if (!caseManagerId || !adminId) return;
+  if (await prisma.auditEvent.count({ where: { requestId: 'seed' } })) return;
+  const base = { requestId: 'seed', ip: '203.0.113.10', userAgent: 'Seed data' };
+  const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000);
+  await prisma.auditEvent.createMany({
+    data: [
+      {
+        ...base,
+        actorId: caseManagerId,
+        actorRole: 'case_manager',
+        action: 'document.viewed',
+        entityType: 'Document',
+        entityId: '00000000-0000-4000-8000-0000000000d1',
+        createdAt: minutesAgo(30),
+      },
+      {
+        ...base,
+        actorId: caseManagerId,
+        actorRole: 'case_manager',
+        action: 'document.downloaded',
+        entityType: 'Document',
+        entityId: '00000000-0000-4000-8000-0000000000d1',
+        createdAt: minutesAgo(25),
+      },
+      {
+        ...base,
+        actorId: adminId,
+        actorRole: 'super_admin',
+        action: 'master_data.updated',
+        entityType: 'Treatment',
+        entityId: '00000000-0000-4000-8000-0000000000e1',
+        before: { name: 'Knee replacement' },
+        after: { name: 'Total knee replacement' },
+        createdAt: minutesAgo(10),
+      },
+    ],
+  });
 }
