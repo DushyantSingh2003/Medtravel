@@ -21,6 +21,8 @@ export interface AccessEntry {
   entityId: string;
   /** The patient the record belongs to, so a patient's whole history can be pulled up. */
   patientId?: string | null;
+  /** Facts about how the access went (for example `{ watermarked: true }`); never file names or content. */
+  details?: Record<string, unknown>;
 }
 
 /**
@@ -81,7 +83,13 @@ export class AuditService {
    */
   async recordAccess(context: RequestContext, entry: AccessEntry): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
-      await this.record(tx, context, entry);
+      await this.record(tx, context, {
+        action: entry.action,
+        entityType: entry.entityType,
+        entityId: entry.entityId,
+        patientId: entry.patientId ?? null,
+        ...(entry.details ? { after: entry.details } : {}),
+      });
       if (entry.action === 'document.downloaded' && context.actor) {
         await this.downloads.check(tx, context.actor.userId, context);
       }

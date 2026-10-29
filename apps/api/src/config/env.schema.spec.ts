@@ -50,6 +50,8 @@ describe('loadEnv', () => {
       AUTH_ENCRYPTION_KEY: 'ab'.repeat(32),
       EMAIL_TRANSPORT: 'smtp',
       TRUST_PROXY_HOPS: '1',
+      S3_ACCESS_KEY: 'AKIAREAL',
+      S3_SECRET_KEY: 'real-secret-key',
     };
     expect(loadEnv(production as NodeJS.ProcessEnv).NODE_ENV).toBe('production');
     expect(() =>
@@ -58,6 +60,9 @@ describe('loadEnv', () => {
     expect(() => loadEnv({ ...production, TRUST_PROXY_HOPS: '0' } as NodeJS.ProcessEnv)).toThrow(
       /TRUST_PROXY_HOPS/,
     );
+    expect(() =>
+      loadEnv({ ...production, S3_SECRET_KEY: 'medtravel-secret' } as NodeJS.ProcessEnv),
+    ).toThrow(/S3_SECRET_KEY/);
   });
 
   it('rejects a malformed encryption key and a short token secret', () => {

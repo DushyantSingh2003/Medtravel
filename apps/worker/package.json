@@ -20,6 +20,7 @@
     "@medtravel/db": "workspace:*",
     "@medtravel/emails": "workspace:*",
     "@medtravel/pdf": "workspace:*",
+    "@medtravel/storage": "workspace:*",
     "@nestjs/bullmq": "^12.0.0",
     "@nestjs/common": "^12.1.2",
     "@nestjs/core": "^12.1.2",

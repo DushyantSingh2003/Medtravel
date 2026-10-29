@@ -18,6 +18,8 @@ const urlString = (message: string) =>
  */
 /** Development-only defaults so a fresh checkout runs; production refuses them. */
 const DEV_TOKEN_SECRET = 'dev-only-token-secret-change-me-0123456789abcdef';
+const DEV_S3_ACCESS_KEY = 'medtravel';
+const DEV_S3_SECRET_KEY = 'medtravel-secret';
 const DEV_ENCRYPTION_KEY = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
 export const envSchema = z
@@ -59,6 +61,18 @@ export const envSchema = z
     SMTP_HOST: z.string().default('localhost'),
     SMTP_PORT: z.coerce.number().int().default(1025),
     EMAIL_FROM: z.string().default('MedTravel <noreply@medtravel.local>'),
+    /** Object storage: MinIO locally, S3 in production. Files are only ever in the private bucket. */
+    S3_ENDPOINT: urlString('S3_ENDPOINT must be a URL').optional(),
+    /** The address browsers use to reach the bucket when it differs from `S3_ENDPOINT` (a container name versus localhost). */
+    S3_PUBLIC_ENDPOINT: urlString('S3_PUBLIC_ENDPOINT must be a URL').optional(),
+    S3_REGION: z.string().default('us-east-1'),
+    S3_ACCESS_KEY: z.string().min(1).default(DEV_S3_ACCESS_KEY),
+    S3_SECRET_KEY: z.string().min(1).default(DEV_S3_SECRET_KEY),
+    S3_PRIVATE_BUCKET: z.string().min(3).default('medtravel-private'),
+    S3_FORCE_PATH_STYLE: z
+      .string()
+      .optional()
+      .transform((value) => value === 'true'),
     /** Skip the mandatory second factor for users who have not enrolled. Development only; refused elsewhere. */
     AUTH_DEV_SKIP_2FA: z
       .string()
@@ -84,6 +98,8 @@ export const envSchema = z
           'TRUST_PROXY_HOPS',
           'Set TRUST_PROXY_HOPS to the number of proxies in front of the API, or every visitor shares one address',
         );
+      if (env.S3_ACCESS_KEY === DEV_S3_ACCESS_KEY || env.S3_SECRET_KEY === DEV_S3_SECRET_KEY)
+        issue('S3_SECRET_KEY', 'Set real S3_ACCESS_KEY and S3_SECRET_KEY in production');
       if (env.EMAIL_TRANSPORT === 'capture')
         issue('EMAIL_TRANSPORT', 'Mail must be sent (EMAIL_TRANSPORT=smtp) in production');
     }

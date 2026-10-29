@@ -43,6 +43,8 @@ env_args=(
   -e "AUTH_ENCRYPTION_KEY=$(openssl rand -hex 32)"
   -e EMAIL_TRANSPORT=smtp
   -e TRUST_PROXY_HOPS=1
+  -e "S3_ACCESS_KEY=smoke-$(openssl rand -hex 6)"
+  -e "S3_SECRET_KEY=$(openssl rand -hex 16)"
 )
 docker run -d --name "$name" --network host "${env_args[@]}" "$image" > /dev/null
 
