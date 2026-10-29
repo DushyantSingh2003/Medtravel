@@ -182,6 +182,11 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-09.
 
 ### Deferred from F-08
 
+- **First GitHub CI result: red on one test, now fixed.** The develop push "loop: finish F-08" failed only `API e2e`, in
+  `realtime.e2e-spec.ts` ("replays what happened in the rooms while the browser was away"): two events from different rooms
+  stamped in the same millisecond came back in the wrong order. Realtime messages now carry a publish sequence (`seq`) that
+  breaks such ties; fixed with F-09. All other jobs (lint, typecheck, unit tests, four images, browser tests) passed.
+
 - **Local browser runs on a long-used database:** the two audit-log browser tests look for the seeded sample events on the first
   page of the newest-first list, so they fail on a development database that has since collected more than 25 newer audit
   events (the full run on this machine did: 1,090 newer rows). On the fresh database CI uses they pass; make the tests search
