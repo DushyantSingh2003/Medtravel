@@ -4,7 +4,7 @@ Tick a task here when it is finished and `pnpm check` is green. The task queue t
 build loop is `loop/cloud-state.json`; this file is the human-readable view and also records
 what each task deferred.
 
-Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-05.
+Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-06.
 
 ### Phase 0 — Scaffold (week 1)
 
@@ -22,7 +22,7 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-05.
 - [x] **F-03** Authentication
 - [x] **F-04** Roles, permissions and data scoping
 - [x] **F-05** Audit log and domain events
-- [ ] **F-06** Secure file service
+- [x] **F-06** Secure file service
 - [ ] **F-07** Notification engine
 - [ ] **F-08** Realtime gateway
 - [ ] **F-09** Money, currencies and languages
@@ -165,6 +165,35 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-05.
 - [ ] **G-08** Advanced analytics
 
 ## Notes and deferred work
+
+### Deferred from F-06
+
+- **Not yet verified on GitHub:** first CI result for this task. The browser job now runs Redis, the worker, and `fake-s3` and
+  `fake-clamd` (from `@medtravel/storage`) instead of MinIO and ClamAV.
+- **Never run against the real MinIO, S3 or ClamAV.** The sandbox and CI have neither; everything was exercised with the AWS SDK
+  against an in-memory S3-compatible server (presigned multipart upload, copy, delete, five-minute links) and a fake `clamd`
+  that finds only the EICAR string. Before staging: run `pnpm dev` (the real containers) and upload a file; give the bucket
+  CORS rules that allow the portal origin, the headers `*` and expose `ETag`; add a lifecycle rule that expires `watermarked/`
+  after a day; configure ClamAV's `StreamMaxLength` (and `MaxFileSize`) to 500 MB; set `S3_PUBLIC_ENDPOINT` when the bucket is
+  reached under another address than the API uses.
+- The 300 MB ZIP in the browser test passes through the in-memory bucket; a real 500 MB upload also depends on the ClamAV
+  container's memory and scan time, which were not measured.
+- The `FileUploader` is configured multipart-only; single-request uploads are refused by the API.
+- Watermarking: PDFs and JPEG/PNG up to 50 MB are stamped (viewer name, date, case number) in a per-download copy under
+  `watermarked/`; HEIC, DOCX, ZIP and larger files are delivered as stored (the answer and the audit row say `watermarked: false`).
+  PDF text outside Latin-1 (an Arabic name) is shown as `?` because the built-in PDF fonts have no such glyphs; image
+  watermarks need a font in the image (the Dockerfile adds DejaVu). Stamping happens in the request, so a 50 MB PDF holds the
+  request for a moment; moving it to the worker is the follow-up.
+- Thumbnails exist for JPEG and PNG only (HEIC cannot be decoded by the prebuilt image library, PDFs have no page image);
+  the portal previews PDFs and images through the signed link instead.
+- Uploads that are started and never finished leave an open `FileUpload` row and parts in the bucket: no job expires them yet
+  (set a bucket rule to abort incomplete multipart uploads after a day).
+- `document.shared` and `document.unshared` outbox events have no handler yet (the hospital is not told).
+- Documents of a case can be shared only with hospitals that already have an opinion request for it; the patient file
+  screen for staff, the hospital's own upload flow and the case 360 documents tab use the same API but have no screen yet.
+- Only the patient's own screen (`/patient/records`) exists; attendants see the same page but cannot delete or share.
+- The worker handles the scan one file at a time inside the outbox's two-minute lock: a very large file on a slow scanner can
+  outlive the lock and be scanned twice (the second run finds it no longer `pending` and stops).
 
 ### Deferred from F-05
 
