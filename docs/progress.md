@@ -168,6 +168,11 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-08.
 
 ### Deferred from F-08
 
+- **Local browser runs on a long-used database:** the two audit-log browser tests look for the seeded sample events on the first
+  page of the newest-first list, so they fail on a development database that has since collected more than 25 newer audit
+  events (the full run on this machine did: 1,090 newer rows). On the fresh database CI uses they pass; make the tests search
+  for the sample events instead of relying on their position.
+
 - **Only the notification bell and the typing signal use it so far.** Nothing publishes `case.updated`, `message.created` or
   `task.assigned` yet: the case, messaging and task tasks (C-04, C-10, C-09) queue them with `enqueueRealtime(tx, ...)` and
   subscribe with `useRealtimeEvent` / `useCaseRoom` / `useTyping`. The acceptance sentence ("two browsers on the same case see
