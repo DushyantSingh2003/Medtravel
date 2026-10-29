@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { ROLES, can, type Role } from '@medtravel/contracts';
+import { ROLES, type Role } from '@medtravel/contracts';
 import type { Actor } from '../src/auth/actor.js';
 import { ScopeService } from '../src/rbac/scope.service.js';
 import { DocumentsProbeModule } from './support/documents-probe.js';
@@ -195,6 +195,23 @@ beforeAll(async () => {
     hospitalId: hospitalA.id,
     deletedAt: new Date(),
   }); // deleted
+  // c9: referred by agency 1 but the patient never agreed to share the stage; c10 and c11 were sent to hospital A and then
+  // cancelled / had their consent withdrawn; all three unowned.
+  await makeCase('c9', { patientId: patient2.id, agentId: agency.id });
+  await makeCase('c10', { patientId: patient2.id });
+  await makeCase('c11', { patientId: patient2.id });
+
+  const agentConsent = (patientId: string, agentId: string, caseId: string) =>
+    t.db.consent.create({
+      data: { patientId, caseId, agentId, type: 'share_stage_with_agent' },
+    });
+  await agentConsent(patient.id, agency.id, c1);
+  await agentConsent(patient2.id, otherAgency.id, world.cases['c3'] as string);
+  const agentWithdrawn = await agentConsent(patient2.id, agency.id, world.cases['c9'] as string);
+  await t.db.consent.update({
+    where: { id: agentWithdrawn.id },
+    data: { withdrawnAt: new Date(Date.now() + 1000) },
+  });
 
   await t.db.booking.create({
     data: {
@@ -205,6 +222,15 @@ beforeAll(async () => {
     },
   });
   await t.db.caseAttendant.create({ data: { caseId: c1, attendantId: attendant.id } });
+  await t.db.booking.create({
+    data: {
+      caseId: world.cases['c2'] as string,
+      type: 'interpreter',
+      status: 'cancelled',
+      startsAt: new Date(now + DAY),
+      interpreterId: interpreter.id,
+    },
+  });
 
   // A request leaves draft only with a consent from the patient to share with that hospital.
   const consentFor = async (patientId: string, hospitalId: string, caseId: string) =>
@@ -250,6 +276,32 @@ beforeAll(async () => {
     },
   });
 
+  await t.db.opinionRequest.create({
+    data: {
+      caseId: world.cases['c10'] as string,
+      hospitalId: hospitalA.id,
+      status: 'cancelled',
+      consentId: await consentFor(patient2.id, hospitalA.id, world.cases['c10'] as string),
+    },
+  });
+  const withdrawnConsent = await consentFor(
+    patient2.id,
+    hospitalA.id,
+    world.cases['c11'] as string,
+  );
+  await t.db.opinionRequest.create({
+    data: {
+      caseId: world.cases['c11'] as string,
+      hospitalId: hospitalA.id,
+      status: 'sent',
+      consentId: withdrawnConsent,
+    },
+  });
+  await t.db.consent.update({
+    where: { id: withdrawnConsent },
+    data: { withdrawnAt: new Date(Date.now() + 1000) },
+  });
+
   // Documents of c1: a report shared with hospital A, a passport not shared, a report whose consent was withdrawn.
   const docData = (name: string) => ({
     kind: 'report' as const,
@@ -276,13 +328,26 @@ beforeAll(async () => {
       type: 'share_medical_with_hospital',
     },
   });
-  for (const name of ['shared', 'private', 'withdrawn', 'attendantUpload']) {
+  for (const name of [
+    'shared',
+    'private',
+    'withdrawn',
+    'attendantUpload',
+    'internal',
+    'unscanned',
+    'hospitalUpload',
+  ]) {
     const doc = await t.db.document.create({
       data: {
         ...docData(name),
         ...(name === 'attendantUpload'
           ? { kind: 'passport' as const, uploadedById: attendantUser }
           : {}),
+        ...(name === 'internal' ? { visibility: 'internal' as const } : {}),
+        ...(name === 'hospitalUpload'
+          ? { kind: 'discharge' as const, hospitalId: hospitalA.id }
+          : {}),
+        scanStatus: name === 'unscanned' ? ('pending' as const) : ('clean' as const),
       },
     });
     world.docs[name] = doc.id;
@@ -290,6 +355,13 @@ beforeAll(async () => {
   await t.db.documentShare.create({
     data: {
       documentId: world.docs['shared'] as string,
+      hospitalId: hospitalA.id,
+      consentId: consent.id,
+    },
+  });
+  await t.db.documentShare.create({
+    data: {
+      documentId: world.docs['unscanned'] as string,
       hospitalId: hospitalA.id,
       consentId: consent.id,
     },
@@ -315,7 +387,7 @@ afterAll(async () => {
 describe('which cases each role sees', () => {
   it.each([
     ['patient', 'patient', ['c1']],
-    ['patient2', 'patient', ['c2', 'c3', 'c4', 'c5', 'c6', 'c7']],
+    ['patient2', 'patient', ['c10', 'c11', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c9']],
     ['attendant', 'attendant', ['c1']],
     ['agent', 'agent', ['c1']],
     ['agentSub', 'agent', ['c1']],
@@ -323,7 +395,7 @@ describe('which cases each role sees', () => {
     ['cm1', 'case_manager', ['c1', 'c2', 'c4']],
     ['cm2', 'case_manager', ['c1', 'c2', 'c4']],
     ['cm3', 'case_manager', ['c3', 'c5', 'c6']],
-    ['manager', 'case_manager', ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7']],
+    ['manager', 'case_manager', ['c1', 'c10', 'c11', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c9']],
     ['gc', 'ground_coordinator', ['c1', 'c7']],
     ['gcNoCity', 'ground_coordinator', []],
     ['interpreter', 'interpreter', ['c1']],
@@ -332,8 +404,8 @@ describe('which cases each role sees', () => {
     ['deskB', 'hospital_desk', ['c5']],
     ['dr1', 'doctor', ['c1']],
     ['dr2', 'doctor', []],
-    ['finance', 'finance', ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7']],
-    ['admin', 'super_admin', ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7']],
+    ['finance', 'finance', ['c1', 'c10', 'c11', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c9']],
+    ['admin', 'super_admin', ['c1', 'c10', 'c11', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c9']],
   ] as const)('%s (%s)', async (key, role, expected) => {
     expect(await visibleTo(actorOf(key, role))).toEqual([...expected]);
   });
@@ -393,8 +465,10 @@ describe('which documents each role sees', () => {
   it('gives the patient all of their own, and the attendant only what they uploaded', async () => {
     expect(await docsFor('patient', 'patient')).toEqual([
       'attendantUpload',
+      'hospitalUpload',
       'private',
       'shared',
+      'unscanned',
       'withdrawn',
     ]);
     expect(await docsFor('patient2', 'patient')).toEqual([]);
@@ -402,7 +476,7 @@ describe('which documents each role sees', () => {
   });
 
   it('gives the hospital only what a live consent shared with it', async () => {
-    expect(await docsFor('desk', 'hospital_desk')).toEqual(['shared']);
+    expect(await docsFor('desk', 'hospital_desk')).toEqual(['hospitalUpload', 'shared']);
     expect(await docsFor('dr1', 'doctor')).toEqual(['shared']);
     expect(await docsFor('dr2', 'doctor')).toEqual([]);
     expect(await docsFor('deskB', 'hospital_desk')).toEqual([]);
@@ -411,18 +485,24 @@ describe('which documents each role sees', () => {
   it('gives staff with the permission the documents of their cases, and the others none', async () => {
     expect(await docsFor('cm1', 'case_manager')).toEqual([
       'attendantUpload',
+      'hospitalUpload',
+      'internal',
       'private',
       'shared',
+      'unscanned',
       'withdrawn',
     ]);
     expect(await docsFor('cm3', 'case_manager')).toEqual([]);
     expect(await docsFor('reviewer', 'medical_reviewer')).toEqual([
       'attendantUpload',
+      'hospitalUpload',
+      'internal',
       'private',
       'shared',
+      'unscanned',
       'withdrawn',
     ]);
-    expect(await docsFor('admin', 'super_admin')).toHaveLength(4);
+    expect(await docsFor('admin', 'super_admin')).toHaveLength(7);
     for (const [key, role] of [
       ['finance', 'finance'],
       ['gc', 'ground_coordinator'],
@@ -452,10 +532,24 @@ describe('patient files', () => {
 });
 
 describe('document endpoints refuse the roles the matrix excludes (403)', () => {
-  const routes = [
-    { method: 'GET', action: 'read', ok: 200 },
-    { method: 'POST', action: 'create', ok: 201 },
-  ] as const;
+  /** Written out here, not derived from the matrix, so a wrong grant in the matrix fails this test. */
+  const MAY_READ: Role[] = [
+    'patient',
+    'attendant',
+    'case_manager',
+    'medical_reviewer',
+    'hospital_desk',
+    'doctor',
+    'super_admin',
+  ];
+  const MAY_UPLOAD: Role[] = [
+    'patient',
+    'attendant',
+    'case_manager',
+    'medical_reviewer',
+    'hospital_desk',
+    'super_admin',
+  ];
 
   it.each(ROLES)('%s', async (role) => {
     const user = await t.makeUser({
@@ -464,10 +558,12 @@ describe('document endpoints refuse the roles the matrix excludes (403)', () => 
     });
     const { accessToken } = await t.tokenFor(user.id);
     const headers = { authorization: `Bearer ${accessToken}` };
-    for (const { method, action, ok } of routes) {
-      const res = await t.raw(method, '/probe/documents', { headers });
-      expect(res.status, `${role} ${method}`).toBe(can(role, action, 'Document') ? ok : 403);
-    }
+    expect((await t.raw('GET', '/probe/documents', { headers })).status, `${role} GET`).toBe(
+      MAY_READ.includes(role) ? 200 : 403,
+    );
+    expect((await t.raw('POST', '/probe/documents', { headers })).status, `${role} POST`).toBe(
+      MAY_UPLOAD.includes(role) ? 201 : 403,
+    );
   });
 
   it('is 403 for an agent on both, and 401 with no sign-in', async () => {

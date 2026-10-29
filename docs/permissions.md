@@ -33,6 +33,7 @@ role sees only part of a record, the **field groups**. A dash means no access. D
 
 **Patient**
 
+- `name`: fullName
 - `identity`: fullName, gender, dateOfBirth, nationalityCode
 - `contact`: email, phone, address, emergencyContact
 - `passport`: passportNumber, passportExpiry
@@ -110,7 +111,7 @@ role sees only part of a record, the **field groups**. A dash means no access. D
 | --- | --- |
 | MasterData | read (all) |
 | Case | read, create (referrals; fields: identity, stage) |
-| Patient | read (referrals; fields: identity) |
+| Patient | read (referrals; fields: name) |
 | Document | — |
 | MedicalSummary | — |
 | Opinion | — |
@@ -126,14 +127,14 @@ role sees only part of a record, the **field groups**. A dash means no access. D
 | Commission | read (own) |
 | Payout | read (own) |
 | Task | — |
-| Conversation | read, create, update (referrals) |
+| Conversation | — |
 | Incident | — |
 | Consent | — |
 | Feedback | — |
 | Notification | read, update (own) |
 | User | — |
 | AuditLog | — |
-| Report | read, export (referrals) |
+| Report | — |
 | Setting | — |
 
 ### Case manager (`case_manager`)
@@ -173,7 +174,7 @@ role sees only part of a record, the **field groups**. A dash means no access. D
 | Subject | Access |
 | --- | --- |
 | MasterData | read (all) |
-| Case | read, update (city_window; fields: identity, stage, travel, assignment) |
+| Case | read, update (city_window; fields: identity, stage, travel) |
 | Patient | read (city_window; fields: identity, contact) |
 | Document | — |
 | MedicalSummary | — |
@@ -339,12 +340,12 @@ role sees only part of a record, the **field groups**. A dash means no access. D
 | MedicalSummary | — |
 | Opinion | — |
 | Quote | read (all) |
-| Invoice | read, create, update, delete (all) |
+| Invoice | read, create, update (all) |
 | Payment | read, create, update (all) |
 | Refund | read, create, update (all) |
 | Visa | — |
 | Booking | read (all) |
-| Admission | read (all) |
+| Admission | — |
 | Hospital | read (all) |
 | Agent | read (all) |
 | Commission | read, create, update (all) |

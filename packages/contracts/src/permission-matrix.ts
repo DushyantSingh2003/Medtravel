@@ -79,6 +79,7 @@ export const FIELD_GROUPS = {
     commercial: ['source', 'campaign', 'agentId', 'lostReasonId', 'lostNote'],
   },
   Patient: {
+    name: ['fullName'],
     identity: ['fullName', 'gender', 'dateOfBirth', 'nationalityCode'],
     contact: ['email', 'phone', 'address', 'emergencyContact'],
     passport: ['passportNumber', 'passportExpiry'],
@@ -154,14 +155,13 @@ export const PERMISSION_MATRIX: Record<Role, RoleMatrix> = {
     MasterData: masters,
     // An agent sees where their referral is and who it is, nothing medical and nothing about money.
     Case: cell('rc', 'referrals', ['identity', 'stage']),
-    Patient: cell('r', 'referrals', ['identity']),
+    // The name only: no date of birth, gender or nationality.
+    Patient: cell('r', 'referrals', ['name']),
     Hospital: cell('r', 'all'),
     Agent: cell('ru', 'own'),
     Commission: cell('r', 'own'),
     Payout: cell('r', 'own'),
-    Conversation: cell('rcu', 'referrals'),
     Notification: cell('ru', 'own'),
-    Report: cell('rx', 'referrals'),
   },
   case_manager: {
     MasterData: masters,
@@ -190,7 +190,7 @@ export const PERMISSION_MATRIX: Record<Role, RoleMatrix> = {
   },
   ground_coordinator: {
     MasterData: masters,
-    Case: cell('ru', 'city_window', ['identity', 'stage', 'travel', 'assignment']),
+    Case: cell('ru', 'city_window', ['identity', 'stage', 'travel']),
     Patient: cell('r', 'city_window', ['identity', 'contact']),
     Booking: cell('ru', 'city_window'),
     Admission: cell('r', 'city_window'),
@@ -255,11 +255,11 @@ export const PERMISSION_MATRIX: Record<Role, RoleMatrix> = {
     Case: cell('r', 'all', ['identity', 'stage', 'money', 'assignment', 'commercial']),
     Patient: cell('r', 'all', ['identity']),
     Quote: cell('r', 'all'),
-    Invoice: cell('rcud', 'all'),
+    // Invoices are voided with a credit note, never deleted: the numbering must have no gaps.
+    Invoice: cell('rcu', 'all'),
     Payment: cell('rcu', 'all'),
     Refund: cell('rcu', 'all'),
     Booking: cell('r', 'all'),
-    Admission: cell('r', 'all'),
     Hospital: cell('r', 'all'),
     Agent: cell('r', 'all'),
     Commission: cell('rcu', 'all'),

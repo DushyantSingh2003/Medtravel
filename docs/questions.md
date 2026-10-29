@@ -71,3 +71,5 @@ Appended by build tasks. Format: `- [<TASK-ID>] <question> — assumed: <what wa
 - [F-04] Finance — assumed: sees every case's identity, stage and money fields, but no medical fields and no documents; invoices and payments are theirs.
 - [F-04] Who exports — assumed: only roles with a reports permission (agent: own referrals, case manager: team, finance, super admin; the audit log by super admin only).
 - [F-04] Attendants — assumed: see the case, travel, visa and chat of the patient they are attached to, and can upload their own passport; not the medical record.
+- [F-04] Agents and consent — assumed: an agency sees a referral only while the patient has an unwithdrawn `share_stage_with_agent` consent for that agency, and then only case number, name, stage and status.
+- [F-04] Hospital access ends — assumed: when the opinion request is declined, expired or cancelled, or the patient withdraws the consent, the hospital loses the case and its documents at once.

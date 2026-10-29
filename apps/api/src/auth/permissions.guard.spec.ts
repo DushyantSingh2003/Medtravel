@@ -5,6 +5,12 @@ import type { Role } from '@medtravel/contracts';
 import { Authenticated, Can, Public } from './decorators.js';
 import { PermissionsGuard } from './permissions.guard.js';
 
+@Authenticated()
+class OpenClass {
+  @Can('delete', 'MasterData') guarded(): void {}
+  plain(): void {}
+}
+
 class Routes {
   @Can('delete', 'MasterData') guarded(): void {}
   undeclared(): void {}
@@ -12,10 +18,14 @@ class Routes {
   @Authenticated() anyone(): void {}
 }
 
-const contextFor = (handler: () => void, role?: Role): ExecutionContext =>
+const contextFor = (
+  handler: () => void,
+  role?: Role,
+  owner: new () => object = Routes,
+): ExecutionContext =>
   ({
     getHandler: () => handler,
-    getClass: () => Routes,
+    getClass: () => owner,
     switchToHttp: () => ({
       getRequest: () => ({
         actor: role ? { userId: 'u', role, sessionId: 's', scopeCaseId: null } : undefined,
@@ -50,5 +60,14 @@ describe('PermissionsGuard', () => {
   it('lets any signed-in user through an authenticated route, but nobody who is not signed in', () => {
     expect(guard.canActivate(contextFor(routes.anyone, 'patient'))).toBe(true);
     expect(() => guard.canActivate(contextFor(routes.anyone))).toThrow(ForbiddenException);
+  });
+
+  it('still checks a declared permission under a class-level @Authenticated()', () => {
+    const open = new OpenClass();
+    expect(guard.canActivate(contextFor(open.guarded, 'super_admin', OpenClass))).toBe(true);
+    expect(() => guard.canActivate(contextFor(open.guarded, 'agent', OpenClass))).toThrow(
+      ForbiddenException,
+    );
+    expect(guard.canActivate(contextFor(open.plain, 'agent', OpenClass))).toBe(true);
   });
 });

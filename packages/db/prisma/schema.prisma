@@ -1097,6 +1097,7 @@ model Case {
   @@index([slaDueAt])
   @@index([stage, ownerId])
   @@index([stage, createdAt])
+  @@index([plannedArrivalAt])
   @@index([closedAt])
   @@index([patientId])
   @@index([treatmentId])

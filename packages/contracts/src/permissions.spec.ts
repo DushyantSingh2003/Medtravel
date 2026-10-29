@@ -65,9 +65,7 @@ const EXPECTED: Record<Role, Partial<Record<PermissionSubject, string>>> = {
     Agent: 'ru',
     Commission: 'r',
     Payout: 'r',
-    Conversation: 'rcu',
     Notification: 'ru',
-    Report: 'rx',
   },
   case_manager: {
     MasterData: 'r',
@@ -160,11 +158,10 @@ const EXPECTED: Record<Role, Partial<Record<PermissionSubject, string>>> = {
     Case: 'r',
     Patient: 'r',
     Quote: 'r',
-    Invoice: 'rcud',
+    Invoice: 'rcu',
     Payment: 'rcu',
     Refund: 'rcu',
     Booking: 'r',
-    Admission: 'r',
     Hospital: 'r',
     Agent: 'r',
     Commission: 'rcu',
@@ -233,6 +230,8 @@ describe('the rules that must never regress', () => {
     'Consent',
     'Incident',
     'Task',
+    'Conversation',
+    'Report',
   ];
 
   it('never lets an agent touch documents, medical summaries, opinions, quotes or money', () => {
@@ -253,12 +252,8 @@ describe('the rules that must never regress', () => {
     for (const field of ['diagnosis', 'medicalNotes', 'budgetMinor', 'treatmentId', 'agentId'])
       expect(can('agent', 'read', 'Case', field), field).toBe(false);
     expect(can('agent', 'read', 'Case', 'stage')).toBe(true);
-    expect(readableFields('agent', 'Patient')).toEqual([
-      'fullName',
-      'gender',
-      'dateOfBirth',
-      'nationalityCode',
-    ]);
+    expect(readableFields('agent', 'Patient')).toEqual(['fullName']);
+    expect(can('agent', 'read', 'Patient', 'dateOfBirth')).toBe(false);
     expect(can('agent', 'read', 'Patient', 'passportNumber')).toBe(false);
   });
 

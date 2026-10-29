@@ -182,6 +182,24 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-04.
   hospital"; the check by hospital id belongs to the hospital module.
 - Rows beyond the case (quotes, invoices, bookings, tasks, conversations) are scoped through their case with `caseWhere`;
   the exceptions (own notifications, an agent's commissions) are scoped in their modules.
+- **From the F-04 reviews, fixed:** agents see a case only with a live `share_stage_with_agent` consent, and only the patient's
+  name; agents lost Conversation and Report; hospital access needs a live request (sent, viewed, accepted or answered) with
+  a consent that has not been withdrawn; hospital documents need a clean scan and the share's consent type, and the desk
+  also reads what its own hospital uploaded; patients and attendants never see internal documents; interpreters lose access
+  when the booking is cancelled or completed; soft-deleted staff, patient and attendant links and inactive users get
+  nothing; a declared `@Can` is enforced even under a class-level `@Public()` or `@Authenticated()`; finance cannot delete
+  invoices and sees no admission data; index on `Case.plannedArrivalAt`.
+- **From the F-04 reviews, not done:** (1) writes are not field-checked (modules must validate bodies with narrow Zod
+  schemas and prefer action endpoints such as "accept quote"); roles without a field list read every field of their own
+  records, so give patients an explicit list when the Case schema exists, and check the group names against the Prisma
+  columns then (`patientName`, `diagnosis`, `emergencyContact` are planned names, not columns yet). (2) Only cases,
+  documents and patient files have filters; the other subjects with a scope (Hospital `hospital`, Booking, Task,
+  Conversation, Commission `own`) must get theirs in the module that builds them, through `ScopeService`, and
+  `assertCaseAccess` ignores the subject's own scope. (3) Unassigned cases (no owner) are visible only to managers, finance and
+  admins until a claim queue exists. (4) The ground coordinator window uses instants, not Asia/Kolkata calendar days.
+  (5) A patient created before their first case is not readable by the creator until the case exists. (6) A doctor linked
+  to two hospitals is matched through their own doctor record only. (7) Finance creates and approves payouts alone
+  (no dual control); decide in F-19 (payments). (8) `useCan` is used on the master data screen only.
 - The portal hides buttons with `useCan` only on the master data screen so far; each later screen uses it.
 
 ### Deferred from F-03
