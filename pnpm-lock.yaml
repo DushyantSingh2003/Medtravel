@@ -341,9 +341,15 @@ importers:
       eslint:
         specifier: ^9.39.5
         version: 9.39.5(jiti@2.7.0)
+      pdf-lib:
+        specifier: ^1.17.1
+        version: 1.17.1
       pino-pretty:
         specifier: ^13.1.2
         version: 13.2.0
+      sharp:
+        specifier: ^0.35.5
+        version: 0.35.5(@types/node@24.19.1)
       typescript:
         specifier: ^6.0.2
         version: 6.0.3

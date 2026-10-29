@@ -2,6 +2,8 @@ import { execFileSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createPrismaClient, type PrismaClient } from '@medtravel/db';
+import { ObjectStore } from '@medtravel/storage';
+import { FakeClamd, FakeS3Server } from '@medtravel/storage/testing';
 import { notifyAdminsOfIncident } from '../src/outbox/handlers/incident-created.handler.js';
 import { OutboxDispatcher } from '../src/outbox/outbox-dispatcher.service.js';
 
@@ -21,6 +23,10 @@ const urlFor = (name: string) => {
 let admin: PrismaClient;
 let prisma: PrismaClient;
 let dispatcher: OutboxDispatcher;
+const s3 = new FakeS3Server();
+const clamd = new FakeClamd();
+const BUCKET = 'worker-private';
+let store: ObjectStore;
 let n = 0;
 
 const makeUser = (
@@ -57,10 +63,22 @@ beforeAll(async () => {
     stdio: 'pipe',
   });
   prisma = createPrismaClient({ connectionString: urlFor(dbName) });
-  dispatcher = new OutboxDispatcher(prisma);
+  const { url } = await s3.start();
+  const { port } = await clamd.start();
+  store = new ObjectStore({
+    endpoint: url,
+    region: 'us-east-1',
+    accessKeyId: 'k',
+    secretAccessKey: 's',
+    bucket: BUCKET,
+    forcePathStyle: true,
+  });
+  dispatcher = new OutboxDispatcher(prisma, store, { CLAMAV_HOST: '127.0.0.1', CLAMAV_PORT: port });
 });
 
 afterAll(async () => {
+  await s3.close();
+  await clamd.close();
   await prisma?.$disconnect();
   await admin?.$executeRawUnsafe(`DROP DATABASE IF EXISTS "${dbName}" WITH (FORCE)`);
   await admin?.$disconnect();
