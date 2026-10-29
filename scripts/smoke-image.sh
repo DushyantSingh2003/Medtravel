@@ -45,6 +45,16 @@ env_args=(
   -e TRUST_PROXY_HOPS=1
   -e "S3_ACCESS_KEY=smoke-$(openssl rand -hex 6)"
   -e "S3_SECRET_KEY=$(openssl rand -hex 16)"
+  # Production refuses the development SMS and WhatsApp stand-ins and the public webhook secrets. Nothing is sent in this test.
+  -e SMS_PROVIDER=twilio
+  -e TWILIO_ACCOUNT_SID=ACsmoke
+  -e "TWILIO_AUTH_TOKEN=$(openssl rand -hex 8)"
+  -e TWILIO_FROM=+15550000000
+  -e WHATSAPP_PROVIDER=meta
+  -e WHATSAPP_PHONE_NUMBER_ID=1
+  -e "WHATSAPP_ACCESS_TOKEN=$(openssl rand -hex 8)"
+  -e "NOTIFICATION_WEBHOOK_SECRET=$(openssl rand -hex 16)"
+  -e "WHATSAPP_VERIFY_TOKEN=$(openssl rand -hex 16)"
 )
 docker run -d --name "$name" --network host "${env_args[@]}" "$image" > /dev/null
 
