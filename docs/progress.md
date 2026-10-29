@@ -168,7 +168,8 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-05.
 
 ### Deferred from F-05
 
-- **Not yet verified on GitHub:** first CI result for this task (the API e2e job now also runs the worker's database tests).
+- **Verified on GitHub:** `ci.yml` run 20 on `develop` (commit 04fc899, "loop: finish F-05") passed, including the API, db and worker
+  database tests, the browser job and the image smoke tests.
 - **Automatic capture of every change:** services write detailed audit rows (what changed) in their own transaction, as
   masters and auth do. As a safety net an interceptor adds a plain `http.<method>` row naming the route (never ids) when a
   signed-in change finishes without any audit row. It does not say what changed; a Prisma extension that records every
