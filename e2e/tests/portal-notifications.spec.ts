@@ -62,21 +62,46 @@ test.describe('the admin sends a test and sees it delivered', () => {
     await expect(page.getByText('No notifications')).toBeHidden();
   });
 
-  test('shows the test in the bell, and marks it read', async ({ page }) => {
+  test('shows the test in the bell, marks one read when opened, and all with one click', async ({
+    page,
+  }) => {
     await signInAs(page, 'super_admin');
+    const csrf = (await page.context().cookies()).find((c) => c.name === 'mt_csrf')?.value ?? '';
+    // Two fresh unread messages for the admin, whatever else the bell already holds.
+    for (let i = 0; i < 2; i += 1)
+      expect(
+        (
+          await page.request.post(`${API}/notifications/test`, {
+            headers: { 'x-csrf-token': csrf },
+            data: { channels: ['in_app'] },
+          })
+        ).ok(),
+      ).toBe(true);
+    await page.reload();
+
     const button = bell(page);
     await expect(button).toHaveAccessibleName(/unread/);
+    const unreadCount = async () =>
+      Number(
+        /(\d+) unread/.exec(
+          (await button.getAttribute('aria-label')) ?? (await button.innerText()),
+        )?.[1] ?? 0,
+      );
     await button.click();
     const item = page.getByRole('button', { name: /Test notification/ }).first();
     await expect(item).toBeVisible();
     await expect(item).toContainText('this is a test message');
-    const before = (await button.getAttribute('aria-label')) ?? (await button.innerText());
+    const before = await unreadCount();
+    expect(before).toBeGreaterThanOrEqual(2);
+
     await item.click();
-    await expect(async () => {
-      expect((await button.innerText()) === before).toBe(false);
-    }).toPass({ timeout: 10_000 });
+    await expect(async () => expect(await unreadCount()).toBe(before - 1)).toPass({
+      timeout: 10_000,
+    });
+
     await page.getByRole('button', { name: 'Mark all as read' }).click();
     await expect(button).not.toHaveAccessibleName(/unread/);
+    await expect(page.getByRole('button', { name: 'Mark all as read' })).toBeHidden();
   });
 });
 

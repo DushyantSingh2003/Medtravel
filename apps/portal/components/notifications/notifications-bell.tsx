@@ -27,7 +27,8 @@ export function NotificationsBell() {
     },
   });
   const page = list.data?.data;
-  const now = Date.now();
+  // Relative times are measured from when the list was last fetched, which also keeps rendering pure.
+  const now = list.dataUpdatedAt;
 
   return (
     <NotificationsMenu
