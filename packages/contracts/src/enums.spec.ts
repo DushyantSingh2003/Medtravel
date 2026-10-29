@@ -21,6 +21,7 @@ describe('database enums', () => {
           'DOCUMENT_ACCEPT',
           'DOCUMENT_TYPES',
           'REALTIME_EVENTS',
+          'ARABIC_COUNTRIES',
         ].includes(name)
       )
         continue;

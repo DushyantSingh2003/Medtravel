@@ -8,6 +8,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Price,
   StageTracker,
   StatCard,
   StatusBadge,
@@ -17,11 +18,17 @@ import {
   type ChatMessage,
   type KanbanCard,
 } from '@medtravel/ui';
-import { CASE_STAGES, type CaseStage, type Locale } from '@medtravel/contracts';
+import { CASE_STAGES, money, type CaseStage, type Locale } from '@medtravel/contracts';
 import { CalendarCheck, FileCheck2, Plane, Users, Wallet } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { Section } from './section';
+
+const PRICES = [
+  { key: 'inr', value: money(12_487_500, 'INR') },
+  { key: 'usd', value: money(150_000, 'USD') },
+  { key: 'aed', value: money(550_875, 'AED') },
+] as const;
 
 interface BoardCard extends KanbanCard {
   title: string;
@@ -271,6 +278,30 @@ export function WorkflowSections({ locale }: { locale: Locale }) {
             delta={{ value: '-2', trend: 'down', upIsGood: false, srLabel: t('stats.faster') }}
           />
           <StatCard label={t('stats.loading')} value="" loading />
+        </div>
+      </Section>
+
+      <Section id="price" title={t('sections.price')} description={t('descriptions.price')}>
+        <dl className="grid gap-3 sm:grid-cols-3">
+          {PRICES.map(({ key, value }) => (
+            <div key={key} className="space-y-1 rounded-md border p-3">
+              <dt className="text-sm text-muted-foreground">{t(`prices.${key}`)}</dt>
+              <dd className="text-lg font-semibold">
+                <Price value={value} locale={locale} />
+              </dd>
+            </div>
+          ))}
+        </dl>
+        <div className="mt-3 text-lg font-semibold">
+          <span className="block text-sm font-normal text-muted-foreground">
+            {t('prices.converted')}
+          </span>
+          <Price
+            value={money(12_487_500, 'INR')}
+            original={money(150_000, 'USD')}
+            locale={locale}
+            approximate
+          />
         </div>
       </Section>
 

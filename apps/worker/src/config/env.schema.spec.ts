@@ -33,10 +33,40 @@ describe('worker env', () => {
       WHATSAPP_PHONE_NUMBER_ID: '555',
       WHATSAPP_ACCESS_TOKEN: 'tok',
       NOTIFICATION_WEBHOOK_SECRET: 'a-real-webhook-secret',
+      FX_PROVIDER: 'frankfurter',
     } as NodeJS.ProcessEnv;
     expect(loadEnv(production).SMS_PROVIDER).toBe('twilio');
     expect(() => loadEnv({ ...production, SMS_PROVIDER: 'dev' })).toThrow(/SMS_PROVIDER/);
     expect(() => loadEnv({ ...production, WHATSAPP_PROVIDER: 'dev' })).toThrow(/WHATSAPP_PROVIDER/);
     expect(() => loadEnv({ ...production, TWILIO_FROM: '' })).toThrow(/SMS_PROVIDER/);
+  });
+
+  it('uses the fixed development exchange rates by default, and refuses them in production', () => {
+    expect(loadEnv(valid).FX_PROVIDER).toBe('static');
+    const production = {
+      ...valid,
+      NODE_ENV: 'production',
+      S3_ACCESS_KEY: 'AKIAREAL',
+      S3_SECRET_KEY: 'real-secret-key',
+      SMS_PROVIDER: 'twilio',
+      TWILIO_ACCOUNT_SID: 'AC1',
+      TWILIO_AUTH_TOKEN: 'token',
+      TWILIO_FROM: '+15550001',
+      WHATSAPP_PROVIDER: 'meta',
+      WHATSAPP_PHONE_NUMBER_ID: '555',
+      WHATSAPP_ACCESS_TOKEN: 'tok',
+      NOTIFICATION_WEBHOOK_SECRET: 'a-real-webhook-secret',
+    } as NodeJS.ProcessEnv;
+    expect(() => loadEnv(production)).toThrow(/FX_PROVIDER/);
+    expect(() => loadEnv({ ...production, FX_PROVIDER: 'openexchangerates' })).toThrow(
+      /OPEN_EXCHANGE_RATES_APP_ID/,
+    );
+    expect(
+      loadEnv({
+        ...production,
+        FX_PROVIDER: 'openexchangerates',
+        OPEN_EXCHANGE_RATES_APP_ID: 'key',
+      }).FX_PROVIDER,
+    ).toBe('openexchangerates');
   });
 });

@@ -19,6 +19,7 @@
     "@medtravel/contracts": "workspace:*",
     "@medtravel/db": "workspace:*",
     "@medtravel/emails": "workspace:*",
+    "@medtravel/fx": "workspace:*",
     "@medtravel/notifications": "workspace:*",
     "@medtravel/pdf": "workspace:*",
     "@medtravel/realtime": "workspace:*",

@@ -49,6 +49,8 @@ export const realtimeMessageSchema = z.object({
   room: z.string().max(80),
   event: z.enum(REALTIME_EVENTS),
   at: z.iso.datetime(),
+  /** Publish order across all rooms; breaks ties between events stamped in the same millisecond. */
+  seq: z.number().int().nonnegative().optional(),
   payload: z.record(z.string(), z.unknown()),
 });
 export type RealtimeMessage = z.infer<typeof realtimeMessageSchema>;

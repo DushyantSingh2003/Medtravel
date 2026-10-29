@@ -33,6 +33,11 @@ export const envSchema = z
     CLAMAV_PORT: z.coerce.number().int().min(1).max(65_535).default(3310),
     WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(100).default(5),
     ...PROVIDER_ENV_SHAPE,
+    /** Where daily exchange rates come from. `static` is fixed development data. */
+    FX_PROVIDER: z.enum(['static', 'frankfurter', 'openexchangerates']).default('static'),
+    OPEN_EXCHANGE_RATES_APP_ID: z.string().optional(),
+    /** When rates are refreshed (cron, in Asia/Kolkata): every day at 06:00 India time. */
+    FX_REFRESH_CRON: z.string().default('0 6 * * *'),
   })
   .superRefine((env, ctx) => {
     if (
@@ -43,6 +48,18 @@ export const envSchema = z
         code: 'custom',
         path: ['S3_SECRET_KEY'],
         message: 'Set real S3 keys in production',
+      });
+    if (env.NODE_ENV === 'production' && env.FX_PROVIDER === 'static')
+      ctx.addIssue({
+        code: 'custom',
+        path: ['FX_PROVIDER'],
+        message: 'Set a real exchange-rate provider in production',
+      });
+    if (env.FX_PROVIDER === 'openexchangerates' && !env.OPEN_EXCHANGE_RATES_APP_ID)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['FX_PROVIDER'],
+        message: 'Open Exchange Rates needs OPEN_EXCHANGE_RATES_APP_ID',
       });
     refineProviderEnv(
       env,

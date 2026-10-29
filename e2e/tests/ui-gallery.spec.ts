@@ -43,6 +43,7 @@ const SECTIONS = [
   'timeline',
   'chat-panel',
   'stat-card',
+  'price',
   'kanban-board',
   'app-shell',
   'switcher',
@@ -532,6 +533,56 @@ test.describe('file uploader (English, desktop)', () => {
       'program.exe is not a PDF, image or DICOM file.',
     );
     await expect(box.locator('li[data-status]')).toHaveCount(0);
+  });
+});
+
+test.describe('Prices', () => {
+  test.use({ viewport: { width: 1280, height: 900 } });
+
+  const shown = async (page: Page) => {
+    const texts = await section(page, 'price')
+      .locator('bdi[data-currency]')
+      .evaluateAll((nodes) =>
+        nodes.map((n) => [
+          n.getAttribute('data-currency'),
+          (n.textContent ?? '').replace(/\s/g, ' '),
+        ]),
+      );
+    return Object.fromEntries(texts.slice(0, 3));
+  };
+
+  test('a price shows correctly in INR, USD and AED in English', async ({ page }) => {
+    await openGallery(page, 'en');
+    expect(await shown(page)).toEqual({
+      INR: '₹124,875.00',
+      USD: '$1,500.00',
+      AED: 'AED 5,508.75',
+    });
+  });
+
+  test('a price shows correctly in INR, USD and AED in Arabic, with Latin digits, left to right', async ({
+    page,
+  }) => {
+    await openGallery(page, 'ar');
+    const prices = await shown(page);
+    expect(prices['INR']).toMatch(/124,875\.00/);
+    expect(prices['USD']).toMatch(/1,500\.00/);
+    expect(prices['AED']).toMatch(/5,508\.75/);
+    for (const text of Object.values(prices)) expect(text).not.toMatch(/[٠-٩]/);
+    await expect(section(page, 'price').locator('bdi').first()).toHaveAttribute('dir', 'ltr');
+  });
+
+  test('a converted price shows ≈ and the original price', async ({ page }) => {
+    await openGallery(page, 'en');
+    const converted = section(page, 'price').locator('[data-slot="price"]').last();
+    await expect(converted).toContainText('≈');
+    await expect(converted).toContainText('$1,500.00');
+  });
+
+  test('has no accessibility violations', async ({ page }) => {
+    await openGallery(page, 'ar');
+    const result = await new AxeBuilder({ page }).include('#cmp-price').analyze();
+    expect(result.violations).toEqual([]);
   });
 });
 

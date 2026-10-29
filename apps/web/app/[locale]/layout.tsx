@@ -3,6 +3,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { ApiQueryProvider } from '@medtravel/api-client';
 import { UiProvider, WhatsAppButton } from '@medtravel/ui';
 import { LOCALES, directionOf, isLocale } from '@medtravel/i18n';
 import { SiteFooterBar } from '../../components/site/site-footer-bar';
@@ -66,12 +67,14 @@ export default async function LocaleLayout({
               closeToast: t('common.closeToast'),
             }}
           >
-            <SiteHeaderBar />
-            <main id="main-content" tabIndex={-1} className="flex-1 outline-none">
-              {children}
-            </main>
-            <SiteFooterBar />
-            {whatsapp ? <WhatsAppButton href={whatsapp} label={t('site.whatsapp')} /> : null}
+            <ApiQueryProvider>
+              <SiteHeaderBar />
+              <main id="main-content" tabIndex={-1} className="flex-1 outline-none">
+                {children}
+              </main>
+              <SiteFooterBar />
+              {whatsapp ? <WhatsAppButton href={whatsapp} label={t('site.whatsapp')} /> : null}
+            </ApiQueryProvider>
           </UiProvider>
         </NextIntlClientProvider>
       </body>

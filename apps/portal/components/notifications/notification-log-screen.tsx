@@ -5,7 +5,13 @@ import {
   useListNotificationLog,
   type ListNotificationLogParams,
 } from '@medtravel/api-client';
-import { NOTIFICATION_CHANNELS, NOTIFICATION_STATUSES, type Locale } from '@medtravel/contracts';
+import {
+  NOTIFICATION_CHANNELS,
+  NOTIFICATION_STATUSES,
+  OPS_TIME_ZONE,
+  dayBoundary,
+  type Locale,
+} from '@medtravel/contracts';
 import {
   Button,
   DataTable,
@@ -28,11 +34,6 @@ import { SendTestDialog } from './send-test-dialog';
 const ALL = 'all';
 const PAGE_SIZE_OPTIONS = [10, 25, 50];
 const LOG_CHANNELS = NOTIFICATION_CHANNELS.filter((channel) => channel !== 'push');
-
-/** Ops screens run on Indian time (CLAUDE.md): a date typed here is a day in Asia/Kolkata (UTC+05:30). */
-const OPS_TIME_ZONE = 'Asia/Kolkata';
-const dayBoundary = (day: string, end: boolean): string =>
-  new Date(`${day}T${end ? '23:59:59.999' : '00:00:00'}+05:30`).toISOString();
 
 function useDebounced(value: string): string {
   const [debounced, setDebounced] = useState(value);
@@ -71,8 +72,8 @@ export function NotificationLogScreen() {
       ...(eventKey === ALL ? {} : { eventKey }),
       ...(channel === ALL ? {} : { channel: channel as ListNotificationLogParams['channel'] }),
       ...(status === ALL ? {} : { status: status as ListNotificationLogParams['status'] }),
-      ...(from ? { from: dayBoundary(from, false) } : {}),
-      ...(to ? { to: dayBoundary(to, true) } : {}),
+      ...(from ? { from: dayBoundary(from, 'start') } : {}),
+      ...(to ? { to: dayBoundary(to, 'end') } : {}),
     }),
     [person, eventKey, channel, status, from, to],
   );
