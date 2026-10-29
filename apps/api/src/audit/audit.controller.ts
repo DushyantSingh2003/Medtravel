@@ -39,15 +39,22 @@ export class AuditController {
     @Ctx() context: RequestContext,
     @Res({ passthrough: true }) reply: FastifyReply,
   ): Promise<string> {
-    const events = await this.query.forExport(filters);
+    const { events, truncated } = await this.query.forExport(filters);
     // Exporting the trail is itself something to audit.
     await this.audit.recordNow(context, {
       action: 'audit.exported',
       entityType: 'AuditLog',
       entityId: 'export',
-      after: { filters, rows: events.length },
+      // The person text is not stored: it can be a name or an email.
+      after: {
+        filters: { ...filters, actor: filters.actor ? '[searched]' : undefined },
+        rows: events.length,
+        truncated,
+      },
     });
     void reply.header('content-disposition', 'attachment; filename="audit-log.csv"');
+    // The file holds at most 10,000 rows; this says when more matched.
+    void reply.header('x-audit-truncated', truncated ? 'true' : 'false');
     return auditCsv(events);
   }
 }

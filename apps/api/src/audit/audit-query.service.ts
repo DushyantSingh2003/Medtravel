@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import type { Prisma, PrismaClient } from '@medtravel/db';
 import {
   AUDIT_EXPORT_MAX_ROWS,
@@ -6,8 +6,12 @@ import {
   type AuditFilters,
   type CursorPage,
 } from '@medtravel/contracts';
-import { readPage } from '../common/cursor.js';
+import { decodeCursor, readPage } from '../common/cursor.js';
 import { PRISMA } from '../database/database.module.js';
+
+/** The total reports at most this many rows. */
+export const AUDIT_TOTAL_CAP = 10_001;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type Row = Prisma.AuditEventGetPayload<Record<string, never>>;
 
@@ -33,7 +37,7 @@ export class AuditQueryService {
           ],
         },
         select: { id: true },
-        take: 200,
+        take: 1000,
       });
       if (people.length === 0) return null;
       and.push({ actorId: { in: people.map((person) => person.id) } });
@@ -96,6 +100,12 @@ export class AuditQueryService {
   ): Promise<CursorPage<AuditEventView>> {
     const where = await this.where(filters);
     if (!where) return { items: [], nextCursor: null, total: 0 };
+    // A cursor is the id of a row; anything else is a forged or stale cursor.
+    if (page.cursor && !UUID.test(decodeCursor(page.cursor)))
+      throw new BadRequestException({
+        message: 'Invalid cursor',
+        errors: [{ path: ['cursor'], message: 'Invalid cursor' }],
+      });
     const { rows, nextCursor, total } = await readPage<Row>({
       limit: page.limit,
       cursor: page.cursor,
@@ -108,20 +118,24 @@ export class AuditQueryService {
           ...(skip ? { skip } : {}),
           ...(cursorKey ? { cursor: { id: cursorKey } } : {}),
         }),
-      count: () => this.prisma.auditEvent.count({ where }),
+      // Counting a huge table on every page is slow; past the cap the total just says "at least this many".
+      count: () => this.prisma.auditEvent.count({ where, take: AUDIT_TOTAL_CAP }),
     });
     return { items: await this.withActors(rows), nextCursor, total };
   }
 
-  /** Up to `AUDIT_EXPORT_MAX_ROWS` rows, newest first, for the CSV. */
-  async forExport(filters: AuditFilters): Promise<AuditEventView[]> {
+  /** Up to `AUDIT_EXPORT_MAX_ROWS` rows, newest first, for the CSV, and whether more matched than were returned. */
+  async forExport(
+    filters: AuditFilters,
+  ): Promise<{ events: AuditEventView[]; truncated: boolean }> {
     const where = await this.where(filters);
-    if (!where) return [];
+    if (!where) return { events: [], truncated: false };
     const rows = await this.prisma.auditEvent.findMany({
       where,
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      take: AUDIT_EXPORT_MAX_ROWS,
+      take: AUDIT_EXPORT_MAX_ROWS + 1,
     });
-    return this.withActors(rows);
+    const truncated = rows.length > AUDIT_EXPORT_MAX_ROWS;
+    return { events: await this.withActors(rows.slice(0, AUDIT_EXPORT_MAX_ROWS)), truncated };
   }
 }

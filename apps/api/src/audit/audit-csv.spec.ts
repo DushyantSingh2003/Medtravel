@@ -24,3 +24,11 @@ describe('csvCell', () => {
     expect(csvCell({ a: 1 })).toBe('"{""a"":1}"');
   });
 });
+
+describe('csvCell, hidden formula starts', () => {
+  it('also guards a formula after spaces, no-break spaces and control characters', () => {
+    for (const bad of [' =1', ' =1', '\u0001+2', '  @x'])
+      expect(csvCell(bad).replace(/^"/, '').startsWith("'")).toBe(true);
+    expect(csvCell('a=b')).toBe('a=b');
+  });
+});

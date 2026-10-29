@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createPrismaClient, type PrismaClient } from '@medtravel/db';
+import { notifyAdminsOfIncident } from '../src/outbox/handlers/incident-created.handler.js';
 import { OutboxDispatcher } from '../src/outbox/outbox-dispatcher.service.js';
 
 /** The dispatcher against a real database: an `incident.created` event becomes one notification per active super admin, once. */
@@ -136,5 +137,29 @@ describe('incident.created', () => {
     expect(
       (await prisma.outboxEvent.findUniqueOrThrow({ where: { id: broken.id } })).lastError,
     ).toBeTruthy();
+  });
+
+  it('does not notify anyone twice when two workers handle the same event at the same moment', async () => {
+    const first = await makeUser('super_admin');
+    const incident = await makeIncident();
+    const event = await publish(incident.id);
+    const record = {
+      id: event.id,
+      type: 'incident.created',
+      aggregateType: 'Incident',
+      aggregateId: incident.id,
+      payload: { incidentId: incident.id },
+      dedupeKey: null,
+      attempts: 1,
+    };
+    await Promise.all([
+      notifyAdminsOfIncident(prisma, record),
+      notifyAdminsOfIncident(prisma, record),
+    ]);
+    expect(
+      await prisma.notification.count({
+        where: { userId: first.id, data: { path: ['eventId'], equals: event.id } },
+      }),
+    ).toBe(1);
   });
 });

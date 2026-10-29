@@ -253,8 +253,8 @@ describe('export', () => {
         action: 'thing.updated',
         entityType: 'Thing',
         entityId,
-        before: { note: '=HYPERLINK("http://evil")' },
-        after: { note: 'has "quotes", commas\nand lines' },
+        before: { label: '=HYPERLINK("http://evil")' },
+        after: { label: 'has "quotes", commas\nand lines' },
       },
     );
     const res = await t.raw('GET', `/audit/export?entityId=${entityId}`, {
@@ -264,10 +264,10 @@ describe('export', () => {
     const text = typeof res.body === 'string' ? res.body : '';
     const lines = text.split('\r\n');
     expect(lines[0]).toBe(
-      'time,actor,email,role,action,entityType,entityId,patientId,ip,requestId,before,after',
+      'time,actor,email,role,action,entityType,entityId,patientId,ip,userAgent,requestId,before,after',
     );
     expect(text).toContain(`thing.updated,Thing,${entityId}`);
-    expect(text).toContain('"{""note"":""=HYPERLINK');
+    expect(text).toContain('"{""label"":""=HYPERLINK');
     expect(text).toContain(String.raw`has \""quotes\"", commas\nand lines`);
     const logged = await listed(admin.headers, '?action=audit.exported');
     expect(logged[0]).toMatchObject({ entityType: 'AuditLog', actorId: admin.user.id });
@@ -318,4 +318,177 @@ describe('too many downloads', () => {
       0,
     );
   }, 120_000);
+});
+
+describe('the safety net for changes that forget to audit themselves', () => {
+  it('adds a plain row naming the route when a signed-in change leaves none, and stays out of the way when it does', async () => {
+    const admin = await as('super_admin');
+    const worker = await as('case_manager');
+    const forgetfulId = `forgot-${next()}`;
+    const carefulId = `careful-${next()}`;
+    expect(
+      (await t.raw('POST', `/probe/access/forgetful/${forgetfulId}`, { headers: worker.headers }))
+        .status,
+    ).toBe(201);
+    expect(
+      (await t.raw('POST', `/probe/access/careful/${carefulId}`, { headers: worker.headers }))
+        .status,
+    ).toBe(201);
+
+    const rows = await listed(admin.headers, `?actorId=${worker.user.id}`);
+    const http = rows.filter((row) => row.action === 'http.post');
+    expect(http).toHaveLength(1);
+    // The route pattern, never the address with its ids.
+    expect(http[0]).toMatchObject({
+      entityType: 'Route',
+      entityId: 'POST /probe/access/forgetful/:id',
+    });
+    expect(JSON.stringify(rows)).not.toContain(forgetfulId);
+    expect(rows.filter((row) => row.action === 'probe.created')).toHaveLength(1);
+  });
+
+  it('does not add one for a read, a refused request, or a failed change', async () => {
+    const admin = await as('super_admin');
+    const agent = await as('agent');
+    await t.raw('POST', '/probe/access/forgetful/x', { headers: agent.headers });
+    await t.raw('GET', `/probe/access/documents/r-${next()}/view`, { headers: agent.headers });
+    expect(await listed(admin.headers, `?actorId=${agent.user.id}`)).toEqual([]);
+  });
+
+  it('does not record an update that changed nothing', async () => {
+    const admin = await as('super_admin');
+    const audit = t.app.get(AuditService);
+    const entityId = `same-${next()}`;
+    await audit.recordNow(
+      { actor: null, ip: null, userAgent: null, requestId: null },
+      { action: 'thing.updated', entityType: 'Thing', entityId, before: { a: 1 }, after: { a: 1 } },
+    );
+    expect(await listed(admin.headers, `?entityId=${entityId}`)).toEqual([]);
+  });
+});
+
+describe('masking, through the API', () => {
+  it('hides contact details, medical text and identifiers under other key names, and secrets in strings stay out of keys', async () => {
+    const admin = await as('super_admin');
+    const audit = t.app.get(AuditService);
+    const entityId = `mask-${next()}`;
+    await audit.recordNow({ actor: null, ip: null, userAgent: null, requestId: null }, {
+      action: 'patient.created',
+      entityType: 'Patient',
+      entityId,
+      after: {
+        date_of_birth: '1990-01-01',
+        phoneNumber: '+91',
+        diagnosis: 'private text',
+        medicalHistory: 'private text',
+        passportNo: 'N1234567',
+        stage: 'enquiry',
+      },
+    } as never);
+    const [row] = await listed(admin.headers, `?entityId=${entityId}`);
+    expect(row?.after).toEqual({
+      date_of_birth: '[masked]',
+      phoneNumber: '[masked]',
+      diagnosis: '[masked]',
+      medicalHistory: '[masked]',
+      passportNo: '****4567',
+      stage: 'enquiry',
+    });
+  });
+});
+
+describe('paging and the filters, harder cases', () => {
+  it('pages rows that share the same timestamp without losing or repeating one', async () => {
+    const admin = await as('super_admin');
+    const actor = await as('case_manager');
+    const at = new Date(Date.now() - 5 * 60_000);
+    await t.db.auditEvent.createMany({
+      data: Array.from({ length: 5 }, (_, i) => ({
+        actorId: actor.user.id,
+        action: 'tie.created',
+        entityType: 'Tie',
+        entityId: `tie-${i}`,
+        createdAt: at,
+      })),
+    });
+    const seen: string[] = [];
+    let cursor: string | null = null;
+    for (let i = 0; i < 4 && (i === 0 || cursor); i += 1) {
+      const res = page(
+        (
+          await t.raw(
+            'GET',
+            `/audit?actorId=${actor.user.id}&limit=2${cursor ? `&cursor=${cursor}` : ''}`,
+            {
+              headers: admin.headers,
+            },
+          )
+        ).body,
+      );
+      seen.push(...res.items.map((row) => row.entityId));
+      cursor = res.nextCursor;
+    }
+    expect([...seen].sort()).toEqual(['tie-0', 'tie-1', 'tie-2', 'tie-3', 'tie-4']);
+  });
+
+  it('answers 400, not 500, for a cursor that is not a row id, and for a one-character person search', async () => {
+    const admin = await as('super_admin');
+    const forged = Buffer.from('not-a-uuid', 'utf8').toString('base64url');
+    expect((await t.raw('GET', `/audit?cursor=${forged}`, { headers: admin.headers })).status).toBe(
+      400,
+    );
+    expect((await t.raw('GET', '/audit?actor=a', { headers: admin.headers })).status).toBe(400);
+  });
+
+  it('exports the device and says when the file is complete, without storing the person text of the filter', async () => {
+    const admin = await as('super_admin');
+    const res = await t.raw('GET', '/audit/export?actor=zzz-nobody', { headers: admin.headers });
+    expect(res.status).toBe(200);
+    expect(res.headers['x-audit-truncated']).toBe('false');
+    const logged = await listed(admin.headers, '?action=audit.exported');
+    expect(JSON.stringify(logged[0]?.after)).not.toContain('zzz-nobody');
+  });
+});
+
+describe('the download alert window', () => {
+  it('does not count downloads from before the window, and is raised once for a burst that spans two clock hours', async () => {
+    const quiet = await as('case_manager');
+    await t.db.auditEvent.createMany({
+      data: Array.from({ length: DOWNLOAD_ALERT_LIMIT + 5 }, (_, i) => ({
+        actorId: quiet.user.id,
+        action: 'document.downloaded',
+        entityType: 'Document',
+        entityId: `old-${i}`,
+        createdAt: new Date(Date.now() - 3 * 3_600_000),
+      })),
+    });
+    await t.raw('GET', `/probe/access/documents/new-${next()}/download`, {
+      headers: quiet.headers,
+    });
+    expect(await t.db.incident.count({ where: { description: { contains: quiet.user.id } } })).toBe(
+      0,
+    );
+
+    const burst = await as('case_manager');
+    await t.db.auditEvent.createMany({
+      data: Array.from({ length: DOWNLOAD_ALERT_LIMIT }, (_, i) => ({
+        actorId: burst.user.id,
+        action: 'document.downloaded',
+        entityType: 'Document',
+        entityId: `recent-${i}`,
+        createdAt: new Date(Date.now() - 10 * 60_000),
+      })),
+    });
+    // Two downloads at the same moment: counted one after the other, so exactly one alert.
+    await Promise.all(
+      [0, 1].map(() =>
+        t.raw('GET', `/probe/access/documents/burst-${next()}/download`, {
+          headers: burst.headers,
+        }),
+      ),
+    );
+    expect(await t.db.incident.count({ where: { description: { contains: burst.user.id } } })).toBe(
+      1,
+    );
+  });
 });

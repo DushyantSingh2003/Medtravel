@@ -44,9 +44,10 @@ const ACTION_FILTERS = [
   'incident.created',
 ] as const;
 
-/** A date typed in the viewer's own calendar, as the instant the day starts (or ends) there. */
+/** Ops screens run on Indian time (CLAUDE.md): a date typed here is a day in Asia/Kolkata (UTC+05:30, no daylight saving). */
+const OPS_TIME_ZONE = 'Asia/Kolkata';
 const dayBoundary = (day: string, end: boolean): string =>
-  new Date(`${day}T${end ? '23:59:59.999' : '00:00:00'}`).toISOString();
+  new Date(`${day}T${end ? '23:59:59.999' : '00:00:00'}+05:30`).toISOString();
 
 function useDebounced(value: string): string {
   const [debounced, setDebounced] = useState(value);
@@ -75,7 +76,9 @@ export function AuditScreen() {
   });
   const [open, setOpen] = useState<AuditPageDtoItemsItem | null>(null);
   const [exporting, setExporting] = useState(false);
-  const actor = useDebounced(actorText);
+  // The API wants at least three characters of a name or email.
+  const typedActor = useDebounced(actorText);
+  const actor = typedActor.length >= 3 ? typedActor : '';
   const entityType = useDebounced(entityTypeText);
 
   const filters = useMemo<Omit<ListAuditParams, 'cursor' | 'limit'>>(
@@ -102,7 +105,12 @@ export function AuditScreen() {
   const page = list.data?.data;
 
   const dateFormat = useMemo(
-    () => new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: 'medium', timeStyle: 'medium' }),
+    () =>
+      new Intl.DateTimeFormat(intlLocale(locale), {
+        dateStyle: 'medium',
+        timeStyle: 'medium',
+        timeZone: OPS_TIME_ZONE,
+      }),
     [locale],
   );
   const formatDate = (iso: string) => dateFormat.format(new Date(iso));

@@ -3,6 +3,7 @@ import type { Prisma, PrismaClient } from '@medtravel/db';
 import { diffAudit, maskSensitive, type AuditAccessAction } from '@medtravel/contracts';
 import type { RequestContext } from '../common/request-context.js';
 import { PRISMA, type Db } from '../database/database.module.js';
+import { auditTrail } from './audit-trail.js';
 import { DownloadAlertService } from './download-alert.service.js';
 
 export interface AuditEntry {
@@ -36,6 +37,15 @@ export class AuditService {
 
   async record(db: Db, context: RequestContext, entry: AuditEntry): Promise<void> {
     const { before, after } = diffAudit(entry.before, entry.after);
+    // An update that changed nothing is not an event.
+    if (
+      entry.before &&
+      entry.after &&
+      !Object.keys(before ?? {}).length &&
+      !Object.keys(after ?? {}).length
+    )
+      return void this.markRecorded();
+    this.markRecorded();
     await db.auditEvent.create({
       data: {
         actorId: context.actor?.userId ?? null,
@@ -51,6 +61,12 @@ export class AuditService {
         requestId: context.requestId,
       },
     });
+  }
+
+  /** Tells the safety-net interceptor that this request has its own audit row. */
+  private markRecorded(): void {
+    const state = auditTrail.getStore();
+    if (state) state.recorded = true;
   }
 
   /** Records an event that has no change of its own to travel with, such as an export. */

@@ -77,3 +77,4 @@ Appended by build tasks. Format: `- [<TASK-ID>] <question> — assumed: <what wa
 - [F-05] What the trail masks — assumed: passwords, tokens, secrets, hashes and one-time codes entirely; date of birth, email, phone and address entirely; passport numbers down to their last four characters. An update stores only the changed fields.
 - [F-05] Who reads the audit log — assumed: super admin only (read and export); the PRD names no other role.
 - [F-05] Retries — assumed: an outbox event is tried 6 times with 5 s, 10 s, 20 s ... waits before it is marked failed.
+- [F-05] "Automatically for every create/update/delete" — assumed: detailed rows are written by each service in its transaction; an interceptor guarantees a plain route-level row for any signed-in change that wrote none. A database-level hook was not built (see docs/progress.md).

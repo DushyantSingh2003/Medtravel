@@ -169,20 +169,33 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-05.
 ### Deferred from F-05
 
 - **Not yet verified on GitHub:** first CI result for this task (the API e2e job now also runs the worker's database tests).
-- **Automatic capture of every change** is by convention, not by a database hook: each service writes its audit row in the
-  same transaction (`AuditService.record`, as masters and auth do). A model change made without it leaves no row; a Prisma
-  extension that records every create, update and delete is the follow-up if that proves too easy to forget.
-- **Views and downloads** are recorded by `AuditService.recordAccess`, which the document and patient endpoints (F-06 and the
-  case screens) must call on every read; they do not exist yet, so the end-to-end proof uses a test-only route, and the
-  Playwright test shows a sign-in within seconds instead of a document view.
-- The audit list counts rows for its total with every request; on a very large table that count wants a cap or an estimate.
-- The CSV export is built in memory (10,000 rows at most), not streamed.
-- The outbox dispatcher polls every 2 seconds; PostgreSQL `LISTEN/NOTIFY` would cut the delay. Only `incident.created` has a
-  handler; the notification, SLA timer and search-refresh handlers arrive with their tasks. Failed events (after 6 tries)
-  stay in the table with `status = failed` and no screen shows them yet.
+- **Automatic capture of every change:** services write detailed audit rows (what changed) in their own transaction, as
+  masters and auth do. As a safety net an interceptor adds a plain `http.<method>` row naming the route (never ids) when a
+  signed-in change finishes without any audit row. It does not say what changed; a Prisma extension that records every
+  create, update and delete is the follow-up if the safety net proves too coarse.
+- **Blocking dependency for F-06 and the case screens:** every patient or document read and download must call
+  `AuditService.recordAccess`. No real call site exists yet, so the end-to-end proof uses a test-only route, and the Playwright
+  test shows a sign-in within seconds instead of a document view.
+- **Masking is a key-name deny-list** (contact details, birth dates, medical text, identifiers, secrets, passports), not an
+  allow-list per entity. A new field with an unusual name is stored as it is: a service logging a whole record must also pass
+  only the fields it means to. Values inside free text (a link with a token in a harmless key) are not scrubbed.
+- **The download alert** counts `document.downloaded` only (not inline views), once per user per rolling hour, and does not
+  escalate after the first alert; no account suspension or step-up. A hospital-wide or address-wide counter is not built.
+- **Audit rows can be deleted only by the retention job** (a trigger needs `SET LOCAL medtravel.audit_retention = 'on'`); the job
+  itself, and a retention period for IP and device data, are not built. The deployment should also connect with a role that
+  has no DELETE or UPDATE on the table.
+- The audit list total is capped at 10,001; the actor filter needs three characters and looks at the first 1,000 matching users;
+  `action` prefix filters use `LIKE 'x.%'`, which wants a `text_pattern_ops` index on a very large table.
+- The CSV export is built in memory (10,000 rows at most, `x-audit-truncated: true` says when more matched), not streamed,
+  and the portal does not yet show that header.
+- The audit screen's dates are Asia/Kolkata days; the browser's own zone is not used.
+- Outbox: polls every 2 seconds and keeps going while batches are full; events no handler knows are deferred 10 minutes, not
+  consumed; an event that keeps killing its worker is marked failed after 6 tries; a handler that runs longer than the 120 s
+  lock can run twice (handlers must be idempotent). Failed events have no alert or screen yet, processed rows are never
+  pruned, and only `incident.created` has a handler.
 - Admin notifications for an incident are in-app only and in English until the notification engine (F-07) renders templates.
-- Audit rows are never deleted or archived yet (the retention job belongs with the data protection work).
-- The incident created by the download alert has no assignee and no screen to work it until the incidents module.
+- Reads of the audit trail are not themselves audited (only the export is); the incident created by the alert has no assignee
+  and no screen to work it until the incidents module.
 
 ### Deferred from F-04
 

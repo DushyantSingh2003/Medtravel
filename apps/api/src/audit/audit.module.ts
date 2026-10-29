@@ -1,7 +1,9 @@
 import { Global, Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { OutboxService } from '../outbox/outbox.service.js';
 import { AuditController } from './audit.controller.js';
 import { AuditQueryService } from './audit-query.service.js';
+import { AuditTrailInterceptor } from './audit-trail.interceptor.js';
 import { AuditService } from './audit.service.js';
 import { DownloadAlertService } from './download-alert.service.js';
 
@@ -9,7 +11,13 @@ import { DownloadAlertService } from './download-alert.service.js';
 @Global()
 @Module({
   controllers: [AuditController],
-  providers: [AuditService, AuditQueryService, DownloadAlertService, OutboxService],
+  providers: [
+    AuditService,
+    AuditQueryService,
+    DownloadAlertService,
+    OutboxService,
+    { provide: APP_INTERCEPTOR, useClass: AuditTrailInterceptor },
+  ],
   exports: [AuditService, OutboxService],
 })
 export class AuditModule {}

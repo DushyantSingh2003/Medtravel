@@ -5,6 +5,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createPrismaClient, type PrismaClient } from '../src/client.ts';
 import {
   OUTBOX_MAX_ATTEMPTS,
+  OUTBOX_UNHANDLED_DELAY_MS,
   OUTBOX_VISIBILITY_TIMEOUT_MS,
   claimOutboxBatch,
   outboxBackoffMs,
@@ -78,9 +79,47 @@ describe('outbox runtime', () => {
     expect((await processOutbox(prisma, {})).claimed).toBe(0);
   });
 
-  it('marks an event with no handler processed, so it does not wait for ever', async () => {
-    await publish('nobody.listens');
-    expect((await processOutbox(prisma, {})).processed).toBe(1);
+  it('keeps an event nobody handles, untouched, and offers it again later', async () => {
+    const event = await publish('nobody.listens');
+    const t0 = new Date();
+    expect(await processOutbox(prisma, {}, { now: t0 })).toMatchObject({
+      claimed: 1,
+      processed: 0,
+    });
+    const row = await prisma.outboxEvent.findUniqueOrThrow({ where: { id: event.id } });
+    expect(row).toMatchObject({ status: 'pending', attempts: 0 });
+    expect(row.availableAt.getTime()).toBeGreaterThanOrEqual(
+      t0.getTime() + OUTBOX_UNHANDLED_DELAY_MS - 1000,
+    );
+    expect((await processOutbox(prisma, {}, { now: new Date(t0.getTime() + 1000) })).claimed).toBe(
+      0,
+    );
+
+    // Once a handler exists (a newer worker), the same event is handled.
+    const later = new Date(t0.getTime() + OUTBOX_UNHANDLED_DELAY_MS + 1000);
+    const seen: string[] = [];
+    await processOutbox(
+      prisma,
+      { 'nobody.listens': async (e) => void seen.push(e.id) },
+      { now: later },
+    );
+    expect(seen).toEqual([event.id]);
+  });
+
+  it('gives up on an event that keeps killing its worker, instead of reclaiming it for ever', async () => {
+    const event = await publish('poison');
+    let now = new Date();
+    // The worker dies every time: it claims and never reports back, until the lock runs out.
+    for (let i = 0; i < OUTBOX_MAX_ATTEMPTS; i += 1) {
+      const claimed = await claimOutboxBatch(prisma, 5, now);
+      expect(claimed.map((e: OutboxEventRecord) => e.id)).toEqual([event.id]);
+      now = new Date(now.getTime() + OUTBOX_VISIBILITY_TIMEOUT_MS + 1000);
+    }
+    expect(await claimOutboxBatch(prisma, 5, now)).toEqual([]);
+    expect(await prisma.outboxEvent.findUniqueOrThrow({ where: { id: event.id } })).toMatchObject({
+      status: 'failed',
+      attempts: OUTBOX_MAX_ATTEMPTS,
+    });
   });
 
   it('never gives the same event to two workers claiming at the same moment', async () => {

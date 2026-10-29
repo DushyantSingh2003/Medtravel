@@ -820,8 +820,15 @@ describe('the audit trail', () => {
       ),
     ).toMatch(/append-only/);
     expect(await rejection(db.$executeRawUnsafe('TRUNCATE "AuditEvent"'))).toMatch(/append-only/);
-    // Deleting a row is the retention job's business, and stays possible.
-    await db.auditEvent.delete({ where: { id: event.id } });
+    // Deleting a row is the retention job's business: refused unless the transaction says it is the retention job.
+    expect(await rejection(db.auditEvent.delete({ where: { id: event.id } }))).toMatch(
+      /retention job/,
+    );
+    await db.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe(`SET LOCAL medtravel.audit_retention = 'on'`);
+      await tx.auditEvent.delete({ where: { id: event.id } });
+    });
+    expect(await db.auditEvent.count({ where: { id: event.id } })).toBe(0);
   });
 });
 

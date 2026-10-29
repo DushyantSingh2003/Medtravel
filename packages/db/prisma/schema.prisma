@@ -2241,6 +2241,8 @@ model Notification {
   id          String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   channel     NotificationChannel
   status      NotificationStatus  @default(queued)
+  /// Makes a repeated delivery of the same event a no-op: one notification per key.
+  dedupeKey   String?             @unique
   templateKey String
   title       String?
   body        String?             @db.Text

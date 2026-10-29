@@ -5,7 +5,8 @@ const payloadSchema = z.object({ incidentId: z.uuid() });
 
 /**
  * An incident was opened (for example by the download alert): tell every active super admin in their notifications.
- * Idempotent: the event id is stored on each notification, so a retried event does not notify anyone twice.
+ * Idempotent: each notification carries the key `<event id>:<user id>`, which is unique, so a redelivered event (even two
+ * deliveries at once) does not notify anyone twice.
  */
 export async function notifyAdminsOfIncident(
   prisma: PrismaClient,
@@ -23,21 +24,12 @@ export async function notifyAdminsOfIncident(
     where: { role: 'super_admin', status: 'active', deletedAt: null },
     select: { id: true },
   });
-  const already = await prisma.notification.findMany({
-    where: {
-      templateKey: 'incident.created',
-      userId: { in: admins.map((admin) => admin.id) },
-      data: { path: ['eventId'], equals: event.id },
-    },
-    select: { userId: true },
-  });
-  const notified = new Set(already.map((row) => row.userId));
-  const fresh = admins.filter((admin) => !notified.has(admin.id));
-  if (fresh.length === 0) return 0;
-
   // Titles are English here; the notification engine (F-07) renders them in each person's language from the template key.
-  await prisma.notification.createMany({
-    data: fresh.map((admin) => ({
+  // `dedupeKey` is unique: a second delivery of this event, even at the same moment, inserts nothing.
+  const created = await prisma.notification.createMany({
+    skipDuplicates: true,
+    data: admins.map((admin) => ({
+      dedupeKey: `${event.id}:${admin.id}`,
       userId: admin.id,
       channel: 'in_app' as const,
       status: 'sent' as const,
@@ -49,5 +41,5 @@ export async function notifyAdminsOfIncident(
       ...(incident.caseId ? { caseId: incident.caseId } : {}),
     })),
   });
-  return fresh.length;
+  return created.count;
 }

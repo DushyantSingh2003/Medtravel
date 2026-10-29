@@ -19,6 +19,7 @@ export interface RawResponse {
   /** Every `Set-Cookie` of the response, as `name -> value` (an empty value means the cookie was cleared). */
   cookies: Record<string, string>;
   setCookieHeaders: string[];
+  headers: Record<string, string | string[] | number | undefined>;
 }
 
 export interface RawRequest {
@@ -169,7 +170,13 @@ export async function createTestApp(
         return [(pair ?? '').slice(0, index), (pair ?? '').slice(index + 1)];
       }),
     );
-    return { status: response.statusCode, body: parse(response.body), cookies, setCookieHeaders };
+    return {
+      status: response.statusCode,
+      body: parse(response.body),
+      cookies,
+      setCookieHeaders,
+      headers: response.headers,
+    };
   };
 
   return {

@@ -31,18 +31,34 @@ describe('maskSensitive', () => {
 
   it('hides date of birth, email, phone and address', () => {
     expect(
-      maskSensitive({ dateOfBirth: '1990-01-01', email: 'a@b.c', phone: '+91', address: 'x', city: 'Delhi' }),
+      maskSensitive({
+        dateOfBirth: '1990-01-01',
+        email: 'a@b.c',
+        phone: '+91',
+        address: 'x',
+        city: 'Delhi',
+      }),
     ).toEqual({ dateOfBirth: MASK, email: MASK, phone: MASK, address: MASK, city: 'Delhi' });
   });
 
   it('goes into nested objects and arrays, and leaves null and plain values alone', () => {
     expect(
-      maskSensitive({ user: { password: 'p', profile: [{ token: 't', ok: 1 }] }, passportNumber: null, n: 3 }),
-    ).toEqual({ user: { password: MASK, profile: [{ token: MASK, ok: 1 }] }, passportNumber: null, n: 3 });
+      maskSensitive({
+        user: { password: 'p', profile: [{ token: 't', ok: 1 }] },
+        passportNumber: null,
+        n: 3,
+      }),
+    ).toEqual({
+      user: { password: MASK, profile: [{ token: MASK, ok: 1 }] },
+      passportNumber: null,
+      n: 3,
+    });
   });
 
   it('writes dates as ISO strings', () => {
-    expect(maskSensitive({ at: new Date('2026-01-02T03:04:05.000Z') })).toEqual({ at: '2026-01-02T03:04:05.000Z' });
+    expect(maskSensitive({ at: new Date('2026-01-02T03:04:05.000Z') })).toEqual({
+      at: '2026-01-02T03:04:05.000Z',
+    });
   });
 
   it('does not change its input', () => {
@@ -88,5 +104,66 @@ describe('auditListQuerySchema', () => {
     ).toBe(true);
     expect(auditListQuerySchema.safeParse({ actorId: 'nope' }).success).toBe(false);
     expect(auditListQuerySchema.safeParse({ from: 'yesterday' }).success).toBe(false);
+  });
+});
+
+describe('maskSensitive, more keys', () => {
+  it('masks contact variants, medical text and identifiers', () => {
+    const masked = maskSensitive({
+      birthDate: '1990-01-01',
+      phoneNumber: '+91',
+      mobile: '9',
+      whatsappNumber: '9',
+      contactEmail: 'a@b.c',
+      emailAddress: 'a@b.c',
+      addressLine1: 'x',
+      street: 'y',
+      diagnosis: 'text',
+      medicalNotes: 'text',
+      symptoms: 'text',
+      medicalHistory: 'text',
+      allergies: 'text',
+      aadhaarNumber: '1',
+      cardNumber: '4',
+      cvv: '1',
+      iban: 'X',
+      accountNumber: '1',
+      passport: 'N1234567',
+      passportNumberEncrypted: 'zzz',
+      footprint: 'kept',
+      stage: 'enquiry',
+    }) as Record<string, unknown>;
+    for (const key of Object.keys(masked)) {
+      if (key === 'footprint') expect(masked[key]).toBe('kept');
+      else if (key === 'stage') expect(masked[key]).toBe('enquiry');
+      else expect(masked[key], key).toBe(MASK);
+    }
+  });
+
+  it('writes bigint and decimal-like values as strings and hides binary values', () => {
+    expect(
+      maskSensitive({ amount: 12n, price: { toJSON: () => '1.50' }, blob: new Uint8Array([1]) }),
+    ).toEqual({
+      amount: '12',
+      price: '1.50',
+      blob: MASK,
+    });
+  });
+});
+
+describe('diffAudit, more cases', () => {
+  it('ignores the order of keys inside nested values and copes with bigint', () => {
+    expect(diffAudit({ a: { x: 1, y: 2 }, n: 1n }, { a: { y: 2, x: 1 }, n: 1n })).toEqual({
+      before: {},
+      after: {},
+    });
+    expect(diffAudit({ n: 1n }, { n: 2n })).toEqual({ before: { n: 1n }, after: { n: 2n } });
+  });
+});
+
+describe('auditListQuerySchema actor', () => {
+  it('needs at least three characters', () => {
+    expect(auditListQuerySchema.safeParse({ actor: 'ab' }).success).toBe(false);
+    expect(auditListQuerySchema.safeParse({ actor: 'abc' }).success).toBe(true);
   });
 });

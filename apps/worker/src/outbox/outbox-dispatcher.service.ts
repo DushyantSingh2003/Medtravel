@@ -10,6 +10,9 @@ import { PRISMA } from '../database/database.module.js';
 import { outboxHandlers } from './outbox-handlers.js';
 
 const POLL_INTERVAL_MS = 2_000;
+/** Small, because a batch is handled one event after another under one lock. */
+const BATCH_SIZE = 10;
+const MAX_ROUNDS_PER_TICK = 20;
 
 /**
  * Polls the outbox table and runs the handlers. One round at a time per process; several workers can run side by side
@@ -36,7 +39,16 @@ export class OutboxDispatcher implements OnApplicationBootstrap, OnApplicationSh
 
   /** Runs one polling round now; the timer calls this, and tests can too. */
   async runOnce(): Promise<void> {
+    // Keep going while batches come back full, so a backlog drains without waiting for the next tick.
+    for (let round = 0; round < MAX_ROUNDS_PER_TICK; round += 1) {
+      const claimed = await this.round();
+      if (claimed < BATCH_SIZE) return;
+    }
+  }
+
+  private async round(): Promise<number> {
     const result = await processOutbox(this.prisma, outboxHandlers(this.prisma), {
+      limit: BATCH_SIZE,
       onError: (event, error) =>
         // The event id and type only: payloads can hold personal data.
         this.logger.warn(
@@ -49,6 +61,7 @@ export class OutboxDispatcher implements OnApplicationBootstrap, OnApplicationSh
       this.logger.log(
         `outbox: ${result.processed} processed, ${result.retried} to retry, ${result.failed} failed`,
       );
+    return result.claimed;
   }
 
   private schedule(): void {

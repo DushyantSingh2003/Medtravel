@@ -89,7 +89,7 @@ test.describe('audit log', () => {
     for await (const chunk of stream) chunks.push(Buffer.from(chunk));
     const text = Buffer.concat(chunks).toString('utf8');
     expect(text.split('\r\n')[0]).toBe(
-      'time,actor,email,role,action,entityType,entityId,patientId,ip,requestId,before,after',
+      'time,actor,email,role,action,entityType,entityId,patientId,ip,userAgent,requestId,before,after',
     );
     expect(text).toContain('document.viewed');
   });

@@ -7,8 +7,8 @@ import type { Db } from '../database/database.module.js';
 /**
  * One user downloading more than `DOWNLOAD_ALERT_LIMIT` documents inside the window opens an incident and writes an
  * `incident.created` event, which the worker turns into a notification for every admin. Called inside the transaction that
- * records the download, so the count includes it. At most one incident per user per hour: the outbox key is unique and
- * `skipDuplicates` turns a repeat into a no-op without aborting the transaction.
+ * records the download, so the count includes it. A per-user advisory lock serialises the counting, and at most one
+ * incident is raised per user per window.
  */
 @Injectable()
 export class DownloadAlertService {
@@ -18,34 +18,41 @@ export class DownloadAlertService {
     context: RequestContext,
     now: Date = new Date(),
   ): Promise<boolean> {
+    // One user's downloads are counted one at a time, so two at once cannot both miss the limit or both raise the alert.
+    await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}))`;
     const since = new Date(now.getTime() - DOWNLOAD_ALERT_WINDOW_MINUTES * 60_000);
     const count = await db.auditEvent.count({
       where: { actorId: userId, action: 'document.downloaded', createdAt: { gte: since } },
     });
     if (count <= DOWNLOAD_ALERT_LIMIT) return false;
 
-    const incidentId = randomUUID();
-    const hour = now.toISOString().slice(0, 13);
-    const created = await db.outboxEvent.createMany({
-      data: [
-        {
-          type: 'incident.created',
-          aggregateType: 'Incident',
-          aggregateId: incidentId,
-          dedupeKey: `download-alert:${userId}:${hour}`,
-          payload: {
-            incidentId,
-            reason: 'many_downloads',
-            userId,
-            count,
-            windowMinutes: DOWNLOAD_ALERT_WINDOW_MINUTES,
-          },
-        },
-      ],
-      skipDuplicates: true,
+    // One alert per user per window: while the last one is still inside it, carry on quietly.
+    const recent = await db.outboxEvent.findFirst({
+      where: {
+        type: 'incident.created',
+        dedupeKey: { startsWith: `download-alert:${userId}:` },
+        createdAt: { gte: since },
+      },
+      select: { id: true },
     });
-    if (created.count === 0) return false;
+    if (recent) return false;
 
+    const incidentId = randomUUID();
+    await db.outboxEvent.create({
+      data: {
+        type: 'incident.created',
+        aggregateType: 'Incident',
+        aggregateId: incidentId,
+        dedupeKey: `download-alert:${userId}:${incidentId}`,
+        payload: {
+          incidentId,
+          reason: 'many_downloads',
+          userId,
+          count,
+          windowMinutes: DOWNLOAD_ALERT_WINDOW_MINUTES,
+        },
+      },
+    });
     await db.incident.create({
       data: {
         id: incidentId,

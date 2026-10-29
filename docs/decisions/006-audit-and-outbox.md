@@ -16,6 +16,11 @@ Status: accepted (F-05)
 - The download alert runs in the transaction of the download, so the count includes it, and an outbox key unique per user and
   hour turns repeats into no-ops without aborting the transaction.
 
+- Audit rows are deleted only inside a transaction that sets `medtravel.audit_retention`; a trigger refuses any other delete.
+  An interceptor adds a plain `http.<method>` row for a signed-in change that wrote no audit row of its own.
+- An outbox event no handler knows is deferred, not consumed, so a worker that is older than an event does not lose it; an event
+  whose worker keeps dying is marked failed after the last allowed try.
+
 ## Why not
 
 A database trigger on every table would audit changes nobody asked about (sessions, outbox, counters) and cannot know the

@@ -39,7 +39,13 @@ export async function claimOutboxBatch(
   now: Date = new Date(),
 ): Promise<OutboxEventRecord[]> {
   const lockedUntil = new Date(now.getTime() + OUTBOX_VISIBILITY_TIMEOUT_MS);
-  return prisma.$queryRaw<OutboxEventRecord[]>`
+  // An event whose lock ran out after its last allowed try belongs to a worker that died on it, again and again: give up
+  // on it instead of handing it to the next worker.
+  await prisma.$executeRaw`
+    UPDATE "OutboxEvent"
+    SET "status" = 'failed', "lastError" = 'Gave up: the worker stopped while handling it, on every try'
+    WHERE "status" = 'processing' AND "attempts" >= ${OUTBOX_MAX_ATTEMPTS} AND "availableAt" <= ${now}`;
+  const claimed = await prisma.$queryRaw<(OutboxEventRecord & { createdAt: Date })[]>`
     UPDATE "OutboxEvent"
     SET "status" = 'processing', "attempts" = "attempts" + 1, "availableAt" = ${lockedUntil}
     WHERE "id" IN (
@@ -49,7 +55,11 @@ export async function claimOutboxBatch(
       LIMIT ${limit}
       FOR UPDATE SKIP LOCKED
     )
-    RETURNING "id", "type", "aggregateType", "aggregateId", "payload", "dedupeKey", "attempts"`;
+    RETURNING "id", "type", "aggregateType", "aggregateId", "payload", "dedupeKey", "attempts", "createdAt"`;
+  // RETURNING does not promise the order of the subquery: put the events back in the order they were published.
+  return claimed
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id))
+    .map(({ createdAt: _createdAt, ...event }) => event);
 }
 
 export async function completeOutbox(
@@ -93,8 +103,32 @@ export interface OutboxRunResult {
 }
 
 /**
+ * Gives an event back untouched, as if it had not been claimed: for an event no handler of this worker knows (it may be a
+ * newer type than this worker, or an older worker during a rolling deploy). It waits `delayMs` before anyone looks again.
+ */
+export async function deferOutbox(
+  prisma: PrismaClient,
+  event: OutboxEventRecord,
+  delayMs: number,
+  now: Date = new Date(),
+): Promise<void> {
+  await prisma.outboxEvent.updateMany({
+    where: { id: event.id, status: 'processing', attempts: event.attempts },
+    data: {
+      status: 'pending',
+      attempts: Math.max(0, event.attempts - 1),
+      availableAt: new Date(now.getTime() + delayMs),
+    },
+  });
+}
+
+/** How long an event nobody handles waits before it is offered again. */
+export const OUTBOX_UNHANDLED_DELAY_MS = 10 * 60_000;
+
+/**
  * One polling round: claim a batch, run each event's handler, record the outcome. An event with no handler is marked
- * processed so unrelated events never pile up. A handler that throws puts its event back for a later try.
+ * deferred, not consumed: a handler that is not deployed yet must not lose the event. A handler that throws puts its event
+ * back for a later try.
  */
 export async function processOutbox(
   prisma: PrismaClient,
@@ -108,8 +142,13 @@ export async function processOutbox(
   const batch = await claimOutboxBatch(prisma, options.limit ?? 20, options.now);
   const result: OutboxRunResult = { claimed: batch.length, processed: 0, retried: 0, failed: 0 };
   for (const event of batch) {
+    const handler = handlers[event.type];
+    if (!handler) {
+      await deferOutbox(prisma, event, OUTBOX_UNHANDLED_DELAY_MS, options.now);
+      continue;
+    }
     try {
-      await handlers[event.type]?.(event);
+      await handler(event);
       await completeOutbox(prisma, event);
       result.processed += 1;
     } catch (error) {

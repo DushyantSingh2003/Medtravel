@@ -10,6 +10,7 @@ const COLUMNS = [
   'entityId',
   'patientId',
   'ip',
+  'userAgent',
   'requestId',
   'before',
   'after',
@@ -19,7 +20,8 @@ const COLUMNS = [
 export function csvCell(value: unknown): string {
   if (value === null || value === undefined) return '';
   let text = typeof value === 'string' ? value : JSON.stringify(value);
-  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+  // A spreadsheet runs a cell that starts with = + - @ as a formula, also after leading spaces and control characters.
+  if (/^[\s\p{Cc}\u00a0]*[=+\-@]/u.test(text) || /^[\t\r]/.test(text)) text = `'${text}`;
   return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
@@ -35,6 +37,7 @@ export function auditCsv(events: AuditEventView[]): string {
       event.entityId,
       event.patientId,
       event.ip,
+      event.userAgent,
       event.requestId,
       event.before,
       event.after,

@@ -1,4 +1,4 @@
-import { Controller, Get, Module, Param } from '@nestjs/common';
+import { Controller, Get, Module, Param, Post } from '@nestjs/common';
 import { Can } from '../../src/auth/decorators.js';
 import { AuditService } from '../../src/audit/audit.service.js';
 import { Ctx, type RequestContext } from '../../src/common/request-context.js';
@@ -19,6 +19,26 @@ class AccessProbeController {
       entityType: 'Document',
       entityId: id,
       patientId: null,
+    });
+    return { ok: true };
+  }
+
+  /** A change that forgets to audit itself: the safety net must leave a row. */
+  @Post('forgetful/:id')
+  @Can('create', 'Document')
+  forgetful(): { ok: true } {
+    return { ok: true };
+  }
+
+  /** A change that audits itself: the safety net must stay out of the way. */
+  @Post('careful/:id')
+  @Can('create', 'Document')
+  async careful(@Param('id') id: string, @Ctx() context: RequestContext): Promise<{ ok: true }> {
+    await this.audit.recordNow(context, {
+      action: 'probe.created',
+      entityType: 'Probe',
+      entityId: id,
+      after: { id },
     });
     return { ok: true };
   }
