@@ -1,5 +1,7 @@
 export * from './primitives.js';
+export * from './case-machine.js';
 export * from './case-stages.js';
+export * from './cases.js';
 export * from './roles.js';
 export * from './currencies.js';
 export * from './enums.js';

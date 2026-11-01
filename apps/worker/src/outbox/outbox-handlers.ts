@@ -5,6 +5,7 @@ import type { ClamdOptions, ObjectStore } from '@medtravel/storage';
 import { processUploadedDocument } from '../documents/process-document.js';
 import { deliverQueuedNotification } from './handlers/notification-deliver.handler.js';
 import { publishRealtime } from './handlers/realtime-publish.handler.js';
+import { notifyAgentOfStageChange } from './handlers/case-stage-changed.handler.js';
 import { notifyAdminsOfIncident } from './handlers/incident-created.handler.js';
 
 export interface HandlerDeps {
@@ -25,5 +26,7 @@ export function outboxHandlers(deps: HandlerDeps): OutboxHandlers {
     'document.uploaded': (event) => processUploadedDocument(deps, event),
     'notification.deliver': (event) => deliverQueuedNotification(deps, event),
     'realtime.publish': (event) => publishRealtime(deps, event),
+    'case.stage_changed': async (event) =>
+      void (await notifyAgentOfStageChange(deps.prisma, event)),
   };
 }
