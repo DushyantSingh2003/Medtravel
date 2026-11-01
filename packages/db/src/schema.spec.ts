@@ -82,6 +82,7 @@ describe('schema.prisma enums', () => {
           'portal',
           'displayCurrency',
           'caseExitStage',
+          'caseTarget',
           'caseStage',
           'caseStatus',
           'role',
@@ -172,7 +173,7 @@ describe('schema.prisma conventions', () => {
   });
 
   it('uses database-generated UUID keys, except the code-keyed reference tables', () => {
-    const codeKeyed = new Set(['Country', 'Language', 'Currency', 'NumberSequence']);
+    const codeKeyed = new Set(['Country', 'Language', 'Currency', 'NumberSequence', 'StageConfig']);
     for (const model of models) {
       if (codeKeyed.has(model.name)) continue;
       const id = fieldsOf(model).find((f) => f.name === 'id');
@@ -270,6 +271,7 @@ describe('schema.prisma conventions', () => {
       'AuditEvent',
       'OutboxEvent',
       'NumberSequence',
+      'StageConfig',
       'ProcessedWebhook',
       'DoctorTranslation',
       'HospitalTranslation',

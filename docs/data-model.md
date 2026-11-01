@@ -2,7 +2,7 @@
 
 > Generated from `packages/db/prisma/schema.prisma` by `pnpm --filter @medtravel/db docs:model`. Do not edit by hand: a test fails when this file is out of date.
 
-The database holds **79 tables** and **51 enums** (PRD section 11). The central entity is the **Case**: one patient, one treatment episode, and everything else hangs off it.
+The database holds **80 tables** and **51 enums** (PRD section 11). The central entity is the **Case**: one patient, one treatment episode, and everything else hangs off it.
 
 ## Overview
 
@@ -127,6 +127,7 @@ The central entity: one patient, one treatment episode. Everything else hangs of
 | **CaseIntake** | What the patient told us about their condition. Medical text: kept off the Case row so an agent's or a list query never carries it by accident. | Case (case) |  | soft delete |
 | **CaseNote** | A staff-only note on a case (Case 360 notes). Never shown to patients, hospitals or agents; messages to those people live in Message. | Case (case), User (author, optional) |  | soft delete |
 | **CaseStageHistory** | Every stage change of a case, who made it and when. | Case (case), User (actor, optional) |  |  |
+| **StageConfig** | What an admin changed about a stage: its target time, owner role and automatic tasks. A stage with no row uses the defaults in `packages/contracts` (`DEFAULT_STAGE_TARGET_MINUTES`, `STAGE_OWNER_ROLE`, `DEFAULT_AUTO_TASKS`). |  |  |  |
 | **MedicalSummary** | The reviewer's structured summary. One current version per case; older versions are kept. | Case (case), User (reviewer, optional), Speciality (recommendedSpeciality, optional) | OpinionRequest (opinionRequests) | unique: caseId + version |
 | **Document** | A file in the private bucket. Only metadata is here; downloads go through presigned URLs and are audited. | Patient (patient, optional), Case (case, optional), Agent (agent, optional), Hospital (hospital, optional), DocumentType (type, optional), User (uploadedBy, optional) | DocumentShare (shares), Admission (admissionsDischarged), Accreditation (accreditations), Quote (quotes), Invoice (invoices), VisaApplication (visaInvitations), MessageAttachment (messageAttachments) | soft delete |
 | **FileUpload** | One browser upload of a file to the private bucket. The API creates it when it signs the start of the multipart upload and only signs later requests for keys it knows, for the same user, while it is open. | User (user) |  |  |

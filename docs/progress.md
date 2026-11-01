@@ -4,7 +4,7 @@ Tick a task here when it is finished and `pnpm check` is green. The task queue t
 build loop is `loop/cloud-state.json`; this file is the human-readable view and also records
 what each task deferred.
 
-Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-09.
+Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-10.
 
 ### Phase 0 — Scaffold (week 1)
 
@@ -26,7 +26,7 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-09.
 - [x] **F-07** Notification engine
 - [x] **F-08** Realtime gateway
 - [x] **F-09** Money, currencies and languages
-- [ ] **F-10** Case core and stage machine
+- [x] **F-10** Case core and stage machine
 - [ ] **F-11** Seed data and test factories
 - [ ] **F-12** Observability
 
@@ -165,6 +165,26 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-09.
 - [ ] **G-08** Advanced analytics
 
 ## Notes and deferred work
+
+### Deferred from F-10
+
+- **No screens yet.** The case list, case page, stage tracker actions and the stage-configuration form come with the ops portal tasks;
+  the API (`/cases`, `/cases/:id/transitions`, `/cases/:id/history`, `/cases/stage-config`) is ready and generated into the client.
+- **Only the data the schema can check is required today:** a case manager, a medical summary, a sent quote, an accepted quote, and a
+  succeeded deposit. Visa approval, a booking, an admission and a discharge summary are added to `ENTRY_REQUIREMENTS`
+  (`packages/contracts/src/case-machine.ts`) by the tasks that build those records.
+- **Finance can read cases but the permission matrix gives it no update**, so a finance user cannot make the deposit move even though
+  the machine allows it; a case manager makes it after finance confirms. Change the matrix (and `docs/permissions.md`) if finance
+  should move cases.
+- **Agents who open a case cannot read it back** until the patient's consent to share the stage exists (that consent is created by the
+  patient flow); the create answer is returned to them directly.
+- **The patient's own message on a stage change** needs a generic notification event (today's events are specific: quote sent, visa
+  approved, ...); only the agency is told (`referral_stage_changed`, initials only, only with consent). Stage names in that message
+  are English.
+- **SLA breach goes to the case owner** (or the super admins when there is none); escalation to a manager and working-hours
+  calendars are not built. Targets run on calendar time.
+- Automatic assignment of a case manager within 15 minutes (PRD stage 1) is the lead-inbox task's; the task "Assign a case manager"
+  and the 15-minute `firstResponseDueAt` are created.
 
 ### Deferred from F-09
 

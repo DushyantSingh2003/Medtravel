@@ -14,6 +14,7 @@ import { DocumentsModule } from './modules/documents/documents.module.js';
 import { RealtimeModule } from './realtime/realtime.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { StorageModule } from './storage/storage.module.js';
+import { CasesModule } from './modules/cases/cases.module.js';
 import { FxModule } from './modules/fx/fx.module.js';
 import { MastersModule } from './modules/masters/masters.module.js';
 
@@ -33,6 +34,7 @@ import { MastersModule } from './modules/masters/masters.module.js';
     HealthModule,
     MastersModule,
     FxModule,
+    CasesModule,
     DocumentsModule,
     NotificationsModule,
     RealtimeModule,
