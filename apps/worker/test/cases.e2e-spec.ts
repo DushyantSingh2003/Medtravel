@@ -164,6 +164,34 @@ describe('the SLA sweep', () => {
     ).toBe(1);
   });
 
+  it('keeps going when one case cannot be announced', async () => {
+    const bad = await makeCase({ ownerId: managerId, slaDueAt: minutesAgo(500) });
+    const good = await makeCase({ ownerId: managerId, slaDueAt: minutesAgo(400) });
+    // A database whose announcement of one case always fails.
+    const flaky = new Proxy(prisma, {
+      get(target, key, receiver) {
+        if (key !== '$transaction') return Reflect.get(target, key, receiver);
+        return (run: (tx: PrismaClient) => Promise<unknown>) =>
+          target.$transaction(async (tx) => {
+            const original = tx.case.updateMany.bind(tx.case);
+            tx.case.updateMany = ((args: { where: { id?: string } }) => {
+              if (args.where.id === bad.id) throw new Error('boom');
+              return original(args as never);
+            }) as unknown as typeof tx.case.updateMany;
+            return run(tx as unknown as PrismaClient);
+          });
+      },
+    });
+    const result = await sweepOverdueCases(flaky);
+    expect(result.breached).toBeGreaterThanOrEqual(1);
+    expect(
+      (await prisma.case.findUniqueOrThrow({ where: { id: good.id } })).slaBreachedAt,
+    ).not.toBeNull();
+    expect(
+      (await prisma.case.findUniqueOrThrow({ where: { id: bad.id } })).slaBreachedAt,
+    ).toBeNull();
+  });
+
   it('writes how late in plain words', () => {
     expect(overdueText(30_000)).toBe('1 min');
     expect(overdueText(42 * 60_000)).toBe('42 min');
@@ -248,6 +276,17 @@ describe('a case changed stage', () => {
         where: { caseId: c.id, templateKey: 'referral_stage_changed' },
       }),
     ).toBe(sent.length);
+  });
+
+  it('does not tell the agency again when a finished follow-up is closed', async () => {
+    const { c } = await agencyCase('granted');
+    expect(
+      await notifyAgentOfStageChange(
+        prisma,
+        eventFor({ caseId: c.id, to: 'follow_up', status: 'closed' }),
+      ),
+    ).toBe(0);
+    expect(await prisma.notification.count({ where: { caseId: c.id } })).toBe(0);
   });
 
   it('tells the agency nothing without consent, after it is withdrawn, or for a case with no agency', async () => {

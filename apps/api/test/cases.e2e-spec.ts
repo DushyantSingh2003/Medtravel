@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   CASE_STAGES,
@@ -215,6 +216,104 @@ describe('POST /cases', () => {
       where: { id: (res.body as { id: string }).id },
     });
     expect(row).toMatchObject({ agentId: agency.id, source: 'agent' });
+  });
+});
+
+describe('what each kind of caller may learn', () => {
+  it('keeps the reasons staff write on a case’s moves from patients, and shows them to staff', async () => {
+    const own = view((await call('patient1', 'POST', '/cases', {})).body);
+    await t.db.case.update({
+      where: { id: own.id },
+      data: { ownerId: people['manager1']?.id as string },
+    });
+    expect(
+      (await move('admin', own.id, 'on_hold', { note: 'Cannot afford treatment' })).status,
+    ).toBe(200);
+    const asPatient = stageHistoryPageSchema.parse(
+      (await call('patient1', 'GET', `/cases/${own.id}/history`)).body,
+    );
+    expect(asPatient.items.map((h) => h.toStage)).toEqual(['on_hold', 'enquiry']);
+    expect(asPatient.items.every((h) => h.note === null && h.actorId === null)).toBe(true);
+    const asStaff = stageHistoryPageSchema.parse(
+      (await call('admin', 'GET', `/cases/${own.id}/history`)).body,
+    );
+    expect(asStaff.items[0]).toMatchObject({ note: 'Cannot afford treatment' });
+  });
+
+  it('shows an agency only what its role may read: no internal timers, patient id, owner or source', async () => {
+    await person('agent2', 'agent');
+    await t.db.country.upsert({
+      where: { code: 'AE' },
+      update: {},
+      create: { code: 'AE', name: 'United Arab Emirates' },
+    });
+    const agency = await t.db.agent.create({
+      data: {
+        companyName: 'Agency Two',
+        referralCode: `AG${next()}`,
+        languages: ['ar'],
+        countryCode: 'AE',
+      },
+    });
+    await t.db.agentUser.create({
+      data: { agentId: agency.id, userId: people['agent2']?.id as string },
+    });
+    const res = await call('agent2', 'POST', '/cases', {
+      patient: { fullName: 'Lina Haddad' },
+      source: 'walk_in',
+    });
+    expect(res.status).toBe(201);
+    const keys = Object.keys(res.body as object).sort();
+    expect(keys).toEqual(
+      [
+        'caseNo',
+        'createdAt',
+        'id',
+        'nextTargets',
+        'patientName',
+        'stage',
+        'stageEnteredAt',
+        'status',
+        'urgency',
+      ].sort(),
+    );
+    // Their own choice of source is ignored: the case is an agency referral.
+    const row = await t.db.case.findUniqueOrThrow({
+      where: { id: (res.body as { id: string }).id },
+    });
+    expect(row.source).toBe('agent');
+    for (const query of [
+      'ownerId=' + people['manager1']?.id,
+      'source=agent',
+      'overdue=true',
+      'sort=slaDueAt',
+    ])
+      expect((await call('agent2', 'GET', `/cases?${query}`)).status, query).toBe(400);
+  });
+
+  it('keeps a patient’s own source choice out too', async () => {
+    const res = await call('patient2', 'POST', '/cases', { source: 'referral' });
+    expect(res.status).toBe(201);
+    const row = await t.db.case.findUniqueOrThrow({
+      where: { id: (res.body as { id: string }).id },
+    });
+    expect(row.source).toBe('website');
+    expect((await call('patient2', 'GET', '/cases?urgency=routine')).status).toBe(200);
+  });
+
+  it('answers 422 on the field when the treatment, city or country does not exist', async () => {
+    for (const [field, value] of [
+      ['treatmentId', randomUUID()],
+      ['preferredCityId', randomUUID()],
+      ['countryCode', 'ZZ'],
+    ] as const) {
+      const res = await call('manager1', 'POST', '/cases', {
+        patient: { fullName: 'Ref Check' },
+        [field]: value,
+      });
+      expect(res.status, field).toBe(422);
+      expect(errorFields(res.body)).toEqual([field]);
+    }
   });
 });
 
@@ -663,6 +762,26 @@ describe('stage configuration', () => {
         where: { action: 'stage_config.updated', entityId: 'qualification' },
       }),
     ).toBe(1);
+  });
+
+  it('lets the configured owner role move the case, instead of the built-in one', async () => {
+    const created = await openCase('admin', 'Owner Config');
+    await supplyFacts(created.id);
+    await move('admin', created.id, 'qualification');
+    await move('admin', created.id, 'medical_review');
+    // Built in: the medical reviewer owns this stage. Hand it to finance.
+    await call('admin', 'PUT', '/cases/stage-config/medical_review', {
+      targetMinutes: 60,
+      ownerRole: 'finance',
+      autoTasks: [],
+    });
+    expect((await move('reviewer', created.id, 'hospital_opinions')).status).toBe(403);
+    await call('admin', 'PUT', '/cases/stage-config/medical_review', {
+      targetMinutes: 1440,
+      ownerRole: 'medical_reviewer',
+      autoTasks: [],
+    });
+    expect((await move('reviewer', created.id, 'hospital_opinions')).status).toBe(200);
   });
 
   it('is for the super admin only, and checks its input', async () => {

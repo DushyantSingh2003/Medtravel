@@ -189,6 +189,14 @@ describe('who may move a case', () => {
     expect(canMoveCase('hospital_desk', closed, 'closed')).toBe(false);
   });
 
+  it('uses the owner role an admin configured instead of the built-in one', () => {
+    expect(canMoveCase('finance', open('visa'), 'travel_planning')).toBe(false);
+    expect(canMoveCase('finance', open('visa'), 'travel_planning', 'finance')).toBe(true);
+    expect(
+      canMoveCase('hospital_desk', open('hospital_opinions'), 'quote_decision', 'finance'),
+    ).toBe(false);
+  });
+
   it('lets only finance, case managers and the super admin waive a requirement', () => {
     expect(ROLES.filter(canOverrideRequirement).sort()).toEqual([
       'case_manager',

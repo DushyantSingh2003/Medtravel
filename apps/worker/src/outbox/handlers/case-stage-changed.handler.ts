@@ -25,7 +25,9 @@ export async function notifyAgentOfStageChange(
   prisma: PrismaClient,
   event: OutboxEventRecord,
 ): Promise<number> {
-  const { caseId, to } = payloadSchema.parse(event.payload);
+  const { caseId, to, status } = payloadSchema.parse(event.payload);
+  // Closing a finished follow-up keeps the stage; the agency was already told it is in follow-up.
+  if (status === 'closed') return 0;
   const found = await prisma.case.findFirst({
     where: { id: caseId, deletedAt: null, agentId: { not: null } },
     select: {

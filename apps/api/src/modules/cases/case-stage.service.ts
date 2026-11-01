@@ -92,12 +92,22 @@ export class CaseStageService {
       await tx.$queryRaw`SELECT id FROM "Case" WHERE id = ${caseId}::uuid FOR UPDATE`;
       const current = await tx.case.findUnique({
         where: { id: caseId },
-        select: { id: true, stage: true, status: true, ownerId: true, patientId: true },
+        select: {
+          id: true,
+          stage: true,
+          status: true,
+          ownerId: true,
+          patientId: true,
+          deletedAt: true,
+        },
       });
-      if (!current) throw new NotFoundException('Case not found');
+      if (!current || current.deletedAt) throw new NotFoundException('Case not found');
       const from: CaseState = { stage: current.stage, status: current.status };
 
-      if (!canMoveCase(actor.role, from, request.to))
+      const ownerRole = isStage(current.stage)
+        ? (await this.config.get(tx, current.stage)).ownerRole
+        : undefined;
+      if (!canMoveCase(actor.role, from, request.to, ownerRole))
         throw new ForbiddenException('You cannot move this case');
       const resume = await this.resumeStageOf(tx, caseId);
       const plan = describeTransition(from, request.to, resume);
@@ -140,6 +150,7 @@ export class CaseStageService {
           toStage: plan.to.stage,
           note: request.note ?? null,
           actorId: actor.userId,
+          createdAt: now,
         },
       });
       if (entersStage && plan.kind !== 'back')
@@ -191,10 +202,13 @@ export class CaseStageService {
     const row = await this.prisma.case.findUnique({ where: { id: caseId }, select: CASE_SELECT });
     if (!row) throw new NotFoundException('Case not found');
     const resume = await this.resumeStageOf(this.prisma, caseId);
+    const ownerRole = isStage(row.stage)
+      ? (await this.config.get(this.prisma, row.stage)).ownerRole
+      : undefined;
     return toCaseView(
       row,
       actor.role,
-      nextTargetsOf(actor.role, { stage: row.stage, status: row.status }, resume),
+      nextTargetsOf(actor.role, { stage: row.stage, status: row.status }, resume, ownerRole),
     );
   }
 

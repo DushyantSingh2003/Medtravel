@@ -44,7 +44,21 @@ export async function sweepOverdueCases(
   for (const row of due) {
     if (!row.slaDueAt) continue;
     const overdueMs = now.getTime() - row.slaDueAt.getTime();
-    const announced = await prisma.$transaction(async (tx) => {
+    const announced = await announce(prisma, row, overdueMs, now);
+    if (announced) breached += 1;
+  }
+  return { breached };
+}
+
+async function announce(
+  prisma: PrismaClient,
+  row: { id: string; caseNo: string; stage: string; ownerId: string | null; slaDueAt: Date | null },
+  overdueMs: number,
+  now: Date,
+): Promise<boolean> {
+  // One case that cannot be announced must not stop the others; it is retried on the next sweep because its mark rolls back.
+  try {
+    return await prisma.$transaction(async (tx) => {
       const claimed = await tx.case.updateMany({
         where: { id: row.id, slaBreachedAt: null, slaDueAt: row.slaDueAt },
         data: { slaBreachedAt: now },
@@ -71,7 +85,11 @@ export async function sweepOverdueCases(
       });
       return true;
     });
-    if (announced) breached += 1;
+  } catch (error) {
+    // Only the case id is logged: nothing about the patient.
+    console.warn(
+      `sla: could not announce case ${row.id}: ${error instanceof Error ? error.name : 'error'}`,
+    );
+    return false;
   }
-  return { breached };
 }

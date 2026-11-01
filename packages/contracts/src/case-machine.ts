@@ -253,11 +253,27 @@ const OVERRIDERS: readonly Role[] = ['super_admin', 'case_manager', 'finance'];
  * Whether a role may move a case out of its current state: the people who run cases always, anyone else only while the
  * case is in a stage their role owns. Exits and reopening are for case runners only.
  */
-export function canMoveCase(role: Role, from: CaseState, target: CaseTarget): boolean {
+/** Roles that see a case's internal side: notes on its moves, timers, owner and source. Patients, agents and hospitals do not. */
+export const CASE_STAFF_ROLES: readonly Role[] = [
+  'super_admin',
+  'case_manager',
+  'medical_reviewer',
+  'ground_coordinator',
+  'finance',
+];
+export const isCaseStaff = (role: Role): boolean => CASE_STAFF_ROLES.includes(role);
+
+export function canMoveCase(
+  role: Role,
+  from: CaseState,
+  target: CaseTarget,
+  /** The role an admin set as the stage's owner (`StageConfig`); defaults to the built-in one. */
+  ownerRole?: Role,
+): boolean {
   if (CASE_RUNNERS.includes(role)) return true;
   if (!isStage(from.stage) || from.status === 'closed') return false;
   if (!isStage(target) && target !== 'closed') return false;
-  return STAGE_OWNER_ROLE[from.stage as CaseStage] === role;
+  return (ownerRole ?? STAGE_OWNER_ROLE[from.stage as CaseStage]) === role;
 }
 
 export const canOverrideRequirement = (role: Role): boolean => OVERRIDERS.includes(role);

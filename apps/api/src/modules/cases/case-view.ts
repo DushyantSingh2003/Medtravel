@@ -1,6 +1,7 @@
 import type { Prisma } from '@medtravel/db';
 import {
   canMoveCase,
+  isCaseStaff,
   describeTransition,
   CASE_TARGETS,
   pickReadable,
@@ -50,10 +51,12 @@ export function nextTargetsOf(
   role: Role,
   from: CaseState,
   resumeStage: CaseStage | null,
+  ownerRole?: Role,
 ): CaseTarget[] {
   return CASE_TARGETS.filter(
     (target) =>
-      describeTransition(from, target, resumeStage).allowed && canMoveCase(role, from, target),
+      describeTransition(from, target, resumeStage).allowed &&
+      canMoveCase(role, from, target, ownerRole),
   );
 }
 
@@ -91,13 +94,13 @@ export function toCaseView(row: CaseRow, role: Role, nextTargets?: CaseTarget[])
     id: row.id,
     createdAt: row.createdAt.toISOString(),
     ...rest,
-    ...('caseNo' in visible ? { patientId: row.patientId } : {}),
+    ...('caseNo' in visible && role !== 'agent' ? { patientId: row.patientId } : {}),
     ...(budgetMinor !== undefined && budgetMinor !== null && budgetCurrency
       ? { budget: { amountMinor: Number(budgetMinor), currency: budgetCurrency } }
       : 'budgetMinor' in visible
         ? { budget: null }
         : {}),
-    ...('stage' in visible
+    ...('stage' in visible && isCaseStaff(role)
       ? {
           slaDueAt: iso(row.slaDueAt),
           slaBreachedAt: iso(row.slaBreachedAt),

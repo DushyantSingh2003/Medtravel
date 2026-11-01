@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  HttpException,
+  HttpStatus,
   ForbiddenException,
   Inject,
   Injectable,
@@ -7,6 +9,8 @@ import {
 } from '@nestjs/common';
 import type { Prisma, PrismaClient } from '@medtravel/db';
 import {
+  isCaseStaff,
+  type CaseSource,
   roomOf,
   type CaseListQuery,
   type CaseView,
@@ -60,6 +64,47 @@ export class CasesService {
     return `CASE-${year}-${String(value).padStart(6, '0')}`;
   }
 
+  /** Patients and agencies cannot choose where their case "came from"; staff may. */
+  private sourceFor(actor: Actor, input: CreateCase): CaseSource {
+    if (actor.role === 'patient') return 'website';
+    if (actor.role === 'agent') return 'agent';
+    return input.source ?? 'other';
+  }
+
+  /** A treatment or city that does not exist is the form's mistake, shown on its field, not a server error. */
+  private async assertReferences(db: Db, input: CreateCase): Promise<void> {
+    const bad = (field: string) =>
+      new HttpException(
+        {
+          statusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+          message: 'Choose one of the listed options',
+          errors: [{ path: [field], message: 'Choose one of the listed options' }],
+        },
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+    if (input.treatmentId) {
+      const found = await db.treatment.findFirst({
+        where: { id: input.treatmentId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!found) throw bad('treatmentId');
+    }
+    if (input.preferredCityId) {
+      const found = await db.city.findFirst({
+        where: { id: input.preferredCityId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!found) throw bad('preferredCityId');
+    }
+    if (input.countryCode) {
+      const found = await db.country.findFirst({
+        where: { code: input.countryCode },
+        select: { code: true },
+      });
+      if (!found) throw bad('countryCode');
+    }
+  }
+
   private async patientFor(db: Db, actor: Actor, input: CreateCase): Promise<string> {
     if (actor.role === 'patient') {
       if (input.patientId || input.patient)
@@ -74,9 +119,12 @@ export class CasesService {
         select: { name: true, email: true },
       });
       if (!user) throw new NotFoundException('User not found');
+      // An upsert, so two first requests at once end up with one record.
       return (
-        await db.patient.create({
-          data: { fullName: user.name, email: user.email, userId: actor.userId },
+        await db.patient.upsert({
+          where: { userId: actor.userId },
+          update: {},
+          create: { fullName: user.name, email: user.email, userId: actor.userId },
           select: { id: true },
         })
       ).id;
@@ -112,6 +160,7 @@ export class CasesService {
   async create(actor: Actor, input: CreateCase, context: RequestContext): Promise<CaseView> {
     const now = new Date();
     const id = await this.prisma.$transaction(async (tx) => {
+      await this.assertReferences(tx, input);
       const patientId = await this.patientFor(tx, actor, input);
       const agent =
         actor.role === 'agent'
@@ -129,9 +178,7 @@ export class CasesService {
           caseNo,
           patientId,
           urgency: input.urgency,
-          source:
-            input.source ??
-            (actor.role === 'agent' ? 'agent' : actor.role === 'patient' ? 'website' : 'other'),
+          source: this.sourceFor(actor, input),
           ...(input.treatmentId ? { treatmentId: input.treatmentId } : {}),
           ...(input.countryCode ? { countryCode: input.countryCode } : {}),
           ...(input.preferredCityId ? { preferredCityId: input.preferredCityId } : {}),
@@ -197,6 +244,15 @@ export class CasesService {
 
   async list(actor: Actor, query: CaseListQuery): Promise<CursorPage<CaseView>> {
     const now = new Date();
+    // Filters and sorts on internal fields would let a caller learn what the response hides.
+    if (
+      !isCaseStaff(actor.role) &&
+      (query.ownerId || query.source || query.overdue || query.sort === 'slaDueAt')
+    )
+      throw new BadRequestException({
+        message: 'This filter is not available to you',
+        errors: [{ path: ['filter'], message: 'This filter is not available to you' }],
+      });
     const filters: Prisma.CaseWhereInput[] = [await this.scope.caseWhere(actor)];
     if (query.stage) filters.push({ stage: query.stage });
     if (query.status) filters.push({ status: query.status });
@@ -253,8 +309,9 @@ export class CasesService {
         id: row.id,
         fromStage: row.fromStage,
         toStage: row.toStage,
-        note: row.note,
-        actorId: row.actorId,
+        // Reasons written by staff are for staff.
+        note: isCaseStaff(actor.role) ? row.note : null,
+        actorId: isCaseStaff(actor.role) ? row.actorId : null,
         createdAt: row.createdAt.toISOString(),
       })),
       nextCursor,
