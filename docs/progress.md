@@ -168,6 +168,8 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-10.
 
 ### Deferred from F-10
 
+- **CI:** the develop push "loop: finish F-10" passed every job (lint, typecheck, unit tests, images, browser tests, API/worker/db e2e).
+
 - **No screens yet.** The case list, case page, stage tracker actions and the stage-configuration form come with the ops portal tasks;
   the API (`/cases`, `/cases/:id/transitions`, `/cases/:id/history`, `/cases/stage-config`) is ready and generated into the client.
 - **Only the data the schema can check is required today:** a case manager, a medical summary, a sent quote, an accepted quote, and a
