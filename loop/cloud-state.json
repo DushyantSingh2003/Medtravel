@@ -119,6 +119,12 @@
       "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e",
       "finishedAt": "2026-10-29T14:12:10.859Z",
       "note": "Money, currencies and languages"
+    },
+    "F-10": {
+      "status": "in-progress",
+      "attempts": 1,
+      "claimedAt": "2026-11-01T16:10:01.254Z",
+      "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e"
     }
   },
   "approvals": [],
@@ -152,6 +158,7 @@
     "2026-10-29T12:54:14.259Z claim F-08 attempt 1",
     "2026-10-29T13:37:38.417Z finish F-08 done",
     "2026-10-29T13:39:44.772Z claim F-09 attempt 1",
-    "2026-10-29T14:12:10.859Z finish F-09 done"
+    "2026-10-29T14:12:10.859Z finish F-09 done",
+    "2026-11-01T16:10:01.254Z claim F-10 attempt 1"
   ]
 }
