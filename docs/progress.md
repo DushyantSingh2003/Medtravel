@@ -168,6 +168,10 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-09.
 
 ### Deferred from F-09
 
+- **CI:** the develop push "loop: finish F-09" passed every job (lint, typecheck, unit tests, four images, browser tests, API e2e).
+- **Found by running it for real:** the development rate table lacked IQD, KES, NGN, OMR and UZS (seeded currencies), so the daily
+  refresh failed and no rates were stored. The table now covers every seeded currency and skips an unknown one.
+
 - **No price is shown on the website yet.** `ConvertedPrice` (website) and `Price` (ui) are built and proven in the component
   gallery in INR, USD and AED, in English and Arabic; the first pages that show hospital and treatment prices (W-xx) use them.
   Quotes (C-xx) store the rate with `snapshotRate(prisma, pricedIn, shownIn)`.

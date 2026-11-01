@@ -46,16 +46,14 @@ export class FrankfurterProvider implements FxProvider {
 
   async fetchRates(base: string, quotes: readonly string[]): Promise<FetchedRates> {
     const url = `${this.options.baseUrl ?? 'https://api.frankfurter.app'}/latest?from=${base}`;
-    const body = z
-      .object({ date: z.string(), rates: z.record(z.string(), z.number()) })
-      .parse(
-        await json(
-          await (this.options.fetch ?? fetch)(url, {
-            signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-          }),
-          'Frankfurter',
-        ),
-      );
+    const body = z.object({ date: z.string(), rates: z.record(z.string(), z.number()) }).parse(
+      await json(
+        await (this.options.fetch ?? fetch)(url, {
+          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        }),
+        'Frankfurter',
+      ),
+    );
     // The ECB publishes once a day around 16:00 CET: the rates are valid from that day's publication.
     return {
       asOf: new Date(`${body.date}T00:00:00.000Z`),
@@ -91,10 +89,15 @@ export const STATIC_USD_RATES: Record<string, string> = {
   EUR: '0.92000000',
   GBP: '0.79000000',
   INR: '83.25000000',
+  IQD: '1310.00000000',
   JPY: '150.40000000',
+  KES: '129.00000000',
   KWD: '0.30700000',
+  NGN: '1550.00000000',
+  OMR: '0.38500000',
   SAR: '3.75000000',
   USD: '1.00000000',
+  UZS: '12700.00000000',
 };
 
 export class StaticProvider implements FxProvider {
@@ -107,10 +110,12 @@ export class StaticProvider implements FxProvider {
     const rates: Record<string, string> = {};
     for (const quote of quotes) {
       const quoteRate = STATIC_USD_RATES[quote];
-      if (!quoteRate) throw new Error(`No static rate for ${quote}`);
+      if (!quoteRate) continue;
       // quote per base = (quote per USD) / (base per USD)
       rates[quote] = numberToRate(Number(quoteRate) / Number(baseRate));
     }
+    if (Object.keys(rates).length === 0)
+      throw new Error(`No static rate for any of ${quotes.join(', ')}`);
     const day = this.now();
     return {
       asOf: new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate())),

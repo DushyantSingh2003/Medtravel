@@ -101,4 +101,11 @@ describe('the static table and the factory', () => {
       /OPEN_EXCHANGE_RATES_APP_ID/,
     );
   });
+
+  it('quotes every currency the platform seeds, and skips an unknown one rather than failing the refresh', async () => {
+    const provider = new StaticProvider(() => new Date('2026-10-29T10:00:00Z'));
+    const seeded = ['AED', 'EUR', 'GBP', 'INR', 'IQD', 'KES', 'NGN', 'OMR', 'SAR', 'UZS'];
+    const result = await provider.fetchRates('USD', [...seeded, 'XXX']);
+    expect(Object.keys(result.rates).sort()).toEqual(seeded);
+  });
 });
