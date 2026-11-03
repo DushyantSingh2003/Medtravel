@@ -182,6 +182,8 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12.
 
 ### Deferred from F-11
 
+- **CI:** the develop push "loop: finish F-11" passed every job (lint, typecheck, unit tests, images, browser tests, API/worker/db e2e).
+
 - **`pnpm db:reset` has not been run by the build agent:** Prisma refuses `migrate reset` from an AI agent without the user's
   explicit consent. Its parts were checked on a fresh database (`prisma migrate deploy`, then the seed with `SEED_DEV_USERS=true
 SEED_DEMO_DATA=true`: about 3 s, and a second run changes nothing). Run `pnpm db:reset` yourself once.
