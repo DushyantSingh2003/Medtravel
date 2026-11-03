@@ -25,7 +25,8 @@
     "db:seed": "pnpm --filter @medtravel/db db:seed",
     "db:studio": "pnpm --filter @medtravel/db db:studio",
     "format": "prettier --write \"**/*.{ts,tsx,mjs,cjs,js,jsx,json,md,css}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,mjs,cjs,js,jsx,json,md,css}\""
+    "format:check": "prettier --check \"**/*.{ts,tsx,mjs,cjs,js,jsx,json,md,css}\"",
+    "db:reset": "pnpm --filter @medtravel/db db:reset"
   },
   "devDependencies": {
     "@medtravel/config": "workspace:*",

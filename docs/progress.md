@@ -4,7 +4,7 @@ Tick a task here when it is finished and `pnpm check` is green. The task queue t
 build loop is `loop/cloud-state.json`; this file is the human-readable view and also records
 what each task deferred.
 
-Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-10.
+Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-11.
 
 ### Phase 0 — Scaffold (week 1)
 
@@ -27,7 +27,7 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-10.
 - [x] **F-08** Realtime gateway
 - [x] **F-09** Money, currencies and languages
 - [x] **F-10** Case core and stage machine
-- [ ] **F-11** Seed data and test factories
+- [x] **F-11** Seed data and test factories
 - [ ] **F-12** Observability
 
 ### Phase 1B — Coordinator CRM (weeks 5–7)
@@ -165,6 +165,19 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-10.
 - [ ] **G-08** Advanced analytics
 
 ## Notes and deferred work
+
+### Deferred from F-11
+
+- **`pnpm db:reset` has not been run by the build agent:** Prisma refuses `migrate reset` from an AI agent without the user's
+  explicit consent. Its parts were checked on a fresh database (`prisma migrate deploy`, then the seed with `SEED_DEV_USERS=true
+SEED_DEMO_DATA=true`: about 3 s, and a second run changes nothing). Run `pnpm db:reset` yourself once.
+- **The interpreter portal has no demo data:** no booking is assigned to an interpreter (that needs interpreter records, which come with the logistics tasks). The dev attendant is on the first case.
+- **`db:reset` refuses** any environment but development or test and any database that is not on this machine or a local container; the demo seed refuses the same.
+- **Demo documents are rows only**, with no file in the bucket, so viewing or downloading one fails until a real file is uploaded.
+- **Factories live in `packages/db/src/testing`** (exported as `@medtravel/db/testing`) so other packages can import them; the task
+  text said `packages/db/test`, which only holds that package's own e2e tests.
+- Demo case numbers use the 900001+ range of the year; the live counter will reach them only after 900,000 cases.
+- Arabic and other translations of the demo hospital, doctor and package texts are not seeded (English only).
 
 ### Deferred from F-10
 
