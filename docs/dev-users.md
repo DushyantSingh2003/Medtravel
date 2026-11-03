@@ -20,6 +20,7 @@ Password for every user: `Dev@12345`.
 | finance                     | `finance@dev.medtravel.test`            | `/admin`    |
 | super_admin                 | `super-admin@dev.medtravel.test`        | `/admin`    |
 | super_admin, 2FA already on | `admin-2fa@dev.medtravel.test`          | `/admin`    |
+| case_manager, throwaway     | `disposable@dev.medtravel.test`         | `/ops`      |
 
 ## Two-factor authentication
 

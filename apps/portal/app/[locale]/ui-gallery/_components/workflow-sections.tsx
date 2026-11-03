@@ -8,6 +8,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  ImpersonationBanner,
   Price,
   StageTracker,
   StatCard,
@@ -303,6 +304,19 @@ export function WorkflowSections({ locale }: { locale: Locale }) {
             approximate
           />
         </div>
+      </Section>
+
+      <Section
+        id="impersonation-banner"
+        title={t('sections.impersonationBanner')}
+        description={t('descriptions.impersonationBanner')}
+      >
+        <ImpersonationBanner
+          className="static"
+          message={t('impersonation.message')}
+          stopLabel={t('impersonation.stop')}
+          onStop={() => undefined}
+        />
       </Section>
 
       <Section

@@ -62,3 +62,10 @@ language with the same wording.
 `gallery.sections.price`, `gallery.descriptions.price` and `gallery.prices.*` are machine-drafted Arabic (currency names: الروبية الهندية,
 الدولار الأمريكي, الدرهم الإماراتي). Prices themselves use Latin digits in Arabic by platform rule; a native reader may want to
 confirm that is what Arabic-speaking patients expect on the website.
+
+## AD-01 (users and roles)
+
+The whole `users.*` namespace (list, invite, profile, working hours, leave, sign-in history, teams, the deactivate / reset / view-as
+confirmations, the impersonation banner and the sign-out notices) and the gallery's `impersonation` strings are machine-drafted
+Arabic. Worth a native reader: the confirmation wording for deactivating and for viewing as another user, the sign-in event names
+(`users.logins.events`), and the plural forms for people and members.

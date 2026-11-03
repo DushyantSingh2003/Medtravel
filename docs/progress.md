@@ -4,7 +4,7 @@ Tick a task here when it is finished and `pnpm check` is green. The task queue t
 build loop is `loop/cloud-state.json`; this file is the human-readable view and also records
 what each task deferred.
 
-Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12.
+Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12, AD-01.
 
 ### Phase 0 — Scaffold (week 1)
 
@@ -96,7 +96,7 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12.
 
 ### Phase 1G (weeks 6–12, interleaved) — Admin
 
-- [ ] **AD-01** Users and roles
+- [x] **AD-01** Users and roles
 - [ ] **AD-02** Hospital and doctor approvals
 - [ ] **AD-03** Agent approvals and commission plans
 - [ ] **AD-04** CMS
@@ -165,6 +165,19 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12.
 - [ ] **G-08** Advanced analytics
 
 ## Notes and deferred work
+
+### Deferred from AD-01
+
+- **One role and one city per person.** The schema has a single `User.role` and `StaffProfile.cityId`; several roles or cities would
+  need a join table and a change to the case scoping. Working hours are one interval per weekday in the screen (the API allows three).
+- **Nothing reads working hours and leave yet:** the assignment engine (C-02) will. They are stored, edited and shown ("On leave").
+- **Reset two-factor sends no message to the person**; they find out at their next sign-in (a staff member is sent to set it up
+  again). A notification event for it can be added with the templates task.
+- **The audit viewer does not show `onBehalfOfId`** (who was being viewed when an admin impersonated); the column is written and the
+  `impersonation.*` rows are searchable by action. AD-07 adds it to the screen.
+- **Hospital users appear in the list** but only their name can be changed here; their role and hospital are managed with the hospital (AD-02).
+- **Team names stay reserved after a team is deleted** (the name is unique across deleted teams too).
+- Impersonation covers HTTP only: the realtime channel and file downloads through already-issued presigned links are not affected.
 
 ### Deferred from F-12
 
