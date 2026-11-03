@@ -2,7 +2,8 @@ import { execFileSync } from 'node:child_process';
 import { randomBytes, randomInt } from 'node:crypto';
 import type { ModuleMetadata } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
+import { type NestFastifyApplication } from '@nestjs/platform-fastify';
+import { createFastifyAdapter } from '../../src/observability/fastify-options.js';
 import { createPrismaClient, type PrismaClient } from '@medtravel/db';
 import type { Role } from '@medtravel/contracts';
 import { FakeS3Server } from '@medtravel/storage/testing';
@@ -117,7 +118,7 @@ export async function createTestApp(
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule, ...(options.imports ?? [])],
   }).compile();
-  const app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter(), {
+  const app = moduleRef.createNestApplication<NestFastifyApplication>(createFastifyAdapter(), {
     rawBody: true,
   });
   if (options.listen)

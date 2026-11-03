@@ -1,4 +1,11 @@
-import { Global, Inject, Injectable, Module, type OnApplicationShutdown } from '@nestjs/common';
+import {
+  Global,
+  Inject,
+  Injectable,
+  Logger,
+  Module,
+  type OnApplicationShutdown,
+} from '@nestjs/common';
 import { createPrismaClient, type PrismaClient } from '@medtravel/db';
 import { ENV } from '../config/config.module.js';
 import type { Env } from '../config/env.schema.js';
@@ -22,8 +29,15 @@ class DatabaseShutdown implements OnApplicationShutdown {
     {
       provide: PRISMA,
       inject: [ENV],
-      useFactory: (env: Env): PrismaClient =>
-        createPrismaClient({ connectionString: env.DATABASE_URL }),
+      useFactory: (env: Env): PrismaClient => {
+        const logger = new Logger('SlowQuery');
+        return createPrismaClient({
+          connectionString: env.DATABASE_URL,
+          slowQueryMs: env.SLOW_QUERY_MS,
+          onSlowQuery: ({ sql, durationMs }) =>
+            logger.warn(`${durationMs} ms: ${sql.replace(/\s+/g, ' ').slice(0, 300)}`),
+        });
+      },
     },
     DatabaseShutdown,
   ],

@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url';
+import { withSentryConfig } from '@sentry/nextjs/config';
 import createNextIntlPlugin from 'next-intl/plugin';
 import type { NextConfig } from 'next';
 
@@ -16,7 +17,12 @@ const nextConfig: NextConfig = {
     : {}),
   // Workspace packages ship TypeScript/JSX, so Next must compile them rather than
   // treat them as prebuilt node_modules.
-  transpilePackages: ['@medtravel/ui', '@medtravel/api-client', '@medtravel/i18n'],
+  transpilePackages: [
+    '@medtravel/ui',
+    '@medtravel/api-client',
+    '@medtravel/i18n',
+    '@medtravel/observability',
+  ],
   turbopack: {
     rules: {
       '*.css': { loaders: ['@tailwindcss/turbopack'], as: '*.css' },
@@ -24,4 +30,18 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+const withIntl = withNextIntl(nextConfig);
+
+// Source maps are uploaded (and then removed from the build output) only when a Sentry auth token is present, i.e. in the release
+// build. Everywhere else the config is plain, so a build without Sentry credentials works.
+export default process.env.SENTRY_AUTH_TOKEN
+  ? withSentryConfig(withIntl, {
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT_WEB,
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      release: { name: process.env.SENTRY_RELEASE },
+      sourcemaps: { deleteSourcemapsAfterUpload: true },
+      silent: true,
+      telemetry: false,
+    })
+  : withIntl;

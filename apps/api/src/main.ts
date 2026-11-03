@@ -1,24 +1,30 @@
 import helmet from '@fastify/helmet';
 import { NestFactory } from '@nestjs/core';
-import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
+import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { SwaggerModule } from '@nestjs/swagger';
 import { Logger } from 'nestjs-pino';
+import { initSentry } from '@medtravel/observability';
 import { AppModule } from './app.module.js';
 import { ENV } from './config/config.module.js';
 import { loadEnv, type Env } from './config/env.schema.js';
 import { RealtimeAdapter } from './realtime/realtime.adapter.js';
 import { buildOpenApiDocument } from './openapi.js';
+import { createFastifyAdapter } from './observability/fastify-options.js';
 
 async function bootstrap(): Promise<void> {
   // Read before the app exists: how many proxies to trust decides how the client address is worked out, which the
   // rate limiter and the audit trail rely on. `true` would trust anything a client puts in X-Forwarded-For.
-  const { TRUST_PROXY_HOPS } = loadEnv();
+  const early = loadEnv();
+  const { TRUST_PROXY_HOPS } = early;
+  initSentry({
+    dsn: early.SENTRY_DSN,
+    service: 'api',
+    environment: early.SENTRY_ENVIRONMENT ?? early.NODE_ENV,
+    release: early.SENTRY_RELEASE,
+  });
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter({
-      trustProxy: (_address: string, hop: number) => hop < TRUST_PROXY_HOPS,
-      bodyLimit: 10 * 1024 * 1024,
-    }),
+    createFastifyAdapter({ trustProxyHops: TRUST_PROXY_HOPS }),
     { bufferLogs: true, rawBody: true },
   );
 
@@ -37,6 +43,8 @@ async function bootstrap(): Promise<void> {
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'],
     // Sessions are httpOnly cookies, so the browser must be allowed to send them.
     credentials: true,
+    // So the browser can read the request ID of a failed call.
+    exposedHeaders: ['x-request-id'],
   });
 
   app.useWebSocketAdapter(new RealtimeAdapter(app, env));

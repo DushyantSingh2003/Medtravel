@@ -6,6 +6,7 @@ import {
   type OnApplicationShutdown,
 } from '@nestjs/common';
 import { processOutbox, type PrismaClient } from '@medtravel/db';
+import { scrubText } from '@medtravel/observability';
 import type { Providers } from '@medtravel/notifications';
 import type { RealtimePublisher } from '@medtravel/realtime';
 import type { ObjectStore } from '@medtravel/storage';
@@ -76,7 +77,7 @@ export class OutboxDispatcher implements OnApplicationBootstrap, OnApplicationSh
           // The event id and type only: payloads can hold personal data.
           this.logger.warn(
             `outbox ${event.type} ${event.id} failed (attempt ${event.attempts}): ${
-              error instanceof Error ? error.message : 'unknown error'
+              error instanceof Error ? scrubText(error.message) : 'unknown error'
             }`,
           ),
       },

@@ -4,7 +4,7 @@ Tick a task here when it is finished and `pnpm check` is green. The task queue t
 build loop is `loop/cloud-state.json`; this file is the human-readable view and also records
 what each task deferred.
 
-Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-11.
+Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12.
 
 ### Phase 0 — Scaffold (week 1)
 
@@ -28,7 +28,7 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-11.
 - [x] **F-09** Money, currencies and languages
 - [x] **F-10** Case core and stage machine
 - [x] **F-11** Seed data and test factories
-- [ ] **F-12** Observability
+- [x] **F-12** Observability
 
 ### Phase 1B — Coordinator CRM (weeks 5–7)
 
@@ -165,6 +165,20 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-11.
 - [ ] **G-08** Advanced analytics
 
 ## Notes and deferred work
+
+### Deferred from F-12
+
+- **No Sentry project is connected yet:** reports are sent only when `SENTRY_DSN` (API, worker) or `NEXT_PUBLIC_SENTRY_DSN` (website,
+  portal) is set. The acceptance (a thrown error arrives with the request ID and no personal data) is proven against the SDK's
+  outgoing envelope in tests, not against a live Sentry. Set the DSNs, `SENTRY_RELEASE` and, in the release build,
+  `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT_WEB` and `SENTRY_PROJECT_PORTAL` for source maps.
+- **Source-map upload has not been run** (needs a Sentry token); the plain build was checked for both Next apps.
+- **Prometheus and alerting are not set up:** `/metrics` exists and needs `METRICS_TOKEN`; scraping, dashboards and alert rules are
+  infrastructure work for the launch tasks. The worker has no metrics endpoint of its own (its queues and outbox are visible from the API).
+- **Browser requests carry a request ID**, but the website's and portal's own server-side fetches do not yet; events queued by the
+  realtime outbox helper (`enqueueRealtime`) do not record the ID.
+- **Logs from the worker's BullMQ processors** (FX, SLA) do not carry a request ID (they are not caused by a request).
+- The queue board is read-only; retrying a failed job still needs a developer with Redis access.
 
 ### Deferred from F-11
 

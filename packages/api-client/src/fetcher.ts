@@ -11,6 +11,8 @@ export class ApiError extends Error {
   constructor(
     readonly status: number,
     readonly body: unknown,
+    /** The request's reference, to quote to support: the same ID is in the API's logs and error reports. */
+    readonly requestId?: string,
   ) {
     super(`API request failed with status ${status}`);
     this.name = 'ApiError';
@@ -87,6 +89,8 @@ export async function apiFetcher<T extends ApiResponse>(
     const token = UNSAFE(init.method) ? csrfToken() : undefined;
     const headers = new Headers(init.headers);
     if (token) headers.set('x-csrf-token', token);
+    // One ID per call, so a failure on the screen can be found in the API's logs.
+    if (!headers.has('x-request-id')) headers.set('x-request-id', crypto.randomUUID());
     return fetch(new URL(url, baseUrl()), { ...init, headers, credentials: 'include' });
   };
   let response = await send();
@@ -95,6 +99,7 @@ export async function apiFetcher<T extends ApiResponse>(
     response = await send();
     data = await readBody(response);
   }
-  if (!response.ok) throw new ApiError(response.status, data);
+  if (!response.ok)
+    throw new ApiError(response.status, data, response.headers.get('x-request-id') ?? undefined);
   return { data, status: response.status, headers: response.headers } as T;
 }

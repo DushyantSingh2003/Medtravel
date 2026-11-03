@@ -3,6 +3,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { Inject, Injectable, Logger, Module, type OnApplicationBootstrap } from '@nestjs/common';
 import type { PrismaClient } from '@medtravel/db';
 import { createFxProvider, type FxProvider } from '@medtravel/fx';
+import { captureError } from '@medtravel/observability';
 import type { Queue } from 'bullmq';
 import { ENV } from '../config/config.module.js';
 import type { Env } from '../config/env.schema.js';
@@ -23,7 +24,12 @@ export class FxProcessor extends WorkerHost {
   }
 
   async process(): Promise<{ stored: number }> {
-    const result = await runFxRefresh({ prisma: this.prisma, provider: this.provider });
+    const result = await runFxRefresh({ prisma: this.prisma, provider: this.provider }).catch(
+      (error: unknown) => {
+        captureError(error, { jobType: 'fx' });
+        throw error;
+      },
+    );
     this.logger.log(
       `fx: ${result.stored} new rates for ${result.currencies} currencies (${this.provider.name})`,
     );

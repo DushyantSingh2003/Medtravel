@@ -1,6 +1,7 @@
 import { RequestMethod } from '@nestjs/common';
 import type { Params } from 'nestjs-pino';
 import { stdSerializers } from 'pino';
+import { currentRequestId } from '@medtravel/observability';
 import type { Env } from '../config/env.schema.js';
 
 /**
@@ -57,11 +58,20 @@ export function loggerOptions(env: Env): Params {
     pinoHttp: {
       level: env.LOG_LEVEL,
       redact: { paths: REDACTED_PATHS, censor: '[redacted]' },
+      // Every line written while a request (or a job it queued) runs carries the request ID.
+      mixin: () => ({ requestId: currentRequestId() }),
       serializers: {
         // Invitation and link tokens travel in the address; a log reader must not be able to use them.
         req: (request: Record<string, unknown>) => ({
           ...stdSerializers.req(request as never),
-          url: scrubUrl(String(request['url'] ?? '')),
+          // The path only: the query string goes into `query` below, names without values.
+          url: scrubUrl(String(request['url'] ?? '')).split('?')[0],
+          // Query values carry tokens and personal data (`?email=`, `?token=`); only the names are useful in a log.
+          query: Object.fromEntries(
+            Object.keys((request['query'] as Record<string, unknown> | undefined) ?? {}).map(
+              (key) => [key, '[redacted]'],
+            ),
+          ),
         }),
       },
       ...(pretty ? { transport: { target: 'pino-pretty', options: { singleLine: true } } } : {}),

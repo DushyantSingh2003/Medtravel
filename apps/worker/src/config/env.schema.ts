@@ -17,6 +17,12 @@ export const envSchema = z
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
     DATABASE_URL: urlString('DATABASE_URL must be a PostgreSQL connection string'),
+    /** Error reporting. Without a DSN nothing is sent. */
+    SENTRY_DSN: z.url().optional(),
+    SENTRY_ENVIRONMENT: z.string().min(1).optional(),
+    SENTRY_RELEASE: z.string().min(1).optional(),
+    /** Queries slower than this are logged as warnings (the SQL text only, never the values). */
+    SLOW_QUERY_MS: z.coerce.number().int().min(1).default(200),
     REDIS_URL: urlString('REDIS_URL must be a Redis connection string'),
     /** Object storage, the same private bucket the API signs uploads for. */
     S3_ENDPOINT: urlString('S3_ENDPOINT must be a URL').optional(),

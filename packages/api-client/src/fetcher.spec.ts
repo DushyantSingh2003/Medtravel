@@ -25,6 +25,27 @@ describe('apiFetcher', () => {
     expect(init).toMatchObject({ method: 'GET', credentials: 'include' });
   });
 
+  it('sends a request ID with every call, keeps one the caller set, and returns the one the API answered with on a failure', async () => {
+    const spy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async () => new Response('{"ok":true}'));
+    await apiFetcher('/x');
+    const first = new Headers((spy.mock.calls[0]?.[1] as RequestInit).headers).get('x-request-id');
+    expect(first).toMatch(/^[0-9a-f-]{36}$/);
+    await apiFetcher('/x', { headers: { 'x-request-id': 'mine-0000001' } });
+    expect(new Headers((spy.mock.calls[1]?.[1] as RequestInit).headers).get('x-request-id')).toBe(
+      'mine-0000001',
+    );
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('{"message":"boom"}', {
+        status: 500,
+        headers: { 'x-request-id': 'api-ref-0000001' },
+      }),
+    );
+    const error = await apiFetcher('/x').catch((e: unknown) => e);
+    expect(error).toMatchObject({ status: 500, requestId: 'api-ref-0000001' });
+  });
+
   it('resolves to undefined data for an empty body', async () => {
     respond(null, 204);
     expect((await apiFetcher('/x')).data).toBeUndefined();

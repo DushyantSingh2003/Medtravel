@@ -22,6 +22,7 @@ describe('database enums', () => {
           'DOCUMENT_TYPES',
           'REALTIME_EVENTS',
           'CASE_SORTS',
+          'QUEUE_NAMES',
           'ARABIC_COUNTRIES',
         ].includes(name)
       )

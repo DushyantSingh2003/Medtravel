@@ -1,3 +1,4 @@
+import { currentRequestId } from '@medtravel/observability';
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@medtravel/db';
 import type { Db } from '../database/database.module.js';
@@ -18,12 +19,20 @@ export interface DomainEvent {
 @Injectable()
 export class OutboxService {
   async publish(db: Db, event: DomainEvent): Promise<void> {
+    const requestId = currentRequestId();
     await db.outboxEvent.create({
       data: {
         type: event.type,
         aggregateType: event.aggregateType,
         aggregateId: event.aggregateId,
-        payload: event.payload,
+        // The request that caused the event, so the worker's log lines and error reports for it carry the same ID.
+        payload:
+          requestId &&
+          typeof event.payload === 'object' &&
+          event.payload !== null &&
+          !Array.isArray(event.payload)
+            ? { ...event.payload, requestId }
+            : event.payload,
         ...(event.dedupeKey ? { dedupeKey: event.dedupeKey } : {}),
       },
     });
