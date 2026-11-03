@@ -7,7 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { BaseExceptionFilter } from '@nestjs/core';
-import { captureError, scrubText } from '@medtravel/observability';
+import { captureError, scrubMessage, scrubText } from '@medtravel/observability';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
 /**
@@ -33,7 +33,13 @@ export class SentryExceptionFilter extends BaseExceptionFilter {
     // (an email, a passport number). Log it scrubbed, and answer with the same plain 500.
     if (!(exception instanceof HttpException) && host.getType() === 'http') {
       const error = exception instanceof Error ? exception : new Error(String(exception));
-      this.log.error(scrubText(error.message), scrubText(error.stack ?? ''));
+      this.log.error(
+        scrubMessage(error.message),
+        scrubText(error.stack ?? '')
+          .split('\n')
+          .slice(0, 12)
+          .join('\n'),
+      );
       void host
         .switchToHttp()
         .getResponse<FastifyReply>()

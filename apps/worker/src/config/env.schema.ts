@@ -18,7 +18,8 @@ export const envSchema = z
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
     DATABASE_URL: urlString('DATABASE_URL must be a PostgreSQL connection string'),
     /** Error reporting. Without a DSN nothing is sent. */
-    SENTRY_DSN: z.url().optional(),
+    // An empty value (a copied .env.example, an unset compose variable) means "off".
+    SENTRY_DSN: z.preprocess((value) => (value === '' ? undefined : value), z.url().optional()),
     SENTRY_ENVIRONMENT: z.string().min(1).optional(),
     SENTRY_RELEASE: z.string().min(1).optional(),
     /** Queries slower than this are logged as warnings (the SQL text only, never the values). */

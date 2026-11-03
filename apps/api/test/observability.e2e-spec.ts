@@ -19,7 +19,7 @@ class BoomController {
 @Module({ controllers: [BoomController] })
 class BoomModule {}
 
-const METRICS_TOKEN = 'metrics-token-for-the-test-1234';
+const METRICS_TOKEN = 'metrics-token-for-the-test-0123456789ab';
 let t: TestApp;
 /** Every Sentry envelope the app tried to send. */
 const sent: { headers: unknown; items: [unknown, Record<string, unknown>][] }[] = [];
@@ -147,6 +147,21 @@ describe('error reports', () => {
     expect(text).toContain('Could not process');
   });
 
+  it('never sends traces, even when a caller asks for one with a sampled trace header', async () => {
+    sent.length = 0;
+    await t.raw('POST', '/test-boom?email=asha@example.com', {
+      headers: {
+        'sentry-trace': '0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-1',
+        baggage: 'sentry-sampled=true,sentry-trace_id=0af7651916cd43dd8448eb211c80319c',
+      },
+      body: {},
+    });
+    await flushSentry();
+    const types = sent.flatMap((e) => e.items.map(([h]) => (h as { type?: string }).type));
+    expect(types).not.toContain('transaction');
+    expect(types).not.toContain('span');
+  });
+
   it('does not report the errors callers cause (4xx)', async () => {
     sent.length = 0;
     expect((await t.call(null, 'GET', '/cases')).status).toBe(401);
@@ -209,6 +224,8 @@ describe('GET /health/ready', () => {
   });
 
   it('answers 503 without saying why when something is down', async () => {
+    // The last answer is kept for three seconds.
+    await new Promise((resolve) => setTimeout(resolve, 3100));
     const store = t.app.get<ObjectStore>(OBJECT_STORE);
     const spy = vi
       .spyOn(store, 'head')
@@ -221,6 +238,15 @@ describe('GET /health/ready', () => {
       checks: { database: { ok: true }, storage: { ok: false } },
     });
     expect(JSON.stringify(res.body)).not.toContain('ECONNREFUSED');
+  });
+
+  it('answers a burst of probes from one check', async () => {
+    await new Promise((resolve) => setTimeout(resolve, 3100));
+    const store = t.app.get<ObjectStore>(OBJECT_STORE);
+    const spy = vi.spyOn(store, 'head');
+    await Promise.all(Array.from({ length: 10 }, () => t.raw('GET', '/health/ready')));
+    expect(spy.mock.calls.length).toBeLessThanOrEqual(2);
+    spy.mockRestore();
   });
 
   it('keeps the plain liveness probe independent of the dependencies', async () => {
@@ -242,6 +268,21 @@ describe('the queue board at /admin/queues', () => {
         ).status,
         role,
       ).toBe(403);
+    }
+  });
+
+  it('answers only GET and HEAD, even to the super admin', async () => {
+    const admin = await t.makeUser({ email: 'board-post@test.example', role: 'super_admin' });
+    const { accessToken } = await t.tokenFor(admin.id);
+    const headers = { authorization: `Bearer ${accessToken}` };
+    // Turned away (403) or not served at all (404); never a success.
+    for (const [method, url] of [
+      ['POST', '/admin/queues/api/queues/fx/clean/completed'],
+      ['PUT', '/admin/queues/api/queues/fx/pause'],
+      ['DELETE', '/admin/queues/api/queues/fx'],
+    ] as const) {
+      const res = await t.raw(method, url, { headers, body: {} });
+      expect([403, 404], `${method} ${url}`).toContain(res.status);
     }
   });
 

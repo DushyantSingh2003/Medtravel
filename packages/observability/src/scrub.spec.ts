@@ -42,6 +42,44 @@ describe('scrubDeep', () => {
   });
 });
 
+describe('what else is cut', () => {
+  it('keeps only the first line of an error message, and caps it', () => {
+    const out = scrubEvent({
+      exception: {
+        values: [
+          {
+            value:
+              'Invalid `prisma.patient.create()` invocation\n  data: { fullName: "Asha Rao", diagnosis: "x" }',
+          },
+        ],
+      },
+    });
+    expect(JSON.stringify(out)).not.toMatch(/Asha|diagnosis/);
+    const long = scrubEvent({ message: 'a '.repeat(400) });
+    expect(long.message.length).toBeLessThanOrEqual(200);
+  });
+
+  it('drops what the page printed and what was clicked, but keeps that it happened', () => {
+    const out = scrubEvent({
+      breadcrumbs: [
+        { category: 'console', message: 'Patient Asha Rao', level: 'error' },
+        { category: 'ui.click', message: 'button.name-Asha' },
+        { category: 'navigation', message: 'to /cases' },
+      ],
+    });
+    expect(out.breadcrumbs[0]).toEqual({ category: 'console', level: 'error' });
+    expect(out.breadcrumbs[1]).toEqual({ category: 'ui.click' });
+    expect(out.breadcrumbs[2]?.message).toBe('to /cases');
+  });
+
+  it('keeps a request id header only when it has the shape of one', () => {
+    const keep = scrubEvent({ request: { headers: { 'x-request-id': 'edge-trace-0001' } } });
+    expect(keep.request.headers['x-request-id']).toBe('edge-trace-0001');
+    const drop = scrubEvent({ request: { headers: { 'x-request-id': 'Asha Rao 0501234567' } } });
+    expect(drop.request.headers['x-request-id']).toBe('[redacted]');
+  });
+});
+
 describe('scrubEvent', () => {
   const event = () => ({
     message: 'Boom for asha@example.com',

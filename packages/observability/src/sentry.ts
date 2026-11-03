@@ -20,7 +20,10 @@ export function initSentry(options: SentryOptions): boolean {
     dsn: options.dsn,
     environment: options.environment,
     ...(options.release ? { release: options.release } : {}),
-    tracesSampleRate: 0,
+    // Tracing stays off whatever a caller's `sentry-trace` header says: transactions and spans carry full addresses and are not
+    // covered by `beforeSend`.
+    tracesSampler: () => 0,
+    beforeSendTransaction: () => null,
     initialScope: { tags: { service: options.service } },
     beforeSend: (event) => scrubEvent(event),
     beforeBreadcrumb: (breadcrumb) => scrubBreadcrumb(breadcrumb),

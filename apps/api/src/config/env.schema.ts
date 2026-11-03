@@ -31,12 +31,13 @@ export const envSchema = z
     DATABASE_URL: urlString('DATABASE_URL must be a PostgreSQL connection string'),
     REDIS_URL: urlString('REDIS_URL must be a Redis connection string'),
     /** Error reporting. Without a DSN nothing is sent. */
-    SENTRY_DSN: z.url().optional(),
+    // An empty value (a copied .env.example, an unset compose variable) means "off".
+    SENTRY_DSN: z.preprocess((value) => (value === '' ? undefined : value), z.url().optional()),
     SENTRY_ENVIRONMENT: z.string().min(1).optional(),
     /** The release (commit) the running build came from; tags every report. */
     SENTRY_RELEASE: z.string().min(1).optional(),
     /** Bearer token for `GET /metrics`. Open locally when unset; required in production. */
-    METRICS_TOKEN: z.string().min(16).optional(),
+    METRICS_TOKEN: z.string().min(32).optional(),
     /** Queries slower than this are logged as warnings (the SQL text only, never the values). */
     SLOW_QUERY_MS: z.coerce.number().int().min(1).default(200),
     CORS_ORIGINS: z
@@ -112,7 +113,7 @@ export const envSchema = z
       if (!env.METRICS_TOKEN)
         issue(
           'METRICS_TOKEN',
-          'Set METRICS_TOKEN (16+ characters) so /metrics is not public in production',
+          'Set METRICS_TOKEN (32+ characters) so /metrics is not public in production',
         );
       if (env.EMAIL_TRANSPORT === 'capture')
         issue('EMAIL_TRANSPORT', 'Mail must be sent (EMAIL_TRANSPORT=smtp) in production');

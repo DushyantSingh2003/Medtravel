@@ -1,6 +1,13 @@
-import { Inject, Module, type OnApplicationBootstrap } from '@nestjs/common';
+import {
+  Inject,
+  Module,
+  type MiddlewareConsumer,
+  type NestModule,
+  type OnApplicationBootstrap,
+} from '@nestjs/common';
 import { APP_FILTER, HttpAdapterHost } from '@nestjs/core';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import { newRequestId, runWithRequestId } from '@medtravel/observability';
 import { ACCESS_COOKIE, readCookie } from '../auth/cookies.js';
 import { secondFactorOwed } from '../auth/auth.guard.js';
 import { SessionService } from '../auth/session.service.js';
@@ -24,7 +31,7 @@ import { SentryExceptionFilter } from './sentry.filter.js';
     { provide: APP_FILTER, useClass: SentryExceptionFilter },
   ],
 })
-export class ObservabilityModule implements OnApplicationBootstrap {
+export class ObservabilityModule implements NestModule, OnApplicationBootstrap {
   constructor(
     private readonly adapterHost: HttpAdapterHost,
     private readonly metrics: MetricsService,
@@ -32,6 +39,15 @@ export class ObservabilityModule implements OnApplicationBootstrap {
     private readonly sessions: SessionService,
     @Inject(ENV) private readonly env: Env,
   ) {}
+
+  /** Runs each request inside its own async context, so the ID cannot leak into work started by another request or at boot. */
+  configure(consumer: MiddlewareConsumer): void {
+    consumer
+      .apply((request: { id?: unknown }, _response: unknown, next: () => void) =>
+        runWithRequestId(request.id ? String(request.id) : newRequestId(), next),
+      )
+      .forRoutes('*');
+  }
 
   async onApplicationBootstrap(): Promise<void> {
     const fastify = this.adapterHost.httpAdapter.getInstance() as FastifyInstance;
@@ -51,6 +67,8 @@ export class ObservabilityModule implements OnApplicationBootstrap {
   }
 
   private async mayOpenBoard(request: FastifyRequest): Promise<boolean> {
+    // The board is for looking: nothing else, whatever the board itself allows.
+    if (request.method !== 'GET' && request.method !== 'HEAD') return false;
     const bearer = /^Bearer (\S+)$/i.exec(request.headers.authorization ?? '')?.[1];
     const token = bearer ?? readCookie(request.headers.cookie, ACCESS_COOKIE);
     const auth = token ? await this.sessions.authenticate(token) : null;

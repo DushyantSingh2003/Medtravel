@@ -178,6 +178,11 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12.
 - **Browser requests carry a request ID**, but the website's and portal's own server-side fetches do not yet; events queued by the
   realtime outbox helper (`enqueueRealtime`) do not record the ID.
 - **Logs from the worker's BullMQ processors** (FX, SLA) do not carry a request ID (they are not caused by a request).
+- **The queue board shows job data and failure reasons as they are** (the `notifications` jobs can hold recipients and message
+  text) and writes no audit row for a visit. Only the super admin reaches it, over GET/HEAD. Redacting the data or auditing visits
+  is a follow-up before real patient traffic.
+- **A caller can choose its own request ID** (8-64 safe characters) to let a trace span services; it can therefore reuse another
+  request's ID in the logs. Accept the header only from a trusted proxy if that matters for forensics.
 - The queue board is read-only; retrying a failed job still needs a developer with Redis access.
 
 ### Deferred from F-11

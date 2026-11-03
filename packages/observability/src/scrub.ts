@@ -32,6 +32,11 @@ export function scrubUrl(url: string): string {
 }
 
 /** A value and everything inside it, with sensitive keys hidden and strings scrubbed. */
+/** An error message: the first line only (a database validation error lists the arguments after it), cut short, scrubbed. */
+export function scrubMessage(message: string): string {
+  return scrubText(message.split('\n')[0] ?? '').slice(0, MAX_MESSAGE);
+}
+
 export function scrubDeep(value: unknown, key = '', depth = 0): unknown {
   if (value === null || value === undefined) return value;
   if (key && SENSITIVE_KEY.test(key)) return REDACTED;
@@ -47,6 +52,13 @@ export function scrubDeep(value: unknown, key = '', depth = 0): unknown {
     ]),
   );
 }
+
+/** An incoming request ID kept only if it has the shape the API would accept; anything else could be any client string. */
+const safeRequestId = (value: string): string =>
+  /^[A-Za-z0-9._-]{8,64}$/.test(value) ? value : REDACTED;
+
+/** Longest exception message sent: a validation error can quote a whole query with its values. */
+const MAX_MESSAGE = 200;
 
 type Loose = Record<string, unknown>;
 const asObject = (value: unknown): Loose | undefined =>
@@ -73,18 +85,22 @@ export function scrubEvent<T extends object>(event: T): T {
           .map(([k, v]) => [
             k,
             // The request ID was validated when it came in; scrubbing would mangle it.
-            typeof v === 'string' && !/^x-request-id$/i.test(k) ? scrubText(v) : v,
+            typeof v === 'string'
+              ? /^x-request-id$/i.test(k)
+                ? safeRequestId(v)
+                : scrubText(v)
+              : v,
           ]),
       );
   }
   const user = asObject(e['user']);
   if (user) e['user'] = typeof user['id'] === 'string' ? { id: user['id'] } : undefined;
-  if (typeof e['message'] === 'string') e['message'] = scrubText(e['message']);
+  if (typeof e['message'] === 'string') e['message'] = scrubMessage(e['message']);
   if (typeof e['transaction'] === 'string') e['transaction'] = scrubUrl(e['transaction']);
   const exception = asObject(e['exception']);
   const values = Array.isArray(exception?.['values']) ? (exception['values'] as Loose[]) : [];
   for (const v of values) {
-    if (typeof v['value'] === 'string') v['value'] = scrubText(v['value']);
+    if (typeof v['value'] === 'string') v['value'] = scrubMessage(v['value']);
     const frames = asObject(v['stacktrace'])?.['frames'];
     if (Array.isArray(frames))
       for (const frame of frames as Loose[]) {
@@ -113,7 +129,10 @@ function scrubContexts(contexts: unknown): unknown {
 /** Breadcrumbs keep what happened (category, level, a scrubbed message) and lose their data. */
 export function scrubBreadcrumb<T extends object>(breadcrumb: T): T {
   const b = breadcrumb as Loose;
-  if (typeof b['message'] === 'string') b['message'] = scrubText(b['message']);
+  // What the page printed to the console or which element was clicked can name a person; keep only that it happened.
+  if (typeof b['category'] === 'string' && /^(console|ui\.)/.test(b['category']))
+    delete b['message'];
+  else if (typeof b['message'] === 'string') b['message'] = scrubText(b['message']);
   const data = asObject(b['data']);
   if (data) {
     const url = typeof data['url'] === 'string' ? scrubUrl(data['url']) : undefined;
