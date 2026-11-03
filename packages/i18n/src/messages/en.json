@@ -1539,7 +1539,7 @@
     }
   },
   "users": {
-    "title": "Users and teams",
+    "title": "Users and roles",
     "description": "Invite staff, set their role, team, city and hours, and manage who can sign in.",
     "tabs": {
       "people": "People",
@@ -1582,7 +1582,9 @@
       "loading": "Loading people",
       "previous": "Previous",
       "next": "Next",
-      "total": "{count, plural, one {# person} other {# people}}"
+      "total": "{count, plural, one {# person} other {# people}}",
+      "columns": "Columns",
+      "rowsPerPage": "Rows per page"
     },
     "invite": {
       "button": "Invite staff",
