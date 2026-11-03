@@ -37,3 +37,11 @@ set-up page and nothing else works until you finish it.
 
 With `EMAIL_TRANSPORT=capture` (the default outside production) the API keeps mail in memory instead of sending it. To see
 the messages, set `EMAIL_TRANSPORT=smtp` and open Mailpit at http://localhost:8025 (started by `pnpm dev`).
+
+## Demo data
+
+`pnpm db:reset` (development only) drops the database, migrates it and seeds the master data, these users and demo data:
+three hospitals (Delhi, Mumbai, Chennai) with 15 doctors and 30 packages, three agencies (Iraq, Uzbekistan, Kenya) and 40 cases in
+every stage. `SEED_DEMO_DATA=true pnpm db:seed` adds the demo data without dropping anything and can be repeated safely. The dev
+users are wired to it: the hospital desk and the doctor belong to the Delhi hospital, the agent to the Iraqi agency, and the patient
+user owns the first case.

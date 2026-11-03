@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/src/index.d.ts",
       "default": "./dist/src/index.js"
+    },
+    "./testing": {
+      "types": "./dist/src/testing/index.d.ts",
+      "default": "./dist/src/testing/index.js"
     }
   },
   "files": [
@@ -26,7 +30,8 @@
     "lint": "eslint src",
     "test": "vitest run",
     "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
-    "docs:model": "tsx scripts/generate-data-model-doc.ts"
+    "docs:model": "tsx scripts/generate-data-model-doc.ts",
+    "db:reset": "tsx scripts/db-reset.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
