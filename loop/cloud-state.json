@@ -129,10 +129,12 @@
       "note": "Case core and stage machine"
     },
     "F-11": {
-      "status": "in-progress",
+      "status": "done",
       "attempts": 1,
       "claimedAt": "2026-11-03T10:44:08.782Z",
-      "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e"
+      "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e",
+      "finishedAt": "2026-11-03T10:59:47.594Z",
+      "note": "Seed data and test factories"
     }
   },
   "approvals": [],
@@ -169,6 +171,7 @@
     "2026-10-29T14:12:10.859Z finish F-09 done",
     "2026-11-01T16:10:01.254Z claim F-10 attempt 1",
     "2026-11-01T16:36:42.941Z finish F-10 done",
-    "2026-11-03T10:44:09.016Z claim F-11 attempt 1"
+    "2026-11-03T10:44:09.016Z claim F-11 attempt 1",
+    "2026-11-03T10:59:47.594Z finish F-11 done"
   ]
 }
