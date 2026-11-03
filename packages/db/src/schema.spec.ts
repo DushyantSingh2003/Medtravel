@@ -83,6 +83,7 @@ describe('schema.prisma enums', () => {
           'displayCurrency',
           'caseExitStage',
           'caseTarget',
+          'staffRole',
           'caseStage',
           'caseStatus',
           'role',

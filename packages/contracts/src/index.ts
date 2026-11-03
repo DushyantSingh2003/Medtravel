@@ -18,4 +18,5 @@ export * from './fx.js';
 export * from './money.js';
 export * from './locale.js';
 export * from './time.js';
+export * from './users.js';
 export * from './translated.js';

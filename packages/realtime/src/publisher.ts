@@ -77,6 +77,16 @@ export class RealtimePublisher {
   }
 
   /**
+   * Closes every socket in a room, on every API instance. Used when a person's access ends (the account is deactivated): the
+   * browser must stop receiving events now, not at the next periodic check.
+   */
+  async disconnectRoom(room: string): Promise<void> {
+    this.pending = [];
+    this.emitter.in(room).disconnectSockets(true);
+    await Promise.all(this.pending);
+  }
+
+  /**
    * Events in these rooms at or after `since`, oldest first (the browser drops the one it already has by id). `truncated` is
    * true when the log no longer reaches back to `since` (it holds only the last hour and 200 events a room), so the client
    * must refetch everything instead. Log lines that are not valid events are ignored.

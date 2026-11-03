@@ -12,12 +12,19 @@ import {
 } from '@nestjs/common';
 import { ApiCookieAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import { ACCESS_COOKIE, REFRESH_COOKIE, SessionCookies, readCookie } from '../../auth/cookies.js';
+import {
+  ACCESS_COOKIE,
+  IMPERSONATION_COOKIE,
+  REFRESH_COOKIE,
+  SessionCookies,
+  readCookie,
+} from '../../auth/cookies.js';
 import {
   AllowLimitedSession,
   AllowMagicLink,
   Authenticated,
   CurrentActor,
+  IgnoreImpersonation,
   Public,
   Throttle,
 } from '../../auth/decorators.js';
@@ -164,6 +171,30 @@ export class AuthController {
     return ACCEPTED;
   }
 
+  /** Ends a super admin's read-only view of another user. Acts as the admin, not as the viewed user. */
+  @Post('impersonation/stop')
+  @Authenticated()
+  @IgnoreImpersonation()
+  @Throttle({ limit: 30, windowSeconds: 60 })
+  @HttpCode(200)
+  @ApiOperation({
+    operationId: 'stopImpersonation',
+    summary: 'Stop viewing the product as another user',
+  })
+  @ApiOkResponse({ type: AcceptedDto })
+  async stopImpersonation(
+    @CurrentActor() actor: Actor,
+    @Req() request: FastifyRequest,
+    @Ctx() context: RequestContext,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    // Only an actual view leaves a trace: anyone else calling this changes nothing and writes nothing.
+    if (readCookie(request.headers.cookie, IMPERSONATION_COOKIE))
+      await this.auth.recordImpersonationStopped(actor, context);
+    this.cookies.clearImpersonation(reply);
+    return ACCEPTED;
+  }
+
   @Get('me')
   @Authenticated()
   @AllowMagicLink()
@@ -174,7 +205,7 @@ export class AuthController {
   })
   @ApiOkResponse({ type: AuthUserDto })
   me(@CurrentActor() actor: Actor, @Req() request: FastifyRequest) {
-    return this.auth.me(actor, request.limitedSession === true);
+    return this.auth.me(actor, request.limitedSession === true, request.impersonation);
   }
 
   @Post('email/verify')

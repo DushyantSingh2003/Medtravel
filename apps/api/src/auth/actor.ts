@@ -7,6 +7,8 @@ export interface Actor {
   sessionId: string;
   /** Set for a magic-link session: the one case it may see. */
   scopeCaseId: string | null;
+  /** Set while a super admin is looking at the product as this user: the admin's id. Everything is read-only and audited. */
+  impersonatorId?: string;
 }
 
 declare module 'fastify' {
@@ -14,5 +16,7 @@ declare module 'fastify' {
     actor?: Actor;
     /** True for a session that has not completed two-factor yet; it may only use `@AllowLimitedSession` routes. */
     limitedSession?: boolean;
+    /** Present while `actor` is someone a super admin is impersonating. */
+    impersonation?: { by: string; expiresAt: string };
   }
 }

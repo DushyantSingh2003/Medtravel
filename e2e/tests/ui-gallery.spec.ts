@@ -44,6 +44,7 @@ const SECTIONS = [
   'chat-panel',
   'stat-card',
   'price',
+  'impersonation-banner',
   'kanban-board',
   'app-shell',
   'switcher',

@@ -162,6 +162,11 @@ export const authUserSchema = z.object({
   access: z.enum(['full', 'two_factor_setup']),
   /** Set for a magic-link session: the one case it can see. */
   scopeCaseId: z.string().uuid().nullable(),
+  /** Set while a super admin is looking at the product as this user (read-only). */
+  impersonating: z
+    .object({ by: z.string().uuid(), expiresAt: z.string().max(40) })
+    .nullable()
+    .optional(),
 });
 export type AuthUser = z.infer<typeof authUserSchema>;
 

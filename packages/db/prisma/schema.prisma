@@ -782,6 +782,8 @@ model User {
   backupCodes             BackupCode[]
   staffProfile            StaffProfile?
   managedStaff            StaffProfile[]           @relation("StaffManager")
+  managedTeams            Team[]                   @relation("TeamManager")
+  leaves                  StaffLeave[]             @relation("StaffLeaveUser")
   agentUser               AgentUser?
   patient                 Patient?
   attendant               Attendant?
@@ -898,12 +900,46 @@ model StaffProfile {
   city           City?     @relation(fields: [cityId], references: [id], onDelete: Restrict)
   managerId      String?   @db.Uuid
   manager        User?     @relation("StaffManager", fields: [managerId], references: [id], onDelete: SetNull)
+  teamId         String?   @db.Uuid
+  team           Team?     @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  /// Time zone and per-weekday intervals, e.g. { timezone: 'Asia/Kolkata', days: { mon: [{ from: '09:00', to: '18:00' }] } }.
+  workingHours   Json?
   createdAt      DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt      DateTime  @updatedAt @db.Timestamptz(3)
   deletedAt      DateTime? @db.Timestamptz(3)
 
   @@index([cityId])
   @@index([managerId])
+  @@index([teamId])
+}
+
+/// A group of staff under one manager. Joining a team sets the member's manager to the team's.
+model Team {
+  id        String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String         @unique
+  managerId String?        @db.Uuid
+  manager   User?          @relation("TeamManager", fields: [managerId], references: [id], onDelete: SetNull)
+  members   StaffProfile[]
+  createdAt DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime       @updatedAt @db.Timestamptz(3)
+  deletedAt DateTime?      @db.Timestamptz(3)
+
+  @@index([managerId])
+}
+
+/// Days a staff member is away; the assignment engine (C-02) skips them.
+model StaffLeave {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  startsOn  DateTime  @db.Date
+  endsOn    DateTime  @db.Date
+  note      String?
+  userId    String    @db.Uuid
+  user      User      @relation("StaffLeaveUser", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt DateTime? @db.Timestamptz(3)
+
+  @@index([userId, startsOn])
 }
 
 /// A login belonging to an agent organisation (sub-users).
@@ -2364,24 +2400,27 @@ model Incident {
 
 /// Who did or viewed what, when and from where. Append-only (a trigger rejects updates) and deliberately without foreign keys, so it outlives what it describes.
 model AuditEvent {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  actorId    String?  @db.Uuid
-  actorRole  String?  @db.VarChar(32)
-  action     String
-  entityType String
-  entityId   String
-  patientId  String?  @db.Uuid
-  before     Json?
-  after      Json?
-  ip         String?  @db.VarChar(45)
-  userAgent  String?
-  requestId  String?
-  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actorId      String?  @db.Uuid
+  actorRole    String?  @db.VarChar(32)
+  action       String
+  entityType   String
+  entityId     String
+  patientId    String?  @db.Uuid
+  /// Set when a super admin was looking at the product as this user (impersonation); the actor is then the admin.
+  onBehalfOfId String?  @db.Uuid
+  before       Json?
+  after        Json?
+  ip           String?  @db.VarChar(45)
+  userAgent    String?
+  requestId    String?
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([entityType, entityId])
   @@index([action, createdAt])
   @@index([actorId, createdAt])
   @@index([patientId, createdAt])
+  @@index([onBehalfOfId, createdAt])
   @@index([createdAt])
 }
 

@@ -11,6 +11,7 @@ import { TotpService } from '../modules/auth/totp.service.js';
 import { TwoFactorController } from '../modules/auth/two-factor.controller.js';
 import { TwoFactorService } from '../modules/auth/two-factor.service.js';
 import { AuthGuard } from './auth.guard.js';
+import { ImpersonationService } from './impersonation.service.js';
 import { SessionCookies } from './cookies.js';
 import { PermissionsGuard } from './permissions.guard.js';
 import { RateLimiter } from './rate-limiter.js';
@@ -26,6 +27,7 @@ import { ThrottleGuard } from './throttle.guard.js';
   controllers: [AuthController, TwoFactorController, InvitationsController],
   providers: [
     SessionService,
+    ImpersonationService,
     SessionCookies,
     RateLimiter,
     PasswordService,
@@ -39,6 +41,6 @@ import { ThrottleGuard } from './throttle.guard.js';
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
   ],
-  exports: [SessionService, Mailer],
+  exports: [SessionService, SessionCookies, Mailer, ImpersonationService],
 })
 export class AuthModule {}

@@ -150,6 +150,8 @@ export { StageTracker } from './components/stage-tracker';
 export type { StageTrackerLabels, StageTrackerProps } from './components/stage-tracker';
 export { Price } from './components/price';
 export type { PriceProps } from './components/price';
+export { ImpersonationBanner } from './components/impersonation-banner';
+export type { ImpersonationBannerProps } from './components/impersonation-banner';
 export { StatCard } from './components/stat-card';
 export type { StatCardProps } from './components/stat-card';
 export { StatusBadge } from './components/status-badge';

@@ -87,7 +87,8 @@
       "whatsappButton": "WhatsApp button",
       "documentList": "Document list",
       "shareToggleList": "Share toggles",
-      "price": "Price"
+      "price": "Price",
+      "impersonationBanner": "Impersonation banner"
     },
     "descriptions": {
       "button": "Variants, sizes, loading and disabled states.",
@@ -133,7 +134,8 @@
       "whatsappButton": "The chat button. On the website it floats in the corner of the screen.",
       "documentList": "A person's files with type tag, size, date, scan state and who can see them. A file that is still being scanned or did not pass cannot be opened.",
       "shareToggleList": "One switch per hospital: turning it on is the patient's consent to share the document with that hospital.",
-      "price": "A price in the viewer’s language and currency: symbol and digits per locale, Latin digits in Arabic, figure kept left-to-right. A converted price shows ≈ and the original beneath."
+      "price": "A price in the viewer’s language and currency: symbol and digits per locale, Latin digits in Arabic, figure kept left-to-right. A converted price shows ≈ and the original beneath.",
+      "impersonationBanner": "Shown across the top while a super admin is viewing the product as someone else. It cannot be dismissed; the only way out is to stop."
     },
     "button": {
       "primary": "Primary",
@@ -494,6 +496,10 @@
       "usd": "US dollar",
       "aed": "UAE dirham",
       "converted": "Converted from the hospital’s price"
+    },
+    "impersonation": {
+      "message": "Viewing as Asha Verma (patient). Read-only: nothing you do here can be changed.",
+      "stop": "Stop viewing"
     }
   },
   "navSections": {
@@ -1530,6 +1536,205 @@
       "payout_sent": "Payout sent",
       "document_quarantined": "File quarantined",
       "test_event": "Test notification"
+    }
+  },
+  "users": {
+    "title": "Users and teams",
+    "description": "Invite staff, set their role, team, city and hours, and manage who can sign in.",
+    "tabs": {
+      "people": "People",
+      "teams": "Teams"
+    },
+    "filters": {
+      "search": "Search by name or email",
+      "role": "Role",
+      "status": "Status",
+      "allRoles": "All roles",
+      "allStatuses": "All statuses",
+      "team": "Team",
+      "allTeams": "All teams"
+    },
+    "columns": {
+      "name": "Name",
+      "role": "Role",
+      "team": "Team",
+      "status": "Status",
+      "twoFactor": "Two-factor",
+      "lastLogin": "Last sign-in"
+    },
+    "status": {
+      "active": "Active",
+      "invited": "Invited",
+      "suspended": "Suspended",
+      "deactivated": "Deactivated"
+    },
+    "twoFactorOn": "On",
+    "twoFactorOff": "Off",
+    "never": "Never",
+    "onLeave": "On leave",
+    "noTeam": "No team",
+    "table": {
+      "caption": "People",
+      "empty": "No one matches",
+      "emptyHint": "Change the filters or invite someone.",
+      "error": "The list could not be loaded",
+      "retry": "Try again",
+      "loading": "Loading people",
+      "previous": "Previous",
+      "next": "Next",
+      "total": "{count, plural, one {# person} other {# people}}"
+    },
+    "invite": {
+      "button": "Invite staff",
+      "title": "Invite a staff member",
+      "description": "They get an email with a link to choose a password.",
+      "email": "Email address",
+      "name": "Full name",
+      "role": "Role",
+      "send": "Send invitation",
+      "sent": "Invitation sent",
+      "failed": "The invitation could not be sent",
+      "cancel": "Cancel"
+    },
+    "detail": {
+      "back": "All users",
+      "notFound": "This user does not exist",
+      "loadFailed": "The user could not be loaded",
+      "tabs": {
+        "profile": "Profile",
+        "schedule": "Hours and leave",
+        "signIns": "Sign-ins"
+      },
+      "email": "Email",
+      "phone": "Phone",
+      "status": "Status",
+      "viewingAs": "View as this user"
+    },
+    "profile": {
+      "name": "Full name",
+      "role": "Role",
+      "roleHint": "Hospital users are managed with their hospital.",
+      "title": "Job title",
+      "languages": "Languages spoken",
+      "languagesHint": "Codes separated by commas, for example en, ar",
+      "city": "City",
+      "noCity": "No city",
+      "team": "Team",
+      "noTeam": "No team",
+      "assignable": "Receives new cases",
+      "maxOpenCases": "Most open cases",
+      "save": "Save changes",
+      "saved": "Changes saved",
+      "failed": "The changes could not be saved",
+      "staffOnly": "Hospital users have no staff settings."
+    },
+    "hours": {
+      "title": "Working hours",
+      "timezone": "Time zone",
+      "from": "From",
+      "to": "To",
+      "dayOff": "Day off",
+      "save": "Save hours",
+      "saved": "Working hours saved",
+      "clear": "Remove working hours",
+      "days": {
+        "mon": "Monday",
+        "tue": "Tuesday",
+        "wed": "Wednesday",
+        "thu": "Thursday",
+        "fri": "Friday",
+        "sat": "Saturday",
+        "sun": "Sunday"
+      },
+      "invalid": "The end must be after the start"
+    },
+    "leave": {
+      "title": "Leave",
+      "start": "First day",
+      "end": "Last day",
+      "note": "Note",
+      "add": "Add leave",
+      "added": "Leave added",
+      "remove": "Remove",
+      "removed": "Leave removed",
+      "none": "No leave recorded",
+      "failed": "The leave could not be saved",
+      "range": "{from} to {to}"
+    },
+    "actions": {
+      "deactivate": "Deactivate",
+      "reactivate": "Reactivate",
+      "resetTwoFactor": "Reset two-factor",
+      "viewAs": "View as user",
+      "cancel": "Cancel",
+      "close": "Close",
+      "error": "That did not work. Try again."
+    },
+    "confirm": {
+      "deactivateTitle": "Deactivate {name}?",
+      "deactivateBody": "They are signed out on every device within seconds and cannot sign in again until you reactivate them.",
+      "deactivateDone": "Deactivated. They have been signed out everywhere.",
+      "reactivateTitle": "Reactivate {name}?",
+      "reactivateBody": "They will be able to sign in again.",
+      "reactivateDone": "Reactivated",
+      "resetTitle": "Reset two-factor for {name}?",
+      "resetBody": "Their second factor and backup codes are removed and they are signed out everywhere. They must set it up again at their next sign-in.",
+      "resetDone": "Two-factor reset",
+      "viewTitle": "View the product as {name}?",
+      "viewBody": "You will see exactly what they see, for 30 minutes, read-only. Everything you open is recorded in the audit log under your name.",
+      "viewConfirm": "Start viewing",
+      "viewReason": "Why do you need to view as this person?",
+      "viewReasonHint": "At least 10 characters. It is kept in the audit log."
+    },
+    "logins": {
+      "time": "Time",
+      "event": "Event",
+      "address": "Address",
+      "device": "Device",
+      "empty": "No sign-ins recorded",
+      "caption": "Sign-in history",
+      "events": {
+        "auth_login": "Signed in",
+        "auth_login_failed": "Failed sign-in",
+        "auth_account_locked": "Account locked",
+        "auth_logout": "Signed out",
+        "auth_password_reset": "Password reset",
+        "auth_password_changed": "Password changed",
+        "auth_two_factor_enabled": "Two-factor turned on",
+        "auth_two_factor_disabled": "Two-factor turned off",
+        "auth_session_revoked": "Session ended",
+        "auth_other_sessions_revoked": "Other sessions ended",
+        "auth_invitation_accepted": "Invitation accepted",
+        "auth_refresh_token_reuse": "Suspicious session reuse"
+      }
+    },
+    "teams": {
+      "title": "Teams",
+      "add": "Add team",
+      "edit": "Edit",
+      "delete": "Delete",
+      "name": "Team name",
+      "manager": "Manager",
+      "noManager": "No manager",
+      "members": "{count, plural, one {# member} other {# members}}",
+      "empty": "No teams yet",
+      "save": "Save team",
+      "saved": "Team saved",
+      "deleted": "Team deleted",
+      "deleteTitle": "Delete {name}?",
+      "deleteBody": "Only empty teams can be deleted.",
+      "failed": "The team could not be saved",
+      "addTitle": "Add a team",
+      "editTitle": "Edit team"
+    },
+    "banner": {
+      "message": "Viewing as {name} ({role}). Read-only: nothing here can be changed.",
+      "stop": "Stop viewing",
+      "stopFailed": "Could not stop viewing. Try again."
+    },
+    "signedOut": {
+      "deactivated": "Your account was deactivated. You have been signed out.",
+      "twoFactorReset": "Your two-factor was reset. Sign in again to set it up."
     }
   }
 }

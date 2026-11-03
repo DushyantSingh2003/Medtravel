@@ -4,7 +4,7 @@ Tick a task here when it is finished and `pnpm check` is green. The task queue t
 build loop is `loop/cloud-state.json`; this file is the human-readable view and also records
 what each task deferred.
 
-Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12.
+Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12, AD-01.
 
 ### Phase 0 — Scaffold (week 1)
 
@@ -96,7 +96,7 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12.
 
 ### Phase 1G (weeks 6–12, interleaved) — Admin
 
-- [ ] **AD-01** Users and roles
+- [x] **AD-01** Users and roles
 - [ ] **AD-02** Hospital and doctor approvals
 - [ ] **AD-03** Agent approvals and commission plans
 - [ ] **AD-04** CMS
@@ -165,6 +165,29 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12.
 - [ ] **G-08** Advanced analytics
 
 ## Notes and deferred work
+
+### Deferred from AD-01
+
+- **One role and one city per person.** The schema has a single `User.role` and `StaffProfile.cityId`; several roles or cities would
+  need a join table and a change to the case scoping. Working hours are one interval per weekday in the screen (the API allows three).
+- **Nothing reads working hours and leave yet:** the assignment engine (C-02) will. They are stored, edited and shown ("On leave").
+- **Reset two-factor sends no message to the person**; they find out at their next sign-in (a staff member is sent to set it up
+  again). A notification event for it can be added with the templates task.
+- **The audit viewer does not show `onBehalfOfId`** (who was being viewed when an admin impersonated); the column is written and the
+  `impersonation.*` rows are searchable by action. AD-07 adds it to the screen.
+- **Hospital users appear in the list** but only their name can be changed here; their role and hospital are managed with the hospital (AD-02).
+- **Team names stay reserved after a team is deleted** (the name is unique across deleted teams too).
+- **Security review, left for a follow-up:** no fresh-password step-up for deactivation, two-factor reset and impersonation, and no
+  message to the person affected (the `user.deactivated` and `user.two_factor_reset` events have no consumer yet; they come with
+  the templates task); the impersonation cookie is stateless, so "stop" clears the browser's copy but a copied cookie works until it
+  expires (30 minutes) or the admin's session ends; a sign-in completing in the same instant as a two-factor reset could keep its
+  session; audit `before`/`after` of a user change keeps the person's name (personal data in an append-only log).
+- **Fixed from the review:** two admins removing each other at once can no longer leave the platform without a super admin
+  (advisory lock); an admin's downloads while viewing as someone count towards the admin's download alert and carry the admin's
+  name in the watermark; impersonation needs a written reason that is kept in the audit row; your own two-factor cannot be reset
+  here; the stop endpoint writes nothing unless a view is active; moving a manager to another role ends their teams' leadership;
+  `AuditEvent.onBehalfOfId` is indexed.
+- Impersonation covers HTTP only: the realtime channel and file downloads through already-issued presigned links are not affected.
 
 ### Deferred from F-12
 

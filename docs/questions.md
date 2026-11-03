@@ -98,3 +98,6 @@ Appended by build tasks. Format: `- [<TASK-ID>] <question> — assumed: <what wa
 - [F-10] Who may move a case — assumed: case managers and the super admin always; another staff role only while the case is in a stage it owns, and never to an exit. Patients, attendants and agents never.
 - [F-10] Stage owners and targets — assumed from PRD section 3 (15 minutes to assign, 2 hours first contact, 24 hours review, 48 hours hospital opinions, ...); treatment and follow-up have no target. The super admin can change them.
 - [F-10] Timer on hold — assumed: the stage timer stops when a case goes on hold and starts again, in full, when it resumes.
+- [AD-01] Roles per person — assumed: one role per person (the data model has one); changing it takes effect at the person's next request, without signing them out.
+- [AD-01] Impersonation limits — assumed: super admin only, 30 minutes, read-only, not for other super admins, every request audited, with a banner that cannot be dismissed.
+- [AD-01] Who can be deactivated — assumed: anyone except yourself and the last active super admin; reactivation returns a person who never set a password to "invited".

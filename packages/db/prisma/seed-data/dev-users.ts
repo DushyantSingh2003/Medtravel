@@ -14,6 +14,9 @@ export const devEmail = (role: Role): string => `${role.replace(/_/g, '-')}@${DE
 /** A staff user who has never set up two-factor, to try the forced set-up page (it is only forced when the skip flag is off). */
 export const DEV_UNENROLLED_EMAIL = `staff-setup@${DEV_DOMAIN}`;
 
+/** A throwaway staff account the browser tests deactivate and reactivate, so no other test's user is ever taken away. */
+export const DEV_DISPOSABLE_EMAIL = `disposable@${DEV_DOMAIN}`;
+
 /** A user whose second factor is already on, with a fixed secret, so browser tests can compute the codes. */
 export const DEV_TWO_FACTOR_EMAIL = `admin-2fa@${DEV_DOMAIN}`;
 export const DEV_TWO_FACTOR_SECRET = 'KRSXG5CTMVRXEZLUKN2XAZLSKRSXG5CT';
@@ -61,11 +64,16 @@ export async function seedDevUsers(prisma: PrismaClient): Promise<number> {
   });
 
   // Every development user has a phone number so the SMS and WhatsApp channels can be tried (they land in Mailpit).
-  let phoneSerial = 0;
+  // A phone number per account that never depends on which accounts already exist (a unique column, and seeds are re-run).
+  const phoneOrder = [
+    ...ROLES.map(devEmail),
+    DEV_TWO_FACTOR_EMAIL,
+    DEV_UNENROLLED_EMAIL,
+    DEV_DISPOSABLE_EMAIL,
+  ];
   const create = async (email: string, role: Role, extra: { twoFactorSecret?: string } = {}) => {
     const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } });
     if (existing) return existing.id;
-    phoneSerial += 1;
     const user = await prisma.user.create({
       data: {
         email,
@@ -75,7 +83,7 @@ export async function seedDevUsers(prisma: PrismaClient): Promise<number> {
         passwordHash,
         passwordChangedAt: new Date(),
         emailVerifiedAt: new Date(),
-        phone: `+9198000${String(phoneSerial).padStart(5, '0')}`,
+        phone: `+9198000${String(phoneOrder.indexOf(email) + 1).padStart(5, '0')}`,
         phoneVerifiedAt: new Date(),
         ...(extra.twoFactorSecret
           ? { twoFactorEnabled: true, twoFactorSecret: extra.twoFactorSecret }
@@ -158,7 +166,18 @@ export async function seedDevUsers(prisma: PrismaClient): Promise<number> {
     update: {},
     create: { userId: unenrolledId },
   });
-  return ROLES.length + 2;
+  // Created last, so the phone numbers of the users that already exist do not move.
+  const disposableId = await create(
+    DEV_DISPOSABLE_EMAIL,
+    'case_manager',
+    enrolAll ? { twoFactorSecret: encrypted } : {},
+  );
+  await prisma.staffProfile.upsert({
+    where: { userId: disposableId },
+    update: {},
+    create: { userId: disposableId },
+  });
+  return ROLES.length + 3;
 }
 
 /** A few audit events so the admin audit screen has something to show on a fresh database (marked with request id `seed`). */

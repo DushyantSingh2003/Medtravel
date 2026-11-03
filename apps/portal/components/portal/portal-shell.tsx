@@ -19,6 +19,8 @@ import { type FormEvent, type ReactNode } from 'react';
 import { Link, usePathname, useRouter } from '../../i18n/navigation';
 import { RealtimeProvider } from '../realtime/realtime-provider';
 import { NotificationsBell } from '../notifications/notifications-bell';
+import { ImpersonationBar } from './impersonation-banner';
+import { SessionWatcher } from './session-watcher';
 import { PAGE_ICONS } from '../../lib/portal-icons';
 import { PORTAL_DEFINITIONS } from '../../lib/portal-pages';
 import { activePageKey, pageHref } from '../../lib/portal-routes';
@@ -164,6 +166,8 @@ export function PortalShell({
           </>
         }
       >
+        <ImpersonationBar afterStopHref={`/${locale}/admin/users`} />
+        <SessionWatcher />
         <div aria-busy={signingOut || undefined} className="mx-auto w-full max-w-6xl">
           {children}
         </div>
