@@ -1,6 +1,7 @@
 import { BullModule, InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
 import { Inject, Injectable, Logger, Module, type OnApplicationBootstrap } from '@nestjs/common';
 import type { PrismaClient } from '@medtravel/db';
+import { captureError } from '@medtravel/observability';
 import type { Queue } from 'bullmq';
 import { PRISMA } from '../database/database.module.js';
 import { SLA_QUEUE, SLA_SCHEDULER_ID, SLA_SWEEP_EVERY_MS, sweepOverdueCases } from './sla.job.js';
@@ -14,7 +15,10 @@ export class SlaProcessor extends WorkerHost {
   }
 
   async process(): Promise<{ breached: number }> {
-    const result = await sweepOverdueCases(this.prisma);
+    const result = await sweepOverdueCases(this.prisma).catch((error: unknown) => {
+      captureError(error, { jobType: 'sla' });
+      throw error;
+    });
     if (result.breached > 0)
       this.logger.log(`sla: ${result.breached} cases past their stage target`);
     return result;

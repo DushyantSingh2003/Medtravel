@@ -10,7 +10,13 @@ export interface DatabaseOptions {
   connectionString: string;
   /** Log every query. Useful locally; never enable in production — queries carry PII. */
   logQueries?: boolean;
+  /** Called for every query slower than `slowQueryMs`, with the SQL text (placeholders, never the values) and how long it took. */
+  onSlowQuery?: (query: { sql: string; durationMs: number }) => void;
+  /** The threshold for `onSlowQuery`. Default 200 ms. */
+  slowQueryMs?: number;
 }
+
+export const DEFAULT_SLOW_QUERY_MS = 200;
 
 /**
  * Build a PrismaClient on the pg driver adapter.
@@ -21,10 +27,29 @@ export interface DatabaseOptions {
  */
 export function createPrismaClient(options: DatabaseOptions): PrismaClient {
   const adapter = new PrismaPg({ connectionString: options.connectionString });
-  return new PrismaClient({
+  const { onSlowQuery } = options;
+  // Events instead of console output when someone listens for slow queries; the values of a query are never passed on.
+  const client = new PrismaClient({
     adapter,
-    log: options.logQueries ? ['query', 'warn', 'error'] : ['warn', 'error'],
+    log: [
+      ...(options.logQueries ? [{ emit: 'stdout' as const, level: 'query' as const }] : []),
+      ...(onSlowQuery ? [{ emit: 'event' as const, level: 'query' as const }] : []),
+      { emit: 'stdout' as const, level: 'warn' as const },
+      { emit: 'stdout' as const, level: 'error' as const },
+    ],
   });
+  if (onSlowQuery) {
+    const threshold = options.slowQueryMs ?? DEFAULT_SLOW_QUERY_MS;
+    (
+      client as unknown as {
+        $on(event: 'query', run: (e: { query: string; duration: number }) => void): void;
+      }
+    ).$on('query', (event) => {
+      if (event.duration >= threshold)
+        onSlowQuery({ sql: event.query, durationMs: event.duration });
+    });
+  }
+  return client;
 }
 
 let singleton: PrismaClient | undefined;

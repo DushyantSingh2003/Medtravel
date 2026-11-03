@@ -21,6 +21,7 @@
     "@medtravel/emails": "workspace:*",
     "@medtravel/fx": "workspace:*",
     "@medtravel/notifications": "workspace:*",
+    "@medtravel/observability": "workspace:*",
     "@medtravel/pdf": "workspace:*",
     "@medtravel/realtime": "workspace:*",
     "@medtravel/storage": "workspace:*",

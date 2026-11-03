@@ -38,6 +38,13 @@ describe('loadEnv', () => {
     );
   });
 
+  it('treats an empty SENTRY_DSN, as in a copied .env.example, as off', () => {
+    expect(loadEnv({ ...valid, SENTRY_DSN: '' } as NodeJS.ProcessEnv).SENTRY_DSN).toBeUndefined();
+    expect(() => loadEnv({ ...valid, SENTRY_DSN: 'not a url' } as NodeJS.ProcessEnv)).toThrow(
+      /SENTRY_DSN/,
+    );
+  });
+
   it('runs a fresh checkout with development secrets, and refuses them in production', () => {
     expect(loadEnv(valid as NodeJS.ProcessEnv).EMAIL_TRANSPORT).toBe('capture');
     expect(() => loadEnv({ ...valid, NODE_ENV: 'production' } as NodeJS.ProcessEnv)).toThrow(
@@ -61,11 +68,14 @@ describe('loadEnv', () => {
       WHATSAPP_ACCESS_TOKEN: 'tok',
       NOTIFICATION_WEBHOOK_SECRET: 'a-real-webhook-secret',
       WHATSAPP_VERIFY_TOKEN: 'a-real-verify-token-1',
+      METRICS_TOKEN: 'a-real-metrics-token-0123456789abcdef',
     };
     expect(loadEnv(production as NodeJS.ProcessEnv).NODE_ENV).toBe('production');
     expect(() =>
       loadEnv({ ...production, EMAIL_TRANSPORT: 'capture' } as NodeJS.ProcessEnv),
     ).toThrow(/EMAIL_TRANSPORT/);
+    const { METRICS_TOKEN: _omitted, ...withoutMetricsToken } = production;
+    expect(() => loadEnv(withoutMetricsToken as NodeJS.ProcessEnv)).toThrow(/METRICS_TOKEN/);
     expect(() => loadEnv({ ...production, TRUST_PROXY_HOPS: '0' } as NodeJS.ProcessEnv)).toThrow(
       /TRUST_PROXY_HOPS/,
     );

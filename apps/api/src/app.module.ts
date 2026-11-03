@@ -16,6 +16,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { StorageModule } from './storage/storage.module.js';
 import { CasesModule } from './modules/cases/cases.module.js';
 import { FxModule } from './modules/fx/fx.module.js';
+import { ObservabilityModule } from './observability/observability.module.js';
 import { MastersModule } from './modules/masters/masters.module.js';
 
 @Module({
@@ -32,6 +33,7 @@ import { MastersModule } from './modules/masters/masters.module.js';
     RbacModule,
     StorageModule,
     HealthModule,
+    ObservabilityModule,
     MastersModule,
     FxModule,
     CasesModule,
