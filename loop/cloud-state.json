@@ -135,6 +135,12 @@
       "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e",
       "finishedAt": "2026-11-03T10:59:47.594Z",
       "note": "Seed data and test factories"
+    },
+    "F-12": {
+      "status": "in-progress",
+      "attempts": 1,
+      "claimedAt": "2026-11-03T11:06:58.804Z",
+      "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e"
     }
   },
   "approvals": [],
@@ -172,6 +178,7 @@
     "2026-11-01T16:10:01.254Z claim F-10 attempt 1",
     "2026-11-01T16:36:42.941Z finish F-10 done",
     "2026-11-03T10:44:09.016Z claim F-11 attempt 1",
-    "2026-11-03T10:59:47.594Z finish F-11 done"
+    "2026-11-03T10:59:47.594Z finish F-11 done",
+    "2026-11-03T11:06:58.812Z claim F-12 attempt 1"
   ]
 }
