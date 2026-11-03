@@ -58,6 +58,8 @@ const DOMAINS: { title: string; blurb: string; models: string[] }[] = [
       'AuthChallenge',
       'BackupCode',
       'StaffProfile',
+      'Team',
+      'StaffLeave',
       'AgentUser',
       'HospitalStaff',
     ],

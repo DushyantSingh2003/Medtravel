@@ -8,6 +8,8 @@ export const REFRESH_COOKIE = 'mt_rt';
 /** Readable by the portal's JavaScript on purpose: the browser copies it into the `x-csrf-token` header. */
 export const CSRF_COOKIE = 'mt_csrf';
 export const CSRF_HEADER = 'x-csrf-token';
+/** Present while a super admin is viewing the product as another user. Signed, httpOnly, short-lived. */
+export const IMPERSONATION_COOKIE = 'mt_imp';
 
 /** The value of one cookie in a `Cookie` header, or undefined. */
 export function readCookie(header: string | undefined, name: string): string | undefined {
@@ -90,6 +92,17 @@ export class SessionCookies {
       serializeCookie(ACCESS_COOKIE, '', this.options(0, true)),
       serializeCookie(REFRESH_COOKIE, '', this.options(0, true)),
       serializeCookie(CSRF_COOKIE, '', this.options(0, false)),
+      serializeCookie(IMPERSONATION_COOKIE, '', this.options(0, true)),
     ]);
+  }
+
+  setImpersonation(reply: FastifyReply, token: string, maxAgeSeconds: number): void {
+    reply.header('set-cookie', [
+      serializeCookie(IMPERSONATION_COOKIE, token, this.options(maxAgeSeconds, true)),
+    ]);
+  }
+
+  clearImpersonation(reply: FastifyReply): void {
+    reply.header('set-cookie', [serializeCookie(IMPERSONATION_COOKIE, '', this.options(0, true))]);
   }
 }

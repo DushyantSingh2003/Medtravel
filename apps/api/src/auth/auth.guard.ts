@@ -12,7 +12,14 @@ import type { FastifyRequest } from 'fastify';
 import { ENV } from '../config/config.module.js';
 import type { Env } from '../config/env.schema.js';
 import { ACCESS_COOKIE, CSRF_COOKIE, CSRF_HEADER, readCookie } from './cookies.js';
-import { LIMITED_KEY, ALLOW_MAGIC_LINK_KEY, PUBLIC_KEY, WS_GATEWAY_KEY } from './decorators.js';
+import {
+  IGNORE_IMPERSONATION_KEY,
+  LIMITED_KEY,
+  ALLOW_MAGIC_LINK_KEY,
+  PUBLIC_KEY,
+  WS_GATEWAY_KEY,
+} from './decorators.js';
+import { ImpersonationService } from './impersonation.service.js';
 import { SessionService } from './session.service.js';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
@@ -50,6 +57,7 @@ export class AuthGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly sessions: SessionService,
+    private readonly impersonation: ImpersonationService,
     @Inject(ENV) private readonly env: Env,
   ) {}
 
@@ -113,6 +121,22 @@ export class AuthGuard implements CanActivate {
     }
     request.actor = auth.actor;
     request.limitedSession = owed;
+
+    // A super admin looking at the product as someone else: that person is the actor, but nothing may change, and every
+    // request is written to the audit trail. Only the call that ends it acts as the admin.
+    if (!this.reflector.getAllAndOverride<boolean>(IGNORE_IMPERSONATION_KEY, targets) && !owed) {
+      const active = await this.impersonation.resolve(request, auth);
+      if (active) {
+        // Attempts are recorded too, including the ones that are refused.
+        await this.impersonation.recordRequest(request, active);
+        if (unsafe)
+          throw new ForbiddenException(
+            'Viewing as another user is read-only. Stop viewing to make changes.',
+          );
+        request.actor = active.actor;
+        request.impersonation = { by: active.by, expiresAt: active.expiresAt };
+      }
+    }
     return true;
   }
 }

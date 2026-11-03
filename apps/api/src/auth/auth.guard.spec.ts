@@ -4,13 +4,19 @@ import { describe, expect, it } from 'vitest';
 import type { Env } from '../config/env.schema.js';
 import { AuthGuard, secondFactorOwed } from './auth.guard.js';
 import { WsGateway } from './decorators.js';
+import type { ImpersonationService } from './impersonation.service.js';
 import type { SessionService } from './session.service.js';
 
 @WsGateway()
 class MarkedGateway {}
 class OtherHandler {}
 
-const guard = new AuthGuard(new Reflector(), {} as SessionService, {} as Env);
+const guard = new AuthGuard(
+  new Reflector(),
+  {} as SessionService,
+  {} as ImpersonationService,
+  {} as Env,
+);
 const nonHttp = (owner: new () => object, type: string): ExecutionContext =>
   ({
     getType: () => type,

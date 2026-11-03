@@ -444,6 +444,57 @@ async function linkDevStaff(
     });
 }
 
+/** A team under the development case manager, with working hours and a week of leave, so /admin/users has something to show. */
+async function seedTeam(prisma: PrismaClient): Promise<void> {
+  const users = await prisma.user.findMany({
+    where: {
+      email: {
+        in: [
+          devEmail('case_manager'),
+          devEmail('ground_coordinator'),
+          devEmail('medical_reviewer'),
+        ],
+      },
+    },
+    select: { id: true, role: true },
+  });
+  const manager = users.find((u) => u.role === 'case_manager');
+  if (!manager) return;
+  const team = await prisma.team.upsert({
+    where: { name: 'Gulf desk' },
+    update: {},
+    create: { name: 'Gulf desk', managerId: manager.id },
+  });
+  await prisma.staffProfile.updateMany({
+    where: { userId: manager.id },
+    data: { isManager: true },
+  });
+  const hours = {
+    timezone: 'Asia/Kolkata',
+    days: Object.fromEntries(
+      ['mon', 'tue', 'wed', 'thu', 'fri'].map((day) => [day, [{ from: '09:00', to: '18:00' }]]),
+    ),
+  };
+  for (const member of users.filter((u) => u.id !== manager.id)) {
+    await prisma.staffProfile.updateMany({
+      where: { userId: member.id, teamId: null },
+      data: {
+        teamId: team.id,
+        managerId: manager.id,
+        workingHours: hours,
+        languages: ['en', 'ar'],
+      },
+    });
+  }
+  const coordinator = users.find((u) => u.role === 'ground_coordinator');
+  if (coordinator && !(await prisma.staffLeave.count({ where: { userId: coordinator.id } }))) {
+    const day = (offset: number) => new Date(Date.UTC(2030, 0, 1 + offset));
+    await prisma.staffLeave.create({
+      data: { userId: coordinator.id, startsOn: day(10), endsOn: day(16), note: 'Annual leave' },
+    });
+  }
+}
+
 /** The patients, their cases and everything each case would have by its stage. */
 async function seedCases(
   prisma: PrismaClient,
@@ -922,6 +973,7 @@ export async function seedDemoData(
   const hosp = await seedHospitals(prisma, ref);
   const agentIds = await seedAgents(prisma);
   await linkDevStaff(prisma, hosp, ref);
+  await seedTeam(prisma);
   const cases = await seedCases(prisma, ref, hosp, agentIds);
   return { cases, hospitals: hosp.hospitalIds.length };
 }

@@ -316,10 +316,26 @@ export class AuthService {
     return user.twoFactorEnabled || this.signIn.view(user, false).twoFactorRequired;
   }
 
-  async me(actor: Actor, limited: boolean): Promise<AuthUser> {
+  async me(
+    actor: Actor,
+    limited: boolean,
+    impersonation?: { by: string; expiresAt: string },
+  ): Promise<AuthUser> {
     const user = await this.signIn.accountById(actor.userId);
     if (!user) throw new UnauthorizedException('Sign in again');
-    return this.signIn.view(user, limited, actor.scopeCaseId);
+    return {
+      ...this.signIn.view(user, limited, actor.scopeCaseId),
+      ...(impersonation ? { impersonating: impersonation } : {}),
+    };
+  }
+
+  /** The audit row for the end of an impersonation (the viewed user is in the cookie the admin is dropping). */
+  async recordImpersonationStopped(actor: Actor, context: RequestContext): Promise<void> {
+    await this.audit.recordNow(context, {
+      action: 'impersonation.stopped',
+      entityType: 'User',
+      entityId: actor.userId,
+    });
   }
 
   /** Ends the session the request belongs to: by its access token, or failing that by its refresh token. Never fails. */

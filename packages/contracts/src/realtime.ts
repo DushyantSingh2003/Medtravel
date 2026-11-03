@@ -27,6 +27,7 @@ export const REALTIME_EVENTS = [
   'message.created',
   'task.assigned',
   'typing',
+  'session.revoked',
 ] as const;
 export type RealtimeEventName = (typeof REALTIME_EVENTS)[number];
 
@@ -37,6 +38,10 @@ export const realtimePayloadSchemas = {
   'message.created': caseRef.extend({ messageId: z.uuid() }),
   'task.assigned': z.object({ taskId: z.uuid(), caseId: z.uuid().optional() }),
   typing: caseRef.extend({ userId: z.uuid(), typing: z.boolean() }),
+  /** The person's sessions were ended (deactivated, two-factor reset): the browser signs out now instead of at its next request. */
+  'session.revoked': z.object({
+    reason: z.enum(['deactivated', 'two_factor_reset']),
+  }),
 } as const satisfies Record<RealtimeEventName, z.ZodTypeAny>;
 
 export type RealtimePayload<E extends RealtimeEventName> = z.infer<

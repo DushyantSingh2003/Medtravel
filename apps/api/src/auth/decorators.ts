@@ -9,6 +9,7 @@ export const PERMISSION_KEY = 'auth:permission';
 export const LIMITED_KEY = 'auth:limited-session';
 export const ALLOW_MAGIC_LINK_KEY = 'auth:allow-magic-link';
 export const THROTTLE_KEY = 'auth:throttle';
+export const IGNORE_IMPERSONATION_KEY = 'auth:ignore-impersonation';
 
 export interface RequiredPermission {
   action: PermissionAction;
@@ -39,6 +40,12 @@ export const AllowLimitedSession = () => SetMetadata(LIMITED_KEY, true);
  * endpoint is closed to magic links until its author makes it honour `actor.scopeCaseId`.
  */
 export const AllowMagicLink = () => SetMetadata(ALLOW_MAGIC_LINK_KEY, true);
+
+/**
+ * The route acts for the signed-in person themselves even while they are impersonating someone: stopping the impersonation, and
+ * nothing else. Everything else sees the impersonated user, read-only.
+ */
+export const IgnoreImpersonation = () => SetMetadata(IGNORE_IMPERSONATION_KEY, true);
 
 export interface ThrottleOptions {
   limit: number;

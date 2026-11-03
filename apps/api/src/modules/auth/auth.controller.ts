@@ -18,6 +18,7 @@ import {
   AllowMagicLink,
   Authenticated,
   CurrentActor,
+  IgnoreImpersonation,
   Public,
   Throttle,
 } from '../../auth/decorators.js';
@@ -164,6 +165,26 @@ export class AuthController {
     return ACCEPTED;
   }
 
+  /** Ends a super admin's read-only view of another user. Acts as the admin, not as the viewed user. */
+  @Post('impersonation/stop')
+  @Authenticated()
+  @IgnoreImpersonation()
+  @HttpCode(200)
+  @ApiOperation({
+    operationId: 'stopImpersonation',
+    summary: 'Stop viewing the product as another user',
+  })
+  @ApiOkResponse({ type: AcceptedDto })
+  async stopImpersonation(
+    @CurrentActor() actor: Actor,
+    @Ctx() context: RequestContext,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    await this.auth.recordImpersonationStopped(actor, context);
+    this.cookies.clearImpersonation(reply);
+    return ACCEPTED;
+  }
+
   @Get('me')
   @Authenticated()
   @AllowMagicLink()
@@ -174,7 +195,7 @@ export class AuthController {
   })
   @ApiOkResponse({ type: AuthUserDto })
   me(@CurrentActor() actor: Actor, @Req() request: FastifyRequest) {
-    return this.auth.me(actor, request.limitedSession === true);
+    return this.auth.me(actor, request.limitedSession === true, request.impersonation);
   }
 
   @Post('email/verify')

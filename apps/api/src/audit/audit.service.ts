@@ -50,8 +50,10 @@ export class AuditService {
     this.markRecorded();
     await db.auditEvent.create({
       data: {
-        actorId: context.actor?.userId ?? null,
-        actorRole: context.actor?.role ?? null,
+        // While an admin is impersonating, the admin is the one acting; the viewed user is recorded beside it.
+        actorId: context.actor?.impersonatorId ?? context.actor?.userId ?? null,
+        actorRole: context.actor?.impersonatorId ? 'super_admin' : (context.actor?.role ?? null),
+        ...(context.actor?.impersonatorId ? { onBehalfOfId: context.actor.userId } : {}),
         action: entry.action,
         entityType: entry.entityType,
         entityId: entry.entityId,
