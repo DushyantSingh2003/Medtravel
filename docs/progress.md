@@ -171,6 +171,8 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-11.
 - **`pnpm db:reset` has not been run by the build agent:** Prisma refuses `migrate reset` from an AI agent without the user's
   explicit consent. Its parts were checked on a fresh database (`prisma migrate deploy`, then the seed with `SEED_DEV_USERS=true
 SEED_DEMO_DATA=true`: about 3 s, and a second run changes nothing). Run `pnpm db:reset` yourself once.
+- **The interpreter portal has no demo data:** no booking is assigned to an interpreter (that needs interpreter records, which come with the logistics tasks). The dev attendant is on the first case.
+- **`db:reset` refuses** any environment but development or test and any database that is not on this machine or a local container; the demo seed refuses the same.
 - **Demo documents are rows only**, with no file in the bucket, so viewing or downloading one fails until a real file is uploaded.
 - **Factories live in `packages/db/src/testing`** (exported as `@medtravel/db/testing`) so other packages can import them; the task
   text said `packages/db/test`, which only holds that package's own e2e tests.

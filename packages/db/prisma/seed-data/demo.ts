@@ -1,5 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { CASE_STAGES, STATUS_OF_STAGE, type CaseStage } from '@medtravel/contracts';
+import {
+  CASE_STAGES,
+  DEFAULT_STAGE_TARGET_MINUTES,
+  STATUS_OF_STAGE,
+  type CaseStage,
+} from '@medtravel/contracts';
 import type { Prisma, PrismaClient } from '../../src/client.ts';
 import { devEmail } from './dev-users.ts';
 
@@ -297,14 +302,23 @@ async function seedHospitals(prisma: PrismaClient, ref: Awaited<ReturnType<typeo
     };
     const hospital = await prisma.hospital.upsert({
       where: { slug: spec.slug },
-      update: spec.slug === 'dev-hospital' ? data : {},
+      update: {},
       create: { slug: spec.slug, ...data },
     });
     hospitalIds.push(hospital.id);
-    await prisma.accreditation.createMany({
-      skipDuplicates: true,
-      data: (['nabh', 'jci'] as const).map((body) => ({ body, hospitalId: hospital.id })),
-    });
+    // The development hospital is renamed once, and only while it still has the name the dev-user seed gave it.
+    if (spec.slug === 'dev-hospital')
+      await prisma.hospital.updateMany({
+        where: { slug: spec.slug, name: 'Dev Hospital' },
+        data,
+      });
+    for (const body of ['nabh', 'jci'] as const) {
+      const has = await prisma.accreditation.findFirst({
+        where: { hospitalId: hospital.id, body },
+        select: { id: true },
+      });
+      if (!has) await prisma.accreditation.create({ data: { body, hospitalId: hospital.id } });
+    }
     for (const slug of spec.specialities) {
       const speciality = ref.specialities.get(slug);
       if (speciality)
@@ -439,9 +453,9 @@ async function seedCases(
 ): Promise<number> {
   const now = Date.now();
   const year = new Date().getUTCFullYear();
-  // The demo cases have fixed numbers, so their presence means the demo data was already created.
-  const existing = await prisma.case.findUnique({
-    where: { caseNo: `CASE-${year}-900001` },
+  // The second demo patient always exists once the demo data does (the first may be the development patient), whatever the year.
+  const existing = await prisma.patient.findFirst({
+    where: { email: `demo-02@${DEMO_DOMAIN}` },
     select: { id: true },
   });
   if (existing) return 0;
@@ -455,6 +469,10 @@ async function seedCases(
     prisma.lostReason.findMany({ select: { id: true } }),
     prisma.user.findUnique({ where: { email: devEmail('hospital_desk') }, select: { id: true } }),
   ]);
+  const devAttendant = await prisma.attendant.findFirst({
+    where: { user: { email: devEmail('attendant') } },
+    select: { id: true },
+  });
   const devPatient = devPatientUser
     ? await prisma.patient.findUnique({
         where: { userId: devPatientUser.id },
@@ -480,6 +498,8 @@ async function seedCases(
     conversations: [] as Prisma.ConversationCreateManyInput[],
     messages: [] as Prisma.MessageCreateManyInput[],
     documents: [] as Prisma.DocumentCreateManyInput[],
+    shares: [] as Prisma.DocumentShareCreateManyInput[],
+    caseAttendants: [] as Prisma.CaseAttendantCreateManyInput[],
   };
   const countryCounters: Record<string, number> = {};
 
@@ -504,15 +524,17 @@ async function seedCases(
     const agentId = agentIndex >= 0 && n % 2 === 0 ? agentIds[agentIndex] : undefined;
     const exit = plan.lost ? 'lost' : plan.hold ? 'on_hold' : null;
     const enteredAt = new Date(now - (plan.closed ? 20 : 1 + (n % 9)) * DAY - (n % 5) * HOUR);
-    const target =
-      [15, 120, 1440, 2880, 4320, 4320, 20160, 7200, 1440, null, 2880, null][at] ?? null;
+    // Travel dates: ahead of us until arrival, under way during treatment, in the past once the patient is home.
+    const arrivalDays = at === 7 ? 12 : at === 8 ? 1 : at === 9 ? -6 : -25;
+    const target = DEFAULT_STAGE_TARGET_MINUTES[CASE_STAGES[at] as CaseStage];
 
     if (!(n === 0 && devPatient))
       rows.patients.push({
         id: patientId,
         fullName,
         email: `demo-${String(n + 1).padStart(2, '0')}@${DEMO_DOMAIN}`,
-        phone: `${PHONE_PREFIX[country]}${String(10_000_000 + n * 137_371).slice(0, 8)}`,
+        // Reserved-looking numbers (all zeros then a serial) so no message can reach a real person.
+        phone: `${PHONE_PREFIX[country]}0000${String(n + 1).padStart(4, '0')}`,
         gender: n % 2 ? 'female' : 'male',
         dateOfBirth: new Date(Date.UTC(1950 + ((n * 7) % 45), n % 12, 1 + (n % 27))),
         nationalityCode: country,
@@ -546,20 +568,21 @@ async function seedCases(
           : null,
       closedAt: plan.closed || plan.lost ? enteredAt : null,
       lostReasonId: plan.lost ? lostReasons[n % Math.max(lostReasons.length, 1)]?.id : null,
-      plannedArrivalAt: at >= 7 ? new Date(now + (at === 7 ? 12 : at === 8 ? 1 : -6) * DAY) : null,
-      plannedDepartureAt:
-        at >= 7 ? new Date(now + (at === 7 ? 24 : at === 8 ? 13 : 6) * DAY) : null,
+      plannedArrivalAt: at >= 7 ? new Date(now + arrivalDays * DAY) : null,
+      plannedDepartureAt: at >= 7 ? new Date(now + (arrivalDays + 12) * DAY) : null,
     });
     // History: one row per stage reached, spaced from creation to the time it entered the current stage.
     const reached = CASE_STAGES.slice(0, at + 1);
     const span = Math.max(enteredAt.getTime() - created, reached.length);
+    /** When the case entered stage i; the records of that stage are dated from it. */
+    const tAt = (i: number) => created + (span * Math.min(i, at)) / Math.max(reached.length - 1, 1);
     reached.forEach((s, i) => {
       rows.history.push({
         caseId,
         fromStage: i === 0 ? null : reached[i - 1],
         toStage: s,
         actorId: owner?.id ?? null,
-        createdAt: new Date(created + (span * i) / Math.max(reached.length - 1, 1)),
+        createdAt: new Date(tAt(i)),
       });
     });
     if (exit)
@@ -569,8 +592,10 @@ async function seedCases(
         toStage: exit,
         actorId: owner?.id ?? null,
         note: plan.lost ? 'Patient declined' : 'Waiting for patient to confirm dates',
-        createdAt: enteredAt,
+        // A second after the last stage row, so the order is the same on every run.
+        createdAt: new Date(enteredAt.getTime() + 1000),
       });
+    if (n === 0 && devAttendant) rows.caseAttendants.push({ caseId, attendantId: devAttendant.id });
     rows.intakes.push({
       caseId,
       condition,
@@ -578,6 +603,7 @@ async function seedCases(
       medications: 'As prescribed by the home physician.',
     });
 
+    const reportId = randomUUID();
     if (at >= 2) {
       rows.summaries.push({
         caseId,
@@ -590,13 +616,14 @@ async function seedCases(
       });
       rows.documents.push(
         {
+          id: reportId,
           kind: 'report',
           fileName: 'medical-report.pdf',
           mimeType: 'application/pdf',
           sizeBytes: 182_400,
           storageKey: `demo/${caseId}/medical-report.pdf`,
           scanStatus: 'clean',
-          scannedAt: new Date(created),
+          scannedAt: new Date(tAt(2)),
           pageCount: 6,
           patientId,
           caseId,
@@ -608,7 +635,7 @@ async function seedCases(
           sizeBytes: 94_100,
           storageKey: `demo/${caseId}/passport.pdf`,
           scanStatus: 'clean',
-          scannedAt: new Date(created),
+          scannedAt: new Date(tAt(2)),
           pageCount: 2,
           patientId,
           caseId,
@@ -634,17 +661,24 @@ async function seedCases(
         caseId,
         hospitalId,
         textVersion: 'share-medical-v1',
-        grantedAt: new Date(created + DAY),
+        grantedAt: new Date(tAt(3) - HOUR),
       });
+      if (at >= 2)
+        rows.shares.push({
+          documentId: reportId,
+          hospitalId,
+          consentId,
+          sharedById: owner?.id ?? null,
+        });
       rows.requests.push({
         id: requestId,
         caseId,
         hospitalId,
         status: answered ? 'answered' : 'viewed',
-        sentAt: new Date(created + 2 * DAY),
-        dueAt: new Date(created + 4 * DAY),
-        viewedAt: new Date(created + 2 * DAY + HOUR),
-        respondedAt: answered ? new Date(created + 3 * DAY) : null,
+        sentAt: new Date(tAt(3)),
+        dueAt: new Date(tAt(3) + 2 * DAY),
+        viewedAt: new Date(tAt(3) + HOUR),
+        respondedAt: answered ? new Date(tAt(3) + DAY) : null,
         consentId,
         doctorId: k === 0 ? hosp.doctorByHospital.get(hospitalId)?.[0] : null,
         sentById: owner?.id,
@@ -688,9 +722,10 @@ async function seedCases(
         ['hospital', 'Hospital package', base],
         ['stay', 'Guest house, 8 nights', 64_000],
         ['transfer', 'Airport transfers', 12_000],
-        ['service_fee', 'Service fee', Math.round(base * 0.08)],
+        ['service_fee', 'Service fee', Number((BigInt(base) * 8n) / 100n)],
       ];
       const total = lines.reduce((sum, l) => sum + l[2], 0);
+      const deposit = (BigInt(total) * 30n) / 100n;
       rows.quotes.push({
         id: quoteId,
         quoteNo: `Q-${String(900_001 + n)}`,
@@ -699,8 +734,11 @@ async function seedCases(
         status: at >= 5 ? 'accepted' : 'sent',
         totalMinor: BigInt(total),
         currency: 'USD',
-        sentAt: new Date(created + 4 * DAY),
-        acceptedAt: at >= 5 ? new Date(created + 6 * DAY) : null,
+        sentAt: new Date(tAt(4)),
+        acceptedAt: at >= 5 ? new Date(tAt(5)) : null,
+        fxRate: '1.00000000',
+        fxRateAt: new Date(tAt(4)),
+        fxSource: 'seed',
         validUntil: new Date(now + 10 * DAY),
         fxBaseCurrency: 'USD',
         createdById: owner?.id,
@@ -721,9 +759,9 @@ async function seedCases(
           type: 'deposit',
           method: 'bank_wire',
           status: at >= 6 ? 'succeeded' : 'pending',
-          amountMinor: BigInt(Math.round(total * 0.3)),
+          amountMinor: deposit,
           currency: 'USD',
-          paidAt: at >= 6 ? new Date(created + 8 * DAY) : null,
+          paidAt: at >= 6 ? new Date(tAt(6)) : null,
           caseId,
           quoteId,
           payerName: fullName,
@@ -733,9 +771,9 @@ async function seedCases(
           type: 'service',
           method: 'card',
           status: 'succeeded',
-          amountMinor: BigInt(Math.round(total * 0.7)),
+          amountMinor: BigInt(total) - deposit,
           currency: 'USD',
-          paidAt: new Date(now - 10 * DAY),
+          paidAt: new Date(tAt(10)),
           caseId,
           quoteId,
           payerName: fullName,
@@ -750,8 +788,8 @@ async function seedCases(
             ? 'approved'
             : (['documents_pending', 'invitation_issued', 'applied'] as const)[n % 3],
         applicationId: `EMV-${900_000 + n}`,
-        appliedAt: new Date(created + 12 * DAY),
-        decisionAt: at >= 7 ? new Date(created + 20 * DAY) : null,
+        appliedAt: new Date(tAt(6) + DAY),
+        decisionAt: at >= 7 ? new Date(tAt(7)) : null,
       });
     if (at >= 7) {
       const arrival = new Date(now + (at === 7 ? 12 : at === 8 ? 1 : -6) * DAY);
@@ -862,6 +900,8 @@ async function seedCases(
       await tx.conversation.createMany({ data: rows.conversations });
       await tx.message.createMany({ data: rows.messages });
       await tx.document.createMany({ data: rows.documents });
+      await tx.documentShare.createMany({ data: rows.shares });
+      await tx.caseAttendant.createMany({ data: rows.caseAttendants });
     },
     { timeout: 25_000 },
   );
@@ -872,6 +912,9 @@ async function seedCases(
 export async function seedDemoData(
   prisma: PrismaClient,
 ): Promise<{ cases: number; hospitals: number }> {
+  // Fictional hospitals, patients and payments must never reach a real database (same rule as the development users).
+  if (!['development', 'test'].includes(process.env['NODE_ENV'] ?? 'development'))
+    throw new Error('Refusing to create demo data outside development and test');
   const ref = await lookup(prisma);
   for (const code of ['IQ', 'UZ', 'KE', 'AE', 'OM', 'NG', 'IN'])
     if (!ref.countries.has(code))

@@ -1,5 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { STATUS_OF_STAGE, type CaseStage, type Role } from '@medtravel/contracts';
+import {
+  STATUS_OF_STAGE,
+  type CaseExitStage,
+  type CaseStage,
+  type Role,
+} from '@medtravel/contracts';
 import type { Prisma, PrismaClient } from '../client.ts';
 
 /**
@@ -7,9 +12,13 @@ import type { Prisma, PrismaClient } from '../client.ts';
  * calls never collide, and every builder takes overrides. They write the row directly (they do not go through the
  * application's services), so a test can arrange any state, including ones the state machine would not reach.
  */
+/** One counter for the whole process, so two sets of factories on one database never repeat a value. */
+let serial = 0;
+const next = () => (serial += 1);
+
+const EXIT_STATUS = { lost: 'lost', on_hold: 'on_hold', cancelled: 'cancelled' } as const;
+
 export function createFactories(prisma: PrismaClient) {
-  let serial = 0;
-  const next = () => (serial += 1);
   const pad = (n: number, width = 6) => String(n).padStart(width, '0');
 
   const country = (code = 'IN', name = 'India') =>
@@ -115,17 +124,20 @@ export function createFactories(prisma: PrismaClient) {
 
   /** A case at a stage with the status that goes with it; the patient is created unless one is given. */
   const caseAt = async (
-    stage: CaseStage = 'enquiry',
+    stage: CaseStage | CaseExitStage = 'enquiry',
     overrides: Partial<Prisma.CaseUncheckedCreateInput> = {},
   ) => {
     const n = next();
     const patientId = overrides.patientId ?? (await patient()).id;
     return prisma.case.create({
       data: {
-        caseNo: `CASE-2026-${pad(800_000 + n)}`,
+        caseNo: `CASE-${new Date().getUTCFullYear()}-${pad(800_000 + n)}`,
         patientId,
         stage,
-        status: STATUS_OF_STAGE[stage],
+        status:
+          stage in EXIT_STATUS
+            ? EXIT_STATUS[stage as CaseExitStage]
+            : STATUS_OF_STAGE[stage as CaseStage],
         ...overrides,
       },
     });

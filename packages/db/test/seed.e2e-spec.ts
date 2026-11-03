@@ -105,16 +105,62 @@ describe('the demo seed', () => {
     expect(await prisma.document.count()).toBeGreaterThan(40);
   });
 
-  it('keeps the stage history consistent with each case’s stage', async () => {
-    const cases = await prisma.case.findMany({ select: { id: true, stage: true } });
+  it('keeps the stage history consistent with each case’s stage, with a fixed order for exits', async () => {
+    const cases = await prisma.case.findMany({ select: { id: true, stage: true, status: true } });
     for (const c of cases) {
-      const last = await prisma.caseStageHistory.findFirstOrThrow({
+      const rows = await prisma.caseStageHistory.findMany({
         where: { caseId: c.id },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       });
-      expect(last.toStage, c.id).toBe(c.stage === 'follow_up' ? last.toStage : c.stage);
+      const last = rows.at(-1);
+      // A closed case stays in follow-up; every other case ends in the stage it is in.
+      expect(last?.toStage, c.id).toBe(c.stage);
+      if (c.stage === 'lost' || c.stage === 'on_hold') {
+        const before = rows.at(-2);
+        expect(last?.fromStage, c.id).toBe(before?.toStage);
+        expect(last && before && last.createdAt > before.createdAt, c.id).toBe(true);
+      }
     }
     expect(await prisma.caseStageHistory.count({ where: { fromStage: null } })).toBe(40);
+  });
+
+  it('adds up: quote lines equal the quote, payments never exceed it, nothing is dated after the case closed', async () => {
+    const quotes = await prisma.quote.findMany({ include: { lines: true, payments: true } });
+    expect(quotes.length).toBeGreaterThan(10);
+    for (const q of quotes) {
+      expect(
+        q.lines.reduce((sum, l) => sum + l.amountMinor, 0n),
+        q.quoteNo,
+      ).toBe(q.totalMinor);
+      expect(
+        q.payments.reduce((sum, p) => sum + p.amountMinor, 0n) <= q.totalMinor,
+        q.quoteNo,
+      ).toBe(true);
+      expect(q.fxRate, q.quoteNo).not.toBeNull();
+    }
+    const closed = await prisma.case.findFirstOrThrow({
+      where: { status: 'closed' },
+      include: { payments: true },
+    });
+    for (const p of closed.payments)
+      expect(p.paidAt && closed.closedAt && p.paidAt <= closed.closedAt).toBe(true);
+    const home = await prisma.case.findMany({
+      where: { stage: { in: ['discharge_return', 'follow_up'] } },
+    });
+    for (const c of home)
+      expect(c.plannedDepartureAt && c.plannedDepartureAt < new Date()).toBe(true);
+    const overdue = await prisma.opinionRequest.count({
+      where: { status: 'viewed', dueAt: { lt: new Date(Date.now() - 5 * 86_400_000) } },
+    });
+    expect(overdue).toBe(0);
+  });
+
+  it('shares each report with the hospitals that were asked, under their consent', async () => {
+    expect(await prisma.documentShare.count()).toBeGreaterThan(50);
+    const orphan = await prisma.documentShare.count({
+      where: { consent: { withdrawnAt: { not: null } } },
+    });
+    expect(orphan).toBe(0);
   });
 
   it('can run again without changing anything, and quickly', async () => {
@@ -158,6 +204,23 @@ describe('the demo seed', () => {
   });
 });
 
+describe('the demo seed in production', () => {
+  it('refuses to run', () => {
+    expect(() =>
+      execFileSync('pnpm', ['exec', 'tsx', 'prisma/seed.ts'], {
+        cwd: new URL('..', import.meta.url),
+        env: {
+          ...process.env,
+          DATABASE_URL: urlFor(dbName),
+          NODE_ENV: 'production',
+          SEED_DEMO_DATA: 'true',
+        },
+        stdio: 'pipe',
+      }),
+    ).toThrow();
+  });
+});
+
 describe('the test factories', () => {
   it('build unique rows, with overrides, in any state', async () => {
     const make = createFactories(prisma);
@@ -168,7 +231,7 @@ describe('the test factories', () => {
     const b = await make.caseAt('lost', { urgency: 'urgent' });
     expect(a.caseNo).not.toBe(b.caseNo);
     expect(a).toMatchObject({ stage: 'visa', status: 'visa_in_process' });
-    expect(b).toMatchObject({ stage: 'lost', urgency: 'urgent' });
+    expect(b).toMatchObject({ stage: 'lost', status: 'lost', urgency: 'urgent' });
     expect((await make.quote(a.id)).quoteNo).not.toBe((await make.quote(b.id)).quoteNo);
     expect(await make.payment(a.id)).toMatchObject({ status: 'succeeded' });
     expect((await make.agent()).referralCode).not.toBe((await make.agent()).referralCode);
