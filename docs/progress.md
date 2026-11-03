@@ -168,6 +168,8 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12.
 
 ### Deferred from F-12
 
+- **CI:** the develop push "loop: finish F-12" passed every job (lint, typecheck, unit tests, images with the production boot check, browser tests, API/worker/db e2e).
+
 - **No Sentry project is connected yet:** reports are sent only when `SENTRY_DSN` (API, worker) or `NEXT_PUBLIC_SENTRY_DSN` (website,
   portal) is set. The acceptance (a thrown error arrives with the request ID and no personal data) is proven against the SDK's
   outgoing envelope in tests, not against a live Sentry. Set the DSNs, `SENTRY_RELEASE` and, in the release build,
