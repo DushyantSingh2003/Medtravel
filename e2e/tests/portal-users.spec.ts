@@ -41,7 +41,7 @@ test.describe('users and teams', () => {
   test('lists people, searches, and opens one', async ({ page }) => {
     await signInAs(page, 'super_admin');
     await page.goto('/en/admin/users');
-    await expect(page.getByRole('heading', { level: 1, name: 'Users and teams' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Users and roles' })).toBeVisible();
     const table = page.getByRole('table', { name: 'People' });
     await expect(table.getByText(devEmail('case_manager'))).toBeVisible();
     await page.getByRole('searchbox', { name: 'Search by name or email' }).fill('case-manager@dev');
@@ -145,7 +145,7 @@ test.describe('users and teams', () => {
     await banner.getByRole('button', { name: 'Stop viewing' }).click();
     await page.waitForURL(/\/admin\/users/);
     await expect(page.locator('[data-slot=impersonation-banner]')).toHaveCount(0);
-    await expect(page.getByRole('heading', { level: 1, name: 'Users and teams' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Users and roles' })).toBeVisible();
   });
 
   test('works in Arabic, right to left, at phone width, without sideways scrolling', async ({
@@ -154,7 +154,7 @@ test.describe('users and teams', () => {
     await page.setViewportSize({ width: 360, height: 800 });
     await signInAs(page, 'super_admin', 'ar');
     await page.goto('/ar/admin/users');
-    await expect(page.getByRole('heading', { level: 1, name: 'المستخدمون والفرق' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'المستخدمون والأدوار' })).toBeVisible();
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     await expect(page.getByRole('table', { name: 'الأشخاص' })).toBeVisible();
     const overflow = await page.evaluate(
