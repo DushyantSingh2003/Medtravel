@@ -168,6 +168,8 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12, AD-01.
 
 ### Deferred from AD-01
 
+- **CI:** the first two GitHub runs failed only in the browser tests (missing users-table labels, page title not matching the menu, shell tour not exempting the new screen); fixed, and run 44 on `develop` is green.
+
 - **One role and one city per person.** The schema has a single `User.role` and `StaffProfile.cityId`; several roles or cities would
   need a join table and a change to the case scoping. Working hours are one interval per weekday in the screen (the API allows three).
 - **Nothing reads working hours and leave yet:** the assignment engine (C-02) will. They are stored, edited and shown ("On leave").
