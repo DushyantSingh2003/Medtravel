@@ -148,6 +148,12 @@ export type TeamWrite = z.infer<typeof teamWriteSchema>;
 // ---- impersonation --------------------------------------------------------------------------------------------
 /** The impersonation cookie lives this long; the session behind it must still be the admin's own. */
 export const IMPERSONATION_MINUTES = 30;
+/** Why an admin is looking at the product as someone else: kept in the audit trail. */
+export const impersonateRequestSchema = z.strictObject({
+  reason: z.string().trim().min(10, 'Say why, in at least 10 characters').max(300),
+});
+export type ImpersonateRequest = z.infer<typeof impersonateRequestSchema>;
+
 export const impersonatingSchema = z.object({
   userId: z.uuid(),
   name: z.string(),

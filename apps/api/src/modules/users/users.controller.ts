@@ -26,6 +26,7 @@ import { Ctx, type RequestContext } from '../../common/request-context.js';
 import {
   CreateLeaveDto,
   HistoryQueryDto,
+  ImpersonateRequestDto,
   ImpersonationStartedDto,
   LeaveParamsDto,
   LoginHistoryPageDto,
@@ -184,8 +185,12 @@ export class UsersController {
     summary: 'Remove a person’s second factor and sign them out',
   })
   @ApiOkResponse({ type: UserDetailDto })
-  resetTwoFactor(@Param() { id }: UserIdParamDto, @Ctx() context: RequestContext) {
-    return this.users.resetTwoFactor(id, context);
+  resetTwoFactor(
+    @CurrentActor() actor: Actor,
+    @Param() { id }: UserIdParamDto,
+    @Ctx() context: RequestContext,
+  ) {
+    return this.users.resetTwoFactor(actor, id, context);
   }
 
   @Get('users/:id/logins')
@@ -211,10 +216,11 @@ export class UsersController {
   async impersonate(
     @CurrentActor() actor: Actor,
     @Param() { id }: UserIdParamDto,
+    @Body() body: ImpersonateRequestDto,
     @Ctx() context: RequestContext,
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
-    const issued = await this.users.startImpersonation(actor, id, context);
+    const issued = await this.users.startImpersonation(actor, id, body.reason, context);
     this.cookies.setImpersonation(reply, issued.token, issued.maxAgeSeconds);
     return { expiresAt: issued.expiresAt.toISOString() };
   }

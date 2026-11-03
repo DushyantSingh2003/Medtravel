@@ -88,7 +88,8 @@ export class DownloadsService {
     let key = doc.storageKey;
     if (stamp) {
       const viewer = await this.prisma.user.findUnique({
-        where: { id: actor.userId },
+        // The stamp names the person who is really looking, which is the admin while one is viewing as someone else.
+        where: { id: actor.impersonatorId ?? actor.userId },
         select: { name: true },
       });
       const text = watermarkText(viewer?.name ?? 'Unknown', new Date(), doc.case?.caseNo ?? null);

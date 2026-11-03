@@ -27,13 +27,18 @@ export class RealtimeService implements OnApplicationShutdown {
    * Ends a person's live connections everywhere: tells their browsers to sign out, then closes the sockets. Failures are logged,
    * not thrown: the HTTP side already refuses the person, and this only makes the browser notice sooner.
    */
-  async signOutEverywhere(userId: string, reason: 'deactivated' | 'two_factor_reset'): Promise<void> {
+  async signOutEverywhere(
+    userId: string,
+    reason: 'deactivated' | 'two_factor_reset',
+  ): Promise<void> {
     const room = roomOf.user(userId);
     try {
       await this.publisher.publish(room, 'session.revoked', { reason });
       await this.publisher.disconnectRoom(room);
     } catch (error) {
-      this.logger.warn(`could not close the live connections of a user: ${error instanceof Error ? error.name : 'error'}`);
+      this.logger.warn(
+        `could not close the live connections of a user: ${error instanceof Error ? error.name : 'error'}`,
+      );
     }
   }
 

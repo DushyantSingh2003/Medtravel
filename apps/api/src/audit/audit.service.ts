@@ -93,7 +93,12 @@ export class AuditService {
         ...(entry.details ? { after: entry.details } : {}),
       });
       if (entry.action === 'document.downloaded' && context.actor) {
-        await this.downloads.check(tx, context.actor.userId, context);
+        // Counted against whoever is really downloading: an admin viewing as someone else is still the admin.
+        await this.downloads.check(
+          tx,
+          context.actor.impersonatorId ?? context.actor.userId,
+          context,
+        );
       }
     });
   }

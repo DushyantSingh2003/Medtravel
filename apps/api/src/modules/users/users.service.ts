@@ -198,6 +198,8 @@ export class UsersService {
 
   /** The number of active super admins other than `exceptId`: the last one cannot be demoted, deactivated or locked out. */
   private async otherActiveAdmins(db: Db, exceptId: string): Promise<number> {
+    // Counted one transaction at a time: two admins deactivating each other at once must not both see the other as still there.
+    await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('last-super-admin'))`;
     return db.user.count({
       where: { role: 'super_admin', status: 'active', deletedAt: null, id: { not: exceptId } },
     });
@@ -273,6 +275,12 @@ export class UsersService {
           ...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
         },
       });
+      // Someone who stops being a case manager stops leading teams: the manager flag is not carried over to a later return.
+      if (input.role && input.role !== user.role && user.role === 'case_manager') {
+        await tx.team.updateMany({ where: { managerId: id }, data: { managerId: null } });
+        await tx.staffProfile.updateMany({ where: { managerId: id }, data: { managerId: null } });
+        await tx.staffProfile.updateMany({ where: { userId: id }, data: { isManager: false } });
+      }
       const profileData: Prisma.StaffProfileUncheckedUpdateInput = {
         ...(input.title !== undefined ? { title: input.title } : {}),
         ...(input.languages ? { languages: input.languages } : {}),
@@ -459,7 +467,14 @@ export class UsersService {
   }
 
   /** Removes the second factor and signs the person out everywhere; staff must set it up again at their next sign-in. */
-  async resetTwoFactor(id: string, context: RequestContext): Promise<UserDetail> {
+  async resetTwoFactor(actor: Actor, id: string, context: RequestContext): Promise<UserDetail> {
+    // Your own second factor is changed from your security page, where it asks for your password.
+    if (id === actor.userId)
+      throw fieldError(
+        'id',
+        'Use your account security page for your own two-factor',
+        HttpStatus.FORBIDDEN,
+      );
     await this.prisma.$transaction(async (tx) => {
       const user = await this.load(tx, id);
       await tx.user.update({
@@ -534,6 +549,7 @@ export class UsersService {
   async startImpersonation(
     actor: Actor,
     id: string,
+    reason: string,
     context: RequestContext,
   ): Promise<{ token: string; expiresAt: Date; maxAgeSeconds: number }> {
     if (actor.impersonatorId) throw new ForbiddenException('Stop viewing as another user first');
@@ -557,7 +573,7 @@ export class UsersService {
       action: 'user.impersonation_started',
       entityType: 'User',
       entityId: id,
-      after: { role: target.role, expiresAt: issued.expiresAt.toISOString() },
+      after: { role: target.role, reason, expiresAt: issued.expiresAt.toISOString() },
     });
     return issued;
   }

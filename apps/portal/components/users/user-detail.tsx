@@ -20,6 +20,12 @@ import {
   Badge,
   Button,
   ConfirmDialog,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   EmptyState,
   Input,
   Label,
@@ -31,6 +37,7 @@ import {
   Skeleton,
   Switch,
   Tabs,
+  Textarea,
   TabsContent,
   TabsList,
   TabsTrigger,
@@ -209,17 +216,12 @@ export function UserDetail({ id }: { id: string }) {
           await refresh(res.data);
         }}
       />
-      <ConfirmDialog
+      <ViewAsDialog
         open={confirm === 'view'}
-        onOpenChange={(o) => !o && setConfirm(null)}
-        title={t('confirm.viewTitle', { name })}
-        description={t('confirm.viewBody')}
-        confirmLabel={t('confirm.viewConfirm')}
-        cancelLabel={t('actions.cancel')}
-        closeLabel={t('actions.close')}
-        errorLabel={t('actions.error')}
-        onConfirm={async () => {
-          await impersonate.mutateAsync({ id });
+        name={name}
+        onClose={() => setConfirm(null)}
+        onStart={async (reason) => {
+          await impersonate.mutateAsync({ id, data: { reason } });
           // A full navigation: everything on screen must be reloaded as the other person, not patched.
           window.location.assign(
             new URL(`/${locale}/${portal}`, window.location.origin).toString(),
@@ -227,6 +229,77 @@ export function UserDetail({ id }: { id: string }) {
         }}
       />
     </div>
+  );
+}
+
+/** Asks why before viewing as someone else; the reason goes into the audit trail. */
+function ViewAsDialog({
+  open,
+  name,
+  onClose,
+  onStart,
+}: {
+  open: boolean;
+  name: string;
+  onClose: () => void;
+  onStart: (reason: string) => Promise<void>;
+}) {
+  const t = useTranslations('users');
+  const id = useId();
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const valid = reason.trim().length >= 10;
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent closeLabel={t('actions.close')}>
+        <form
+          noValidate
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setBusy(true);
+            setFailed(false);
+            onStart(reason.trim()).catch(() => {
+              setFailed(true);
+              setBusy(false);
+            });
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>{t('confirm.viewTitle', { name })}</DialogTitle>
+            <DialogDescription>{t('confirm.viewBody')}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label htmlFor={`${id}-reason`}>{t('confirm.viewReason')}</Label>
+            <Textarea
+              id={`${id}-reason`}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              maxLength={300}
+              rows={3}
+              aria-describedby={`${id}-hint`}
+            />
+            <p id={`${id}-hint`} className="text-xs text-muted-foreground">
+              {t('confirm.viewReasonHint')}
+            </p>
+          </div>
+          {failed ? (
+            <p role="alert" className="text-sm text-destructive">
+              {t('actions.error')}
+            </p>
+          ) : null}
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={onClose}>
+              {t('actions.cancel')}
+            </Button>
+            <Button type="submit" disabled={!valid || busy}>
+              {t('confirm.viewConfirm')}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

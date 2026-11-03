@@ -2420,6 +2420,7 @@ model AuditEvent {
   @@index([action, createdAt])
   @@index([actorId, createdAt])
   @@index([patientId, createdAt])
+  @@index([onBehalfOfId, createdAt])
   @@index([createdAt])
 }
 

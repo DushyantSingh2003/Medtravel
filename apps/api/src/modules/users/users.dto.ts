@@ -12,6 +12,7 @@ import {
   userListQuerySchema,
   userPageSchema,
   impersonatingSchema,
+  impersonateRequestSchema,
 } from '@medtravel/contracts';
 
 export class UserIdParamDto extends createZodDto(z.object({ id: z.uuid() })) {}
@@ -27,6 +28,7 @@ export class LoginHistoryPageDto extends createZodDto(loginHistoryPageSchema) {}
 export class TeamDto extends createZodDto(teamSchema) {}
 export class TeamListDto extends createZodDto(teamListSchema) {}
 export class TeamWriteDto extends createZodDto(teamWriteSchema) {}
+export class ImpersonateRequestDto extends createZodDto(impersonateRequestSchema) {}
 export class ImpersonationStartedDto extends createZodDto(
   impersonatingSchema.pick({ expiresAt: true }),
 ) {}

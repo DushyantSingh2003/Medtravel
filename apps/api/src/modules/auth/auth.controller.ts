@@ -12,7 +12,13 @@ import {
 } from '@nestjs/common';
 import { ApiCookieAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import { ACCESS_COOKIE, REFRESH_COOKIE, SessionCookies, readCookie } from '../../auth/cookies.js';
+import {
+  ACCESS_COOKIE,
+  IMPERSONATION_COOKIE,
+  REFRESH_COOKIE,
+  SessionCookies,
+  readCookie,
+} from '../../auth/cookies.js';
 import {
   AllowLimitedSession,
   AllowMagicLink,
@@ -169,6 +175,7 @@ export class AuthController {
   @Post('impersonation/stop')
   @Authenticated()
   @IgnoreImpersonation()
+  @Throttle({ limit: 30, windowSeconds: 60 })
   @HttpCode(200)
   @ApiOperation({
     operationId: 'stopImpersonation',
@@ -177,10 +184,13 @@ export class AuthController {
   @ApiOkResponse({ type: AcceptedDto })
   async stopImpersonation(
     @CurrentActor() actor: Actor,
+    @Req() request: FastifyRequest,
     @Ctx() context: RequestContext,
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
-    await this.auth.recordImpersonationStopped(actor, context);
+    // Only an actual view leaves a trace: anyone else calling this changes nothing and writes nothing.
+    if (readCookie(request.headers.cookie, IMPERSONATION_COOKIE))
+      await this.auth.recordImpersonationStopped(actor, context);
     this.cookies.clearImpersonation(reply);
     return ACCEPTED;
   }

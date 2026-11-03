@@ -177,6 +177,16 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12, AD-01.
   `impersonation.*` rows are searchable by action. AD-07 adds it to the screen.
 - **Hospital users appear in the list** but only their name can be changed here; their role and hospital are managed with the hospital (AD-02).
 - **Team names stay reserved after a team is deleted** (the name is unique across deleted teams too).
+- **Security review, left for a follow-up:** no fresh-password step-up for deactivation, two-factor reset and impersonation, and no
+  message to the person affected (the `user.deactivated` and `user.two_factor_reset` events have no consumer yet; they come with
+  the templates task); the impersonation cookie is stateless, so "stop" clears the browser's copy but a copied cookie works until it
+  expires (30 minutes) or the admin's session ends; a sign-in completing in the same instant as a two-factor reset could keep its
+  session; audit `before`/`after` of a user change keeps the person's name (personal data in an append-only log).
+- **Fixed from the review:** two admins removing each other at once can no longer leave the platform without a super admin
+  (advisory lock); an admin's downloads while viewing as someone count towards the admin's download alert and carry the admin's
+  name in the watermark; impersonation needs a written reason that is kept in the audit row; your own two-factor cannot be reset
+  here; the stop endpoint writes nothing unless a view is active; moving a manager to another role ends their teams' leadership;
+  `AuditEvent.onBehalfOfId` is indexed.
 - Impersonation covers HTTP only: the realtime channel and file downloads through already-issued presigned links are not affected.
 
 ### Deferred from F-12

@@ -1682,7 +1682,9 @@
       "resetDone": "Two-factor reset",
       "viewTitle": "View the product as {name}?",
       "viewBody": "You will see exactly what they see, for 30 minutes, read-only. Everything you open is recorded in the audit log under your name.",
-      "viewConfirm": "Start viewing"
+      "viewConfirm": "Start viewing",
+      "viewReason": "Why do you need to view as this person?",
+      "viewReasonHint": "At least 10 characters. It is kept in the audit log."
     },
     "logins": {
       "time": "Time",

@@ -1,4 +1,5 @@
 import { io as connect, type Socket } from 'socket.io-client';
+import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import {
   REALTIME_PATH,
@@ -34,6 +35,8 @@ async function person(
   people[key] = { id: user.id, email, token: accessToken };
   return people[key];
 }
+
+const REASON = 'Checking a reported display problem';
 
 const as = (
   key: string,
@@ -105,7 +108,7 @@ describe('who may manage users', () => {
       ['POST', `/admin/users/${target}/two-factor/reset`],
       ['POST', `/admin/users/${target}/leave`, { startsOn: '2030-01-01', endsOn: '2030-01-02' }],
       ['GET', `/admin/users/${target}/logins`],
-      ['POST', `/admin/users/${target}/impersonate`],
+      ['POST', `/admin/users/${target}/impersonate`, { reason: REASON }],
       ['GET', '/admin/teams'],
       ['POST', '/admin/teams', { name: 'Nope' }],
     ];
@@ -513,9 +516,137 @@ describe('login history', () => {
   });
 });
 
+describe('safeguards found in review', () => {
+  it('never leaves the platform without a super admin, even when two admins remove each other at once', async () => {
+    const a = await person('racea', 'super_admin');
+    const b = await person('raceb', 'super_admin');
+    // Only these two are active admins for the duration of the race.
+    const others = await t.db.user.findMany({
+      where: { role: 'super_admin', status: 'active', id: { notIn: [a.id, b.id] } },
+      select: { id: true },
+    });
+    await t.db.user.updateMany({
+      where: { id: { in: others.map((o) => o.id) } },
+      data: { status: 'suspended' },
+    });
+    try {
+      const [first, second] = await Promise.all([
+        as('racea', 'POST', `/admin/users/${b.id}/deactivate`),
+        as('raceb', 'POST', `/admin/users/${a.id}/deactivate`),
+      ]);
+      const statuses = [first.status, second.status].sort();
+      // One goes through; the other is refused (409 for the last admin, or 401 because the first already signed them out).
+      expect(statuses[0]).toBe(200);
+      expect([401, 409]).toContain(statuses[1]);
+      expect(
+        await t.db.user.count({
+          where: { role: 'super_admin', status: 'active', id: { in: [a.id, b.id] } },
+        }),
+      ).toBe(1);
+    } finally {
+      await t.db.user.updateMany({
+        where: { id: { in: [...others.map((o) => o.id), a.id, b.id] } },
+        data: { status: 'active' },
+      });
+    }
+  });
+
+  it('asks why before viewing as someone, and keeps the reason in the audit trail', async () => {
+    expect(
+      (await as('admin', 'POST', `/admin/users/${idOf('manager')}/impersonate`, {})).status,
+    ).toBe(400);
+    expect(
+      (
+        await as('admin', 'POST', `/admin/users/${idOf('manager')}/impersonate`, {
+          reason: 'short',
+        })
+      ).status,
+    ).toBe(400);
+    expect(
+      (
+        await as('admin', 'POST', `/admin/users/${idOf('manager')}/impersonate`, {
+          reason: 'x'.repeat(301),
+        })
+      ).status,
+    ).toBe(400);
+    expect(
+      (await as('admin', 'POST', `/admin/users/${idOf('manager')}/impersonate`, { reason: REASON }))
+        .status,
+    ).toBe(200);
+    const row = await t.db.auditEvent.findFirstOrThrow({
+      where: { action: 'user.impersonation_started', entityId: idOf('manager') },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(JSON.stringify(row.after)).toContain('display problem');
+  });
+
+  it('keeps someone from resetting their own two-factor here', async () => {
+    expect(
+      (await as('admin', 'POST', `/admin/users/${idOf('admin')}/two-factor/reset`)).status,
+    ).toBe(403);
+  });
+
+  it('writes nothing when someone who is not viewing as anyone calls the stop endpoint', async () => {
+    const before = await t.db.auditEvent.count({ where: { action: 'impersonation.stopped' } });
+    expect((await as('patient', 'POST', '/auth/impersonation/stop', {})).status).toBe(200);
+    expect((await as('admin', 'POST', '/auth/impersonation/stop', {})).status).toBe(200);
+    expect(await t.db.auditEvent.count({ where: { action: 'impersonation.stopped' } })).toBe(
+      before,
+    );
+  });
+
+  it('stops leading teams, and drops the manager flag, when a manager is moved to another role', async () => {
+    const lead = await person('lead2', 'case_manager');
+    await t.db.staffProfile.create({ data: { userId: lead.id, isManager: true } });
+    const team = await t.db.team.create({ data: { name: 'Lead2 team', managerId: lead.id } });
+    expect(
+      (await as('admin', 'PATCH', `/admin/users/${lead.id}`, { role: 'finance' })).status,
+    ).toBe(200);
+    expect((await t.db.team.findUniqueOrThrow({ where: { id: team.id } })).managerId).toBeNull();
+    expect(
+      (await t.db.staffProfile.findUniqueOrThrow({ where: { userId: lead.id } })).isManager,
+    ).toBe(false);
+    // Coming back as a case manager does not bring the old scope with it.
+    await as('admin', 'PATCH', `/admin/users/${lead.id}`, { role: 'case_manager' });
+    expect(
+      (await t.db.staffProfile.findUniqueOrThrow({ where: { userId: lead.id } })).isManager,
+    ).toBe(false);
+  });
+
+  it('counts an admin’s downloads while viewing as someone against the admin', async () => {
+    const { DownloadAlertService } = await import('../src/audit/download-alert.service.js');
+    const alert = t.app.get(DownloadAlertService);
+    const calls: string[] = [];
+    const original = alert.check.bind(alert);
+    alert.check = (async (db: never, userId: string, context: never, now?: Date) => {
+      calls.push(userId);
+      return original(db, userId, context, now);
+    }) as typeof alert.check;
+    const audit = t.app.get((await import('../src/audit/audit.service.js')).AuditService);
+    await audit.recordAccess(
+      {
+        actor: {
+          userId: idOf('patient'),
+          role: 'patient',
+          sessionId: randomUUID(),
+          scopeCaseId: null,
+          impersonatorId: idOf('admin'),
+        },
+        ip: null,
+        userAgent: null,
+        requestId: null,
+      },
+      { action: 'document.downloaded', entityType: 'Document', entityId: randomUUID() },
+    );
+    expect(calls).toEqual([idOf('admin')]);
+  });
+});
+
 describe('impersonation', () => {
   const impersonationCookie = async (adminKey: string, targetId: string) => {
-    const res = await as(adminKey, 'POST', `/admin/users/${targetId}/impersonate`);
+    const res = await as(adminKey, 'POST', `/admin/users/${targetId}/impersonate`, {
+      reason: REASON,
+    });
     expect(res.status).toBe(200);
     const value = res.cookies['mt_imp'];
     expect(value).toBeTruthy();
@@ -628,20 +759,26 @@ describe('impersonation', () => {
   });
 
   it('refuses to start for yourself, another super admin, an inactive or unknown account, or twice', async () => {
-    expect((await as('admin', 'POST', `/admin/users/${idOf('admin')}/impersonate`)).status).toBe(
-      403,
-    );
-    expect((await as('admin', 'POST', `/admin/users/${idOf('admin2')}/impersonate`)).status).toBe(
-      403,
-    );
     expect(
-      (await as('admin', 'POST', '/admin/users/00000000-0000-4000-8000-000000000000/impersonate'))
+      (await as('admin', 'POST', `/admin/users/${idOf('admin')}/impersonate`, { reason: REASON }))
         .status,
+    ).toBe(403);
+    expect(
+      (await as('admin', 'POST', `/admin/users/${idOf('admin2')}/impersonate`, { reason: REASON }))
+        .status,
+    ).toBe(403);
+    expect(
+      (
+        await as('admin', 'POST', '/admin/users/00000000-0000-4000-8000-000000000000/impersonate', {
+          reason: REASON,
+        })
+      ).status,
     ).toBe(404);
     await t.db.user.update({ where: { id: idOf('desk') }, data: { status: 'suspended' } });
-    expect((await as('admin', 'POST', `/admin/users/${idOf('desk')}/impersonate`)).status).toBe(
-      409,
-    );
+    expect(
+      (await as('admin', 'POST', `/admin/users/${idOf('desk')}/impersonate`, { reason: REASON }))
+        .status,
+    ).toBe(409);
     await t.db.user.update({ where: { id: idOf('desk') }, data: { status: 'active' } });
   });
 });

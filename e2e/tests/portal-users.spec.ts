@@ -132,6 +132,7 @@ test.describe('users and teams', () => {
     await signInAs(page, 'super_admin');
     await openUser(page, devEmail('finance'));
     await page.getByRole('button', { name: 'View as user' }).click();
+    await page.getByRole('dialog').getByLabel('Why do you need to view as this person?').fill('Checking a reported display problem');
     await page.getByRole('dialog').getByRole('button', { name: 'Start viewing' }).click();
 
     const banner = page.locator('[data-slot=impersonation-banner]');
