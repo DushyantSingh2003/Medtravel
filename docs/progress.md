@@ -189,6 +189,8 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12, AD-01, AD-02, AD-05.
 
 ### Deferred from AD-05
 
+- **CI:** GitHub run 50 on `develop` is green (see the AD-02 note); the first AD-05 run failed on one browser test, since fixed.
+
 - **The quote builder does not exist yet.** Margins, discount limits and the price lookup are stored, audited and tested here; the
   builder (C-xx) must call `GET /admin/pricing/items/:code/price`, apply `applyMargin` and `discountDecision`, and copy the price onto
   the quote line. The acceptance check (a changed Premium price leaves a sent quote alone) is tested against a quote built that way.
