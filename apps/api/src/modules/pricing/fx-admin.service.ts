@@ -121,6 +121,8 @@ export class FxAdminService {
     if (expiresAt && expiresAt <= new Date())
       throw fieldError('expiresAt', 'The expiry must be in the future');
     const row = await this.prisma.$transaction(async (tx) => {
+      // One writer at a time per pair, so two admins cannot both leave a rate in force.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`fxo:${input.base}${input.quote}`}))`;
       const known = await tx.currency.count({
         where: { code: { in: [input.base, input.quote] }, active: true },
       });

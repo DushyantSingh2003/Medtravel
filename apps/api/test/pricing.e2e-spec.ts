@@ -278,7 +278,7 @@ describe('margins and discount limits', () => {
     const discount = await t.call('super_admin', 'PUT', '/admin/pricing/margins', {
       rules: [{ component: 'discount', marginBp: 10 }],
     });
-    expect(discount.status).toBe(422);
+    expect(discount.status).toBe(400);
     const twice = await t.call('super_admin', 'PUT', '/admin/pricing/margins', {
       rules: [
         { component: 'stay', marginBp: 1 },
@@ -433,7 +433,8 @@ describe('a quote keeps the price it was made with', () => {
       data: { caseNo: 'CASE-2026-990001', patientId: patient.id },
       select: { id: true },
     });
-    // The quote builder asks for the price and copies it, with the version it came from, onto the line.
+    // This checks the lookup and that old versions are immutable. The guarantee itself rests on the quote builder copying the
+    // looked-up price onto the line (docs/progress.md, "Deferred from AD-05"); the quote line has no link back to the price list.
     const priced = priceLookupSchema.parse(
       (await t.call('case_manager', 'GET', '/admin/pricing/items/premium/price?currency=INR')).body,
     );

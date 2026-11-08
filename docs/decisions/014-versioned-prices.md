@@ -20,3 +20,7 @@ override a rate by hand.
 
 Price history is complete and auditable. Reports can join a line to its version later if the builder stores the version id. A
 correction to a wrong price is a new version, not an edit.
+
+A manual rate applies to every conversion made through `rateOn()`, including the public `/fx` endpoints, because it is the platform's
+rate while it is in force; the markup is added only by the price lookup. Quote lines have no foreign key to the price list on purpose:
+the quote builder must copy the looked-up price, and must never recompute a sent quote from the list.

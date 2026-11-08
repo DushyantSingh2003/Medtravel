@@ -143,7 +143,12 @@ export type MarginRules = z.infer<typeof marginRulesSchema>;
 /** Every component once; the discount line is not marked up. */
 export const updateMarginRulesSchema = z.object({
   rules: z
-    .array(marginRuleSchema)
+    .array(
+      marginRuleSchema.refine((rule) => rule.component !== 'discount', {
+        path: ['component'],
+        message: 'A discount line has no margin',
+      }),
+    )
     .min(1)
     .superRefine((rules, ctx) => {
       const seen = new Set<string>();

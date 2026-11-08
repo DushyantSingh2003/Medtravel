@@ -111,6 +111,8 @@ export class PricingService {
 
   async createAddOn(input: CreateAddOn, context: RequestContext): Promise<PriceItem> {
     const created = await this.prisma.$transaction(async (tx) => {
+      // One add-on created at a time: the same code twice, and the sort order, must not race.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('price:add-on'))`;
       if (await tx.priceItem.findUnique({ where: { code: input.code }, select: { id: true } }))
         throw fieldError('code', 'An entry with this code already exists', HttpStatus.CONFLICT);
       const last = await tx.priceItem.aggregate({
@@ -315,8 +317,6 @@ export class PricingService {
       const existing = await tx.marginRule.findMany({ select: { component: true, marginBp: true } });
       const before = Object.fromEntries(existing.map((r) => [r.component, r.marginBp]));
       for (const rule of input.rules) {
-        if (rule.component === 'discount')
-          throw fieldError('rules', 'A discount line has no margin');
         await tx.marginRule.upsert({
           where: { component: rule.component },
           create: { component: rule.component, marginBp: rule.marginBp, updatedById: actor.userId },
