@@ -151,6 +151,12 @@
       "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e",
       "finishedAt": "2026-11-03T14:23:59.422Z",
       "note": "Users and roles"
+    },
+    "AD-05": {
+      "status": "in-progress",
+      "attempts": 1,
+      "claimedAt": "2026-11-08T02:34:49.097Z",
+      "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e"
     }
   },
   "approvals": [],
@@ -192,6 +198,7 @@
     "2026-11-03T11:06:58.812Z claim F-12 attempt 1",
     "2026-11-03T11:32:34.668Z finish F-12 done",
     "2026-11-03T13:40:36.352Z claim AD-01 attempt 1",
-    "2026-11-03T14:23:59.422Z finish AD-01 done"
+    "2026-11-03T14:23:59.422Z finish AD-01 done",
+    "2026-11-08T02:34:49.106Z claim AD-05 attempt 1"
   ]
 }
