@@ -2,7 +2,7 @@ import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
 import { BullModule } from '@nestjs/bullmq';
 import { Inject, Injectable, Logger, Module, type OnApplicationBootstrap } from '@nestjs/common';
 import type { PrismaClient } from '@medtravel/db';
-import { createFxProvider, type FxProvider } from '@medtravel/fx';
+import { createFxProvider, type FxProvider, type FxProviderName } from '@medtravel/fx';
 import { captureError } from '@medtravel/observability';
 import type { Queue } from 'bullmq';
 import { ENV } from '../config/config.module.js';
@@ -19,19 +19,36 @@ export class FxProcessor extends WorkerHost {
   constructor(
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     @Inject(FX_PROVIDER) private readonly provider: FxProvider,
+    @Inject(ENV) private readonly env: Pick<Env, 'OPEN_EXCHANGE_RATES_APP_ID'>,
   ) {
     super();
   }
 
+  /** The provider an admin picked in the pricing settings, or the environment's when none was picked. */
+  private async chosenProvider(): Promise<FxProvider> {
+    const setting = await this.prisma.fxSetting.findUnique({
+      where: { id: 'default' },
+      select: { provider: true },
+    });
+    if (!setting?.provider || setting.provider === this.provider.name) return this.provider;
+    return createFxProvider({
+      provider: setting.provider as FxProviderName,
+      ...(this.env.OPEN_EXCHANGE_RATES_APP_ID
+        ? { openExchangeRatesAppId: this.env.OPEN_EXCHANGE_RATES_APP_ID }
+        : {}),
+    });
+  }
+
   async process(): Promise<{ stored: number }> {
-    const result = await runFxRefresh({ prisma: this.prisma, provider: this.provider }).catch(
+    const provider = await this.chosenProvider();
+    const result = await runFxRefresh({ prisma: this.prisma, provider }).catch(
       (error: unknown) => {
         captureError(error, { jobType: 'fx' });
         throw error;
       },
     );
     this.logger.log(
-      `fx: ${result.stored} new rates for ${result.currencies} currencies (${this.provider.name})`,
+      `fx: ${result.stored} new rates for ${result.currencies} currencies (${provider.name})`,
     );
     return { stored: result.stored };
   }

@@ -17,6 +17,7 @@ import { StorageModule } from './storage/storage.module.js';
 import { CasesModule } from './modules/cases/cases.module.js';
 import { FxModule } from './modules/fx/fx.module.js';
 import { ObservabilityModule } from './observability/observability.module.js';
+import { PricingModule } from './modules/pricing/pricing.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { MastersModule } from './modules/masters/masters.module.js';
 
@@ -39,6 +40,7 @@ import { MastersModule } from './modules/masters/masters.module.js';
     FxModule,
     CasesModule,
     UsersModule,
+    PricingModule,
     DocumentsModule,
     NotificationsModule,
     RealtimeModule,

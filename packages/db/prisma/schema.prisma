@@ -537,30 +537,33 @@ model Language {
 
 /// ISO 4217 currency and how many minor-unit digits it has (2 for USD, 0 for JPY, 3 for KWD).
 model Currency {
-  code                             String        @id @db.Char(3)
+  code                             String           @id @db.Char(3)
   name                             String
-  minorUnits                       Int           @default(2)
-  symbol                           String?       @db.VarChar(8)
-  active                           Boolean       @default(true)
-  fxRatesAsBase                    FxRate[]      @relation("FxBase")
-  fxRatesAsQuote                   FxRate[]      @relation("FxQuote")
-  casesByBudgetCurrency            Case[]        @relation("CaseBudgetCurrency")
-  admissionsByCurrency             Admission[]   @relation("AdmissionCurrency")
-  doctorsByConsultFeeCurrency      Doctor[]      @relation("DoctorConsultFeeCurrency")
-  packagesByCurrency               Package[]     @relation("PackageCurrency")
-  opinionsByCurrency               Opinion[]     @relation("OpinionCurrency")
-  quotesByCurrency                 Quote[]       @relation("QuoteCurrency")
-  quotesPricedFrom                 Quote[]       @relation("QuoteFxBaseCurrency")
-  quoteLinesByCurrency             QuoteLine[]   @relation("QuoteLineCurrency")
-  invoicesByCurrency               Invoice[]     @relation("InvoiceCurrency")
-  creditNotesByCurrency            CreditNote[]  @relation("CreditNoteCurrency")
-  paymentsByCurrency               Payment[]     @relation("PaymentCurrency")
-  refundsByCurrency                Refund[]      @relation("RefundCurrency")
-  stayRoomsByCurrency              StayRoom[]    @relation("StayRoomCurrency")
-  interpretersByHourlyRateCurrency Interpreter[] @relation("InterpreterHourlyRateCurrency")
-  bookingsByCurrency               Booking[]     @relation("BookingCurrency")
-  commissionsByCurrency            Commission[]  @relation("CommissionCurrency")
-  payoutsByCurrency                Payout[]      @relation("PayoutCurrency")
+  minorUnits                       Int              @default(2)
+  symbol                           String?          @db.VarChar(8)
+  active                           Boolean          @default(true)
+  fxRatesAsBase                    FxRate[]         @relation("FxBase")
+  fxRatesAsQuote                   FxRate[]         @relation("FxQuote")
+  casesByBudgetCurrency            Case[]           @relation("CaseBudgetCurrency")
+  admissionsByCurrency             Admission[]      @relation("AdmissionCurrency")
+  doctorsByConsultFeeCurrency      Doctor[]         @relation("DoctorConsultFeeCurrency")
+  packagesByCurrency               Package[]        @relation("PackageCurrency")
+  opinionsByCurrency               Opinion[]        @relation("OpinionCurrency")
+  quotesByCurrency                 Quote[]          @relation("QuoteCurrency")
+  quotesPricedFrom                 Quote[]          @relation("QuoteFxBaseCurrency")
+  quoteLinesByCurrency             QuoteLine[]      @relation("QuoteLineCurrency")
+  invoicesByCurrency               Invoice[]        @relation("InvoiceCurrency")
+  creditNotesByCurrency            CreditNote[]     @relation("CreditNoteCurrency")
+  paymentsByCurrency               Payment[]        @relation("PaymentCurrency")
+  refundsByCurrency                Refund[]         @relation("RefundCurrency")
+  stayRoomsByCurrency              StayRoom[]       @relation("StayRoomCurrency")
+  interpretersByHourlyRateCurrency Interpreter[]    @relation("InterpreterHourlyRateCurrency")
+  bookingsByCurrency               Booking[]        @relation("BookingCurrency")
+  commissionsByCurrency            Commission[]     @relation("CommissionCurrency")
+  payoutsByCurrency                Payout[]         @relation("PayoutCurrency")
+  priceItemPrices                  PriceItemPrice[] @relation("PriceItemPriceCurrency")
+  fxOverridesAsBase                FxOverride[]     @relation("FxOverrideBase")
+  fxOverridesAsQuote               FxOverride[]     @relation("FxOverrideQuote")
 }
 
 /// Exchange rate: 1 base = rate quote, as of a moment. Quotes and payments copy the rate they used.
@@ -757,63 +760,68 @@ model LostReasonTranslation {
 
 /// One row per login. Linked to a Patient, Agent (AgentUser), HospitalStaff or StaffProfile by role.
 model User {
-  id                      String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email                   String?                  @unique
-  phone                   String?                  @unique @db.VarChar(20)
-  name                    String
-  role                    Role
-  language                String                   @default("en") @db.VarChar(8)
-  timezone                String?                  @db.VarChar(64)
-  status                  UserStatus               @default(invited)
-  passwordHash            String?
-  twoFactorEnabled        Boolean                  @default(false)
+  id                        String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                     String?                  @unique
+  phone                     String?                  @unique @db.VarChar(20)
+  name                      String
+  role                      Role
+  language                  String                   @default("en") @db.VarChar(8)
+  timezone                  String?                  @db.VarChar(64)
+  status                    UserStatus               @default(invited)
+  passwordHash              String?
+  twoFactorEnabled          Boolean                  @default(false)
   /// TOTP secret, encrypted by the application (AES-256-GCM); never readable from the database alone.
-  twoFactorSecret         String?
-  emailVerifiedAt         DateTime?                @db.Timestamptz(3)
-  phoneVerifiedAt         DateTime?                @db.Timestamptz(3)
-  passwordChangedAt       DateTime?                @db.Timestamptz(3)
+  twoFactorSecret           String?
+  emailVerifiedAt           DateTime?                @db.Timestamptz(3)
+  phoneVerifiedAt           DateTime?                @db.Timestamptz(3)
+  passwordChangedAt         DateTime?                @db.Timestamptz(3)
   /// Consecutive failed password or code attempts; five lock the account for a while.
-  failedLoginCount        Int                      @default(0)
-  lockedUntil             DateTime?                @db.Timestamptz(3)
-  lastLoginAt             DateTime?                @db.Timestamptz(3)
-  sessions                Session[]
-  authChallenges          AuthChallenge[]          @relation("ChallengeUser")
-  createdChallenges       AuthChallenge[]          @relation("ChallengeCreator")
-  backupCodes             BackupCode[]
-  staffProfile            StaffProfile?
-  managedStaff            StaffProfile[]           @relation("StaffManager")
-  managedTeams            Team[]                   @relation("TeamManager")
-  leaves                  StaffLeave[]             @relation("StaffLeaveUser")
-  agentUser               AgentUser?
-  patient                 Patient?
-  attendant               Attendant?
-  ownedCases              Case[]                   @relation("CaseOwner")
-  reviewedCases           Case[]                   @relation("CaseReviewer")
-  stageChanges            CaseStageHistory[]
-  medicalSummaries        MedicalSummary[]
-  uploadedDocuments       Document[]               @relation("DocumentUploader")
-  fileUploads             FileUpload[]
-  notificationPreferences NotificationPreference[]
-  documentShares          DocumentShare[]
-  caseNotes               CaseNote[]
-  hospitalStaffs          HospitalStaff[]
-  sentOpinionRequests     OpinionRequest[]
-  submittedOpinions       Opinion[]
-  acceptedQuotes          Quote[]                  @relation("QuoteAcceptedBy")
-  createdQuotes           Quote[]                  @relation("QuoteCreatedBy")
-  requestedRefunds        Refund[]                 @relation("RefundRequestedBy")
-  approvedRefunds         Refund[]                 @relation("RefundApprovedBy")
-  interpreter             Interpreter?
-  assignedTasks           Task[]                   @relation("TaskAssignee")
-  createdTasks            Task[]                   @relation("TaskCreator")
-  sentMessages            Message[]
-  notifications           Notification[]
-  reportedIncidents       Incident[]               @relation("IncidentReporter")
-  assignedIncidents       Incident[]               @relation("IncidentAssignee")
-  escalatedIncidents      Incident[]               @relation("IncidentEscalatedTo")
-  createdAt               DateTime                 @default(now()) @db.Timestamptz(3)
-  updatedAt               DateTime                 @updatedAt @db.Timestamptz(3)
-  deletedAt               DateTime?                @db.Timestamptz(3)
+  failedLoginCount          Int                      @default(0)
+  lockedUntil               DateTime?                @db.Timestamptz(3)
+  lastLoginAt               DateTime?                @db.Timestamptz(3)
+  sessions                  Session[]
+  authChallenges            AuthChallenge[]          @relation("ChallengeUser")
+  createdChallenges         AuthChallenge[]          @relation("ChallengeCreator")
+  backupCodes               BackupCode[]
+  staffProfile              StaffProfile?
+  managedStaff              StaffProfile[]           @relation("StaffManager")
+  managedTeams              Team[]                   @relation("TeamManager")
+  priceVersionsCreated      PriceItemVersion[]       @relation("PriceItemVersionCreatedBy")
+  marginRulesUpdated        MarginRule[]             @relation("MarginRuleUpdatedBy")
+  discountThresholdsUpdated DiscountThreshold[]      @relation("DiscountThresholdUpdatedBy")
+  fxSettingsUpdated         FxSetting[]              @relation("FxSettingUpdatedBy")
+  fxOverridesCreated        FxOverride[]             @relation("FxOverrideCreatedBy")
+  leaves                    StaffLeave[]             @relation("StaffLeaveUser")
+  agentUser                 AgentUser?
+  patient                   Patient?
+  attendant                 Attendant?
+  ownedCases                Case[]                   @relation("CaseOwner")
+  reviewedCases             Case[]                   @relation("CaseReviewer")
+  stageChanges              CaseStageHistory[]
+  medicalSummaries          MedicalSummary[]
+  uploadedDocuments         Document[]               @relation("DocumentUploader")
+  fileUploads               FileUpload[]
+  notificationPreferences   NotificationPreference[]
+  documentShares            DocumentShare[]
+  caseNotes                 CaseNote[]
+  hospitalStaffs            HospitalStaff[]
+  sentOpinionRequests       OpinionRequest[]
+  submittedOpinions         Opinion[]
+  acceptedQuotes            Quote[]                  @relation("QuoteAcceptedBy")
+  createdQuotes             Quote[]                  @relation("QuoteCreatedBy")
+  requestedRefunds          Refund[]                 @relation("RefundRequestedBy")
+  approvedRefunds           Refund[]                 @relation("RefundApprovedBy")
+  interpreter               Interpreter?
+  assignedTasks             Task[]                   @relation("TaskAssignee")
+  createdTasks              Task[]                   @relation("TaskCreator")
+  sentMessages              Message[]
+  notifications             Notification[]
+  reportedIncidents         Incident[]               @relation("IncidentReporter")
+  assignedIncidents         Incident[]               @relation("IncidentAssignee")
+  escalatedIncidents        Incident[]               @relation("IncidentEscalatedTo")
+  createdAt                 DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt                 DateTime                 @updatedAt @db.Timestamptz(3)
+  deletedAt                 DateTime?                @db.Timestamptz(3)
 
   @@index([role, status])
 }
@@ -2492,4 +2500,114 @@ model StageConfig {
   autoTasks     Json      @default("[]")
   updatedAt     DateTime  @updatedAt @db.Timestamptz(3)
   updatedById   String?   @db.Uuid
+}
+
+/// What a price list entry is: one of the three service packages, or an add-on.
+enum PriceItemKind {
+  service_package
+  add_on
+}
+
+/// A thing we put a price on: Basic, Standard or Premium service, or an add-on (extra night, interpreter hour, SIM).
+/// The prices live in versions; changing a price adds a version and never edits an old one.
+model PriceItem {
+  id         String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  kind       PriceItemKind
+  code       String             @unique
+  name       String
+  /// What one price buys for an add-on: night, hour, item, trip.
+  unit       String?
+  inclusions String[]
+  sortOrder  Int                @default(0)
+  active     Boolean            @default(true)
+  versions   PriceItemVersion[]
+  createdAt  DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime           @updatedAt @db.Timestamptz(3)
+
+  @@index([kind, sortOrder])
+}
+
+/// One published set of prices for an item. The newest version is the current price list; older ones stay for history.
+model PriceItemVersion {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  version     Int
+  note        String?
+  itemId      String           @db.Uuid
+  item        PriceItem        @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  createdById String?          @db.Uuid
+  createdBy   User?            @relation("PriceItemVersionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  prices      PriceItemPrice[]
+  createdAt   DateTime         @default(now()) @db.Timestamptz(3)
+
+  @@unique([itemId, version])
+  @@index([createdById])
+}
+
+/// The price in one currency within a version. A currency with no row is converted from the INR price at the current rate.
+model PriceItemPrice {
+  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  amountMinor  BigInt
+  versionId    String           @db.Uuid
+  version      PriceItemVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  currency     String           @db.Char(3)
+  currencyInfo Currency         @relation("PriceItemPriceCurrency", fields: [currency], references: [code], onDelete: Restrict)
+
+  @@unique([versionId, currency])
+}
+
+/// Our margin on one kind of quote line, in basis points of cost. One row per component.
+model MarginRule {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  component   QuoteLineKind @unique
+  marginBp    Int
+  updatedById String?       @db.Uuid
+  updatedBy   User?         @relation("MarginRuleUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime      @updatedAt @db.Timestamptz(3)
+
+  @@index([updatedById])
+}
+
+/// The biggest discount (basis points of the quote) a role may give without someone above them approving it.
+model DiscountThreshold {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  role        Role     @unique
+  maxBp       Int
+  updatedById String?  @db.Uuid
+  updatedBy   User?    @relation("DiscountThresholdUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([updatedById])
+}
+
+/// Exchange-rate settings; always one row with id `default`. A null provider means the environment's FX_PROVIDER.
+model FxSetting {
+  id          String   @id
+  provider    String?
+  markupBp    Int      @default(0)
+  updatedById String?  @db.Uuid
+  updatedBy   User?    @relation("FxSettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([updatedById])
+}
+
+/// A rate set by hand instead of the provider's: 1 base = rate quote, with a reason, until it expires or is removed.
+model FxOverride {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rate              Decimal   @db.Decimal(18, 8)
+  reason            String
+  expiresAt         DateTime? @db.Timestamptz(3)
+  revokedAt         DateTime? @db.Timestamptz(3)
+  baseCurrency      String    @db.Char(3)
+  baseCurrencyInfo  Currency  @relation("FxOverrideBase", fields: [baseCurrency], references: [code], onDelete: Restrict)
+  quoteCurrency     String    @db.Char(3)
+  quoteCurrencyInfo Currency  @relation("FxOverrideQuote", fields: [quoteCurrency], references: [code], onDelete: Restrict)
+  createdById       String?   @db.Uuid
+  createdBy         User?     @relation("FxOverrideCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt         DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@index([baseCurrency, quoteCurrency])
+  @@index([createdById])
 }

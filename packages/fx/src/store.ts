@@ -31,7 +31,7 @@ export interface ResolvedRate {
   /** When the (oldest) rate used was published. */
   asOf: Date;
   source: string;
-  how: 'identity' | 'direct' | 'inverse' | 'pivot';
+  how: 'identity' | 'override' | 'direct' | 'inverse' | 'pivot';
 }
 
 /** Writes a provider's rates. A pair at the same time is stored once, so running the job twice changes nothing. */
@@ -86,6 +86,23 @@ async function latest(db: Db, base: string, quote: string, date: Date) {
   });
 }
 
+/** The manual rate in force on a date for one direction of a pair: not revoked, not expired, already set. */
+async function overrideFor(db: Db, base: string, quote: string, date: Date) {
+  return db.fxOverride.findFirst({
+    where: {
+      baseCurrency: base,
+      quoteCurrency: quote,
+      createdAt: { lte: date },
+      AND: [
+        { OR: [{ revokedAt: null }, { revokedAt: { gt: date } }] },
+        { OR: [{ expiresAt: null }, { expiresAt: { gt: date } }] },
+      ],
+    },
+    orderBy: { createdAt: 'desc' },
+    select: { rate: true, createdAt: true },
+  });
+}
+
 const tooOld = (asOf: Date, date: Date) =>
   date.getTime() - asOf.getTime() > MAX_RATE_AGE_DAYS * 86_400_000;
 
@@ -101,6 +118,24 @@ export async function rateOn(
 ): Promise<ResolvedRate> {
   if (from === to)
     return { rate: fromScaled(toScaled('1')), asOf: date, source: 'identity', how: 'identity' };
+
+  // A rate someone set by hand wins over the provider's, until it expires or is removed.
+  const manual = await overrideFor(db, from, to, date);
+  if (manual)
+    return {
+      rate: fromScaled(toScaled(manual.rate.toFixed(8))),
+      asOf: manual.createdAt,
+      source: 'manual',
+      how: 'override',
+    };
+  const manualReverse = await overrideFor(db, to, from, date);
+  if (manualReverse)
+    return {
+      rate: invertRate(manualReverse.rate.toFixed(8)),
+      asOf: manualReverse.createdAt,
+      source: 'manual',
+      how: 'override',
+    };
 
   const direct = await latest(db, from, to, date);
   if (direct && !tooOld(direct.asOf, date))
