@@ -122,6 +122,12 @@ const DOMAINS: { title: string; blurb: string; models: string[] }[] = [
     ],
   },
   {
+    title: 'Partner approvals',
+    blurb:
+      'What hospitals send us for review (AD-02). A `PartnerChangeRequest` holds the fields as submitted (`current`) and as proposed; approving applies `proposed` in the same transaction as the decision. Referral fee, agreement dates and accreditation checks live on `Hospital` and `Accreditation`.',
+    models: ['PartnerChangeRequest'],
+  },
+  {
     title: 'Money',
     blurb: 'Invoices, payments, refunds. Amounts are integer minor units next to a currency code.',
     models: ['Invoice', 'InvoiceLine', 'CreditNote', 'Payment', 'Refund'],

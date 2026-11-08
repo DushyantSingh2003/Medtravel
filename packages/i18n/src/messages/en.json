@@ -1879,5 +1879,180 @@
         "saved": "Manual rate set"
       }
     }
+  },
+  "partners": {
+    "title": "Hospital and doctor approval",
+    "description": "Review onboarding, verify accreditation, and publish or unpublish profiles.",
+    "tabs": {
+      "requests": "Review queue",
+      "hospitals": "Hospitals",
+      "health": "Partner health"
+    },
+    "actions": {
+      "close": "Close",
+      "cancel": "Cancel"
+    },
+    "requests": {
+      "title": "Requests for review",
+      "retry": "Try again",
+      "failed": "The requests could not be loaded",
+      "empty": "Nothing to review",
+      "emptyHint": "Change the filters, or wait for a hospital to send something.",
+      "filters": {
+        "status": "Status",
+        "kind": "Kind",
+        "all": "All"
+      },
+      "status": {
+        "pending": "Waiting",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "withdrawn": "Withdrawn"
+      },
+      "kind": {
+        "hospital_onboarding": "New hospital",
+        "hospital_profile": "Profile change",
+        "package_price": "Package price"
+      },
+      "review": "Review",
+      "view": "View",
+      "total": "{count, plural, one {# request} other {# requests}}",
+      "previous": "Previous",
+      "next": "Next",
+      "note": "Note from the hospital",
+      "reason": "Reason given",
+      "decideFailed": "The decision could not be saved",
+      "approve": "Approve",
+      "reject": "Reject",
+      "approved": "Request approved",
+      "rejected": "Request rejected",
+      "rejectReason": "Reason",
+      "rejectReasonHint": "The hospital will be told why.",
+      "diff": {
+        "caption": "What would change",
+        "field": "Field",
+        "current": "Now",
+        "proposed": "Proposed",
+        "empty": "Not set",
+        "stale": "Changed since",
+        "none": "This submission lists no changes: review the hospital profile as it stands."
+      },
+      "fields": {
+        "name": "Name",
+        "description": "Description",
+        "address": "Address",
+        "website": "Website",
+        "phone": "Phone",
+        "email": "Email",
+        "internationalDeskName": "International desk contact",
+        "internationalDeskEmail": "International desk email",
+        "internationalDeskPhone": "International desk phone",
+        "bedCount": "Beds",
+        "establishedYear": "Year established",
+        "priceMinor": "Price",
+        "currency": "Currency"
+      }
+    },
+    "hospitals": {
+      "title": "Hospitals",
+      "search": "Search by name",
+      "status": "Status",
+      "all": "All",
+      "retry": "Try again",
+      "failed": "The hospitals could not be loaded",
+      "empty": "No hospitals match",
+      "statuses": {
+        "draft": "Draft",
+        "pending_review": "In review",
+        "approved": "Approved",
+        "published": "Published",
+        "unpublished": "Unpublished",
+        "suspended": "Suspended"
+      },
+      "noFee": "No referral fee set",
+      "fee": "Referral fee {fee}",
+      "endsOn": "agreement ends {date}",
+      "waiting": "{count, plural, one {# request waiting} other {# requests waiting}}",
+      "manage": "Manage",
+      "total": "{count, plural, one {# hospital} other {# hospitals}}",
+      "previous": "Previous",
+      "next": "Next",
+      "publish": "Publish on website",
+      "unpublish": "Take off website",
+      "published": "Hospital published",
+      "unpublished": "Hospital taken off the website",
+      "actionFailed": "That did not work",
+      "agreement": {
+        "title": "Referral fee and agreement",
+        "fee": "Referral fee (%)",
+        "feeHint": "Share of the hospital bill we invoice the hospital",
+        "startsOn": "Agreement starts",
+        "endsOn": "Agreement ends",
+        "save": "Save agreement",
+        "saved": "Agreement saved",
+        "failed": "The agreement could not be saved"
+      },
+      "accreditations": {
+        "title": "Accreditations",
+        "empty": "No accreditations on file",
+        "bodies": {
+          "nabh": "NABH",
+          "jci": "JCI",
+          "nabl": "NABL",
+          "iso": "ISO",
+          "other": "Other"
+        },
+        "expires": "expires {date}",
+        "noExpiry": "no expiry date",
+        "expired": "expired",
+        "noCertificate": "no certificate uploaded",
+        "verifiedOn": "checked {date}",
+        "verified": "Verified",
+        "unverified": "Not verified",
+        "verify": "Mark as verified",
+        "removeCheck": "Remove check",
+        "verifiedDone": "Accreditation verified",
+        "unverifiedDone": "Check removed"
+      },
+      "doctors": {
+        "title": "Doctors",
+        "empty": "No doctors",
+        "onWebsite": "{name} on the website",
+        "published": "Doctor published",
+        "unpublished": "Doctor taken off the website"
+      },
+      "packages": {
+        "title": "Packages",
+        "empty": "No packages",
+        "onWebsite": "{name} on the website",
+        "off": "Not on offer",
+        "published": "Package published",
+        "unpublished": "Package taken off the website"
+      }
+    },
+    "health": {
+      "failed": "Partner health could not be loaded",
+      "retry": "Try again",
+      "accreditations": "Accreditations expiring",
+      "agreements": "Agreements ending",
+      "noneExpiring": "Nothing expires in the next 90 days.",
+      "daysLeft": "{count, plural, one {# day left} other {# days left}}",
+      "overdue": "{count, plural, one {# day overdue} other {# days overdue}}",
+      "bodies": {
+        "nabh": "NABH",
+        "jci": "JCI",
+        "nabl": "NABL",
+        "iso": "ISO",
+        "other": "Other"
+      },
+      "responseTimes": "How fast hospitals answer",
+      "responseHint": "Average hours from sending an opinion request to the answer, by month sent.",
+      "noRequests": "No opinion requests in the last six months.",
+      "hospital": "Hospital",
+      "noRequestsMonth": "No requests",
+      "noAnswers": "No answers",
+      "hours": "{hours} h",
+      "answered": "{answered} of {requests} answered"
+    }
   }
 }

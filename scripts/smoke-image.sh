@@ -56,6 +56,8 @@ env_args=(
   -e "NOTIFICATION_WEBHOOK_SECRET=$(openssl rand -hex 16)"
   -e "WHATSAPP_VERIFY_TOKEN=$(openssl rand -hex 16)"
   -e FX_PROVIDER=frankfurter
+  -e WEB_REVALIDATE_URL=http://web.invalid/api/revalidate
+  -e "WEB_REVALIDATE_SECRET=$(openssl rand -hex 16)"
   -e "METRICS_TOKEN=$(openssl rand -hex 24)"
 )
 docker run -d --name "$name" --network host "${env_args[@]}" "$image" > /dev/null

@@ -39,7 +39,7 @@ export class OutboxDispatcher implements OnApplicationBootstrap, OnApplicationSh
     @Inject(OBJECT_STORE) private readonly store: ObjectStore,
     @Inject(NOTIFICATION_PROVIDERS) private readonly providers: Providers,
     @Inject(REALTIME_PUBLISHER) private readonly publisher: Pick<RealtimePublisher, 'publish'>,
-    @Inject(ENV) private readonly env: Pick<Env, 'CLAMAV_HOST' | 'CLAMAV_PORT'>,
+    @Inject(ENV) private readonly env: Pick<Env, 'CLAMAV_HOST' | 'CLAMAV_PORT' | 'WEB_REVALIDATE_URL' | 'WEB_REVALIDATE_SECRET'>,
   ) {}
 
   onApplicationBootstrap(): void {
@@ -70,6 +70,10 @@ export class OutboxDispatcher implements OnApplicationBootstrap, OnApplicationSh
         clamd: { host: this.env.CLAMAV_HOST, port: this.env.CLAMAV_PORT },
         providers: this.providers,
         publisher: this.publisher,
+        revalidate: {
+          url: this.env.WEB_REVALIDATE_URL,
+          secret: this.env.WEB_REVALIDATE_SECRET,
+        },
       }),
       {
         limit: BATCH_SIZE,

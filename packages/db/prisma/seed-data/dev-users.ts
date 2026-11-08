@@ -62,6 +62,7 @@ export async function seedDevUsers(prisma: PrismaClient): Promise<number> {
     update: {},
     create: { slug: 'dev-hospital', name: 'Dev Hospital', cityId: city.id },
   });
+  await seedDevHospitalExtras(prisma, hospital.id);
 
   // Every development user has a phone number so the SMS and WhatsApp channels can be tried (they land in Mailpit).
   // A phone number per account that never depends on which accounts already exist (a unique column, and seeds are re-run).
@@ -223,4 +224,48 @@ async function seedSampleAudit(
       },
     ],
   });
+}
+
+/**
+ * What the approval screens need to be tried and tested on the development hospital: a package to reprice and an accreditation
+ * with a certificate record (metadata only: there is no file) to verify. Created once; an admin's changes are kept.
+ */
+async function seedDevHospitalExtras(prisma: PrismaClient, hospitalId: string): Promise<void> {
+  const treatment = await prisma.treatment.findFirst({ orderBy: { slug: 'asc' }, select: { id: true } });
+  const usd = await prisma.currency.findUnique({ where: { code: 'USD' }, select: { code: true } });
+  if (treatment && usd) {
+    const name = 'Dev check-up package';
+    const has = await prisma.package.findFirst({ where: { hospitalId, name }, select: { id: true } });
+    if (!has)
+      await prisma.package.create({
+        data: { name, priceMinor: 120_000n, currency: 'USD', hospitalId, treatmentId: treatment.id },
+      });
+  }
+  const accreditation = await prisma.accreditation.findFirst({
+    where: { hospitalId, body: 'nabh' },
+    select: { id: true },
+  });
+  if (!accreditation) {
+    const certificate = await prisma.document.create({
+      data: {
+        kind: 'other',
+        fileName: 'dev-nabh-certificate.pdf',
+        mimeType: 'application/pdf',
+        sizeBytes: 1024,
+        storageKey: `dev/hospital/${hospitalId}/nabh-certificate.pdf`,
+        hospitalId,
+      },
+      select: { id: true },
+    });
+    const today = new Date();
+    await prisma.accreditation.create({
+      data: {
+        body: 'nabh',
+        hospitalId,
+        certificateNo: 'DEV-NABH-001',
+        certificateId: certificate.id,
+        expiresAt: new Date(Date.UTC(today.getUTCFullYear() + 1, today.getUTCMonth(), today.getUTCDate())),
+      },
+    });
+  }
 }

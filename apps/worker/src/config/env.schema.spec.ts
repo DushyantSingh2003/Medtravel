@@ -34,6 +34,8 @@ describe('worker env', () => {
       WHATSAPP_ACCESS_TOKEN: 'tok',
       NOTIFICATION_WEBHOOK_SECRET: 'a-real-webhook-secret',
       FX_PROVIDER: 'frankfurter',
+      WEB_REVALIDATE_URL: 'https://site.example/api/revalidate',
+      WEB_REVALIDATE_SECRET: 'a-real-revalidate-secret',
     } as NodeJS.ProcessEnv;
     expect(loadEnv(production).SMS_PROVIDER).toBe('twilio');
     expect(() => loadEnv({ ...production, SMS_PROVIDER: 'dev' })).toThrow(/SMS_PROVIDER/);
@@ -56,6 +58,8 @@ describe('worker env', () => {
       WHATSAPP_PHONE_NUMBER_ID: '555',
       WHATSAPP_ACCESS_TOKEN: 'tok',
       NOTIFICATION_WEBHOOK_SECRET: 'a-real-webhook-secret',
+      WEB_REVALIDATE_URL: 'https://site.example/api/revalidate',
+      WEB_REVALIDATE_SECRET: 'a-real-revalidate-secret',
     } as NodeJS.ProcessEnv;
     expect(() => loadEnv(production)).toThrow(/FX_PROVIDER/);
     expect(() => loadEnv({ ...production, FX_PROVIDER: 'openexchangerates' })).toThrow(
@@ -68,5 +72,20 @@ describe('worker env', () => {
         OPEN_EXCHANGE_RATES_APP_ID: 'key',
       }).FX_PROVIDER,
     ).toBe('openexchangerates');
+  });
+
+  it('wants the website refresh address and secret together, and in production', () => {
+    expect(loadEnv(valid).WEB_REVALIDATE_URL).toBeUndefined();
+    expect(() => loadEnv({ ...valid, WEB_REVALIDATE_URL: 'http://localhost:3000/api/revalidate' })).toThrow(
+      /set together/,
+    );
+    expect(() => loadEnv({ ...valid, WEB_REVALIDATE_SECRET: 'a-long-enough-secret' })).toThrow(/set together/);
+    expect(
+      loadEnv({
+        ...valid,
+        WEB_REVALIDATE_URL: 'http://localhost:3000/api/revalidate',
+        WEB_REVALIDATE_SECRET: 'a-long-enough-secret',
+      }).WEB_REVALIDATE_URL,
+    ).toBe('http://localhost:3000/api/revalidate');
   });
 });

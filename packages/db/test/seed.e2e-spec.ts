@@ -55,13 +55,14 @@ afterAll(async () => {
 });
 
 describe('the demo seed', () => {
-  it('creates three hospitals with departments, 15 doctors and 30 packages, and three agencies', async () => {
+  it('creates three hospitals with departments, 15 doctors and 31 packages, and three agencies', async () => {
     expect(await prisma.hospital.count({ where: { status: 'published' } })).toBe(3);
     const cities = await prisma.hospital.findMany({ select: { city: { select: { slug: true } } } });
     expect(cities.map((h) => h.city.slug).sort()).toEqual(['chennai', 'delhi-ncr', 'mumbai']);
     expect(await prisma.department.count()).toBe(15);
     expect(await prisma.doctor.count()).toBe(15);
-    expect(await prisma.package.count()).toBe(30);
+    // Thirty demo packages and the development hospital's own check-up package (AD-02 uses it to try price changes).
+    expect(await prisma.package.count()).toBe(31);
     const agents = await prisma.agent.findMany({ select: { countryCode: true } });
     expect(agents.map((a) => a.countryCode).sort()).toEqual(['IQ', 'KE', 'UZ']);
   });

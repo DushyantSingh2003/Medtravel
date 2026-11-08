@@ -4,7 +4,7 @@ Tick a task here when it is finished and `pnpm check` is green. The task queue t
 build loop is `loop/cloud-state.json`; this file is the human-readable view and also records
 what each task deferred.
 
-Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12, AD-01, AD-05.
+Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12, AD-01, AD-02, AD-05.
 
 ### Phase 0 — Scaffold (week 1)
 
@@ -97,7 +97,7 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12, AD-01, AD-05.
 ### Phase 1G (weeks 6–12, interleaved) — Admin
 
 - [x] **AD-01** Users and roles
-- [ ] **AD-02** Hospital and doctor approvals
+- [x] **AD-02** Hospital and doctor approvals
 - [ ] **AD-03** Agent approvals and commission plans
 - [ ] **AD-04** CMS
 - [x] **AD-05** Pricing rules and FX
@@ -165,6 +165,25 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12, AD-01, AD-05.
 - [ ] **G-08** Advanced analytics
 
 ## Notes and deferred work
+
+### Deferred from AD-02
+
+- **The website does not use the cache tags yet, and there is no quote builder.** Approving or publishing writes the data and a
+  `web.revalidate` event; the worker posts it to the website's `/api/revalidate`, which calls `revalidateTag`. The public pages (W-xx)
+  must read hospitals, doctors and packages with the tags `hospitals`, `hospital:<slug>`, `doctors`, `doctor:<slug>` and `packages`, and
+  the quote builder (C-xx) must read `Package.priceMinor`/`currency` (which approval updates in the same transaction). The end-to-end
+  "approving a price change updates the website and the quote builder" is therefore tested up to the database write and the event.
+- **Unpublishing a hospital does not clear its doctors' and packages' own published flags** (they are hidden while the hospital is
+  unpublished, and appear again when it is republished). Decide with W-xx whether unpublish should cascade.
+- **No notification to the hospital when a request is decided** (new event keys need templates, F-07). The decision is on the request.
+- **Hospital-role scoping of the request list lives in `PartnerRequestsService`** (`HOSPITAL_ROLES`, `hospitalFor`) rather than in the
+  rbac module; move it to `ScopeService` when H-01 adds more hospital endpoints.
+- **Form and server messages are English.** The agreement form's validation messages and the API's conflict messages are shown as
+  written; stable error codes mapped to `partners.*` keys would fix Arabic.
+- **Small:** a withdrawn request writes no outbox event; onboarding submit does not check profile completeness (H-01); the health view
+  uses UTC days (ops default is Asia/Kolkata); existence of another hospital's package or request id is distinguishable (403 v 404).
+- **Production needs `WEB_REVALIDATE_URL` and `WEB_REVALIDATE_SECRET`** on the worker and `REVALIDATE_SECRET` on the website
+  (the worker refuses to start in production without them).
 
 ### Deferred from AD-05
 

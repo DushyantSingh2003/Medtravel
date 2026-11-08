@@ -6,7 +6,6 @@ import {
   CardDescription,
   CardFooter,
   CardHeader,
-  CardTitle,
 } from '@medtravel/ui';
 import { getTranslations } from 'next-intl/server';
 import { Link } from '../../i18n/navigation';
@@ -20,9 +19,9 @@ export async function MastersIndex() {
         <li key={resource}>
           <Card className="h-full">
             <CardHeader>
-              <CardTitle>
-                <h2>{t(`resources.${resource}.title`)}</h2>
-              </CardTitle>
+              <h2 data-slot="card-title" className="text-base leading-tight font-semibold">
+                {t(`resources.${resource}.title`)}
+              </h2>
               <CardDescription>{t(`resources.${resource}.description`)}</CardDescription>
             </CardHeader>
             <CardContent />

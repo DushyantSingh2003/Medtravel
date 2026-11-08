@@ -787,6 +787,9 @@ model User {
   managedStaff              StaffProfile[]           @relation("StaffManager")
   managedTeams              Team[]                   @relation("TeamManager")
   priceVersionsCreated      PriceItemVersion[]       @relation("PriceItemVersionCreatedBy")
+  changeRequestsSubmitted   PartnerChangeRequest[]   @relation("ChangeRequestSubmittedBy")
+  changeRequestsDecided     PartnerChangeRequest[]   @relation("ChangeRequestDecidedBy")
+  accreditationsVerified    Accreditation[]          @relation("AccreditationVerifiedBy")
   marginRulesUpdated        MarginRule[]             @relation("MarginRuleUpdatedBy")
   discountThresholdsUpdated DiscountThreshold[]      @relation("DiscountThresholdUpdatedBy")
   fxSettingsUpdated         FxSetting[]              @relation("FxSettingUpdatedBy")
@@ -1239,6 +1242,7 @@ model Document {
   shares               DocumentShare[]
   admissionsDischarged Admission[]
   accreditations       Accreditation[]
+  hospitalAgreements   Hospital[]          @relation("HospitalAgreementDocument")
   quotes               Quote[]
   invoices             Invoice[]
   visaInvitations      VisaApplication[]
@@ -1371,6 +1375,10 @@ model Hospital {
   internationalDeskEmail String?
   internationalDeskPhone String?                  @db.VarChar(20)
   agreementBp            Int?
+  agreementStartsOn      DateTime?                @db.Date
+  agreementEndsOn        DateTime?                @db.Date
+  agreementDocumentId    String?                  @db.Uuid
+  agreementDocument      Document?                @relation("HospitalAgreementDocument", fields: [agreementDocumentId], references: [id], onDelete: SetNull)
   bankDetails            Json?
   bedCount               Int?
   establishedYear        Int?
@@ -1398,6 +1406,7 @@ model Hospital {
   commissionRules        CommissionRule[]
   conversations          Conversation[]
   feedbacks              Feedback[]
+  changeRequests         PartnerChangeRequest[]
   createdAt              DateTime                 @default(now()) @db.Timestamptz(3)
   updatedAt              DateTime                 @updatedAt @db.Timestamptz(3)
   deletedAt              DateTime?                @db.Timestamptz(3)
@@ -1405,6 +1414,7 @@ model Hospital {
   @@index([status])
   @@index([searchVector], type: Gin)
   @@index([cityId])
+  @@index([agreementDocumentId])
 }
 
 /// A branch of a hospital group, managed from one login.
@@ -1451,22 +1461,27 @@ model HospitalStaff {
 
 /// NABH, JCI and other accreditations, with the certificate and its expiry.
 model Accreditation {
-  id            String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  body          AccreditationBody
-  certificateNo String?
-  issuedAt      DateTime?         @db.Date
-  expiresAt     DateTime?         @db.Date
-  hospitalId    String            @db.Uuid
-  hospital      Hospital          @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
-  certificateId String?           @db.Uuid
-  certificate   Document?         @relation(fields: [certificateId], references: [id], onDelete: SetNull)
-  createdAt     DateTime          @default(now()) @db.Timestamptz(3)
-  updatedAt     DateTime          @updatedAt @db.Timestamptz(3)
-  deletedAt     DateTime?         @db.Timestamptz(3)
+  id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  body             AccreditationBody
+  certificateNo    String?
+  issuedAt         DateTime?         @db.Date
+  expiresAt        DateTime?         @db.Date
+  hospitalId       String            @db.Uuid
+  hospital         Hospital          @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
+  verifiedAt       DateTime?         @db.Timestamptz(3)
+  verificationNote String?
+  verifiedById     String?           @db.Uuid
+  verifiedBy       User?             @relation("AccreditationVerifiedBy", fields: [verifiedById], references: [id], onDelete: SetNull)
+  certificateId    String?           @db.Uuid
+  certificate      Document?         @relation(fields: [certificateId], references: [id], onDelete: SetNull)
+  createdAt        DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime          @updatedAt @db.Timestamptz(3)
+  deletedAt        DateTime?         @db.Timestamptz(3)
 
   @@index([expiresAt])
   @@index([hospitalId])
   @@index([certificateId])
+  @@index([verifiedById])
 }
 
 /// A speciality a hospital offers.
@@ -1554,27 +1569,29 @@ model HospitalTranslation {
 
 /// A fixed-price package per procedure and room category; used by the cost estimator and the quote builder.
 model Package {
-  id           String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name         String
-  roomCategory String?
-  priceMinor   BigInt
-  stayDays     Int?
-  inclusions   String[]
-  exclusions   String[]
-  validFrom    DateTime?            @db.Date
-  validUntil   DateTime?            @db.Date
-  active       Boolean              @default(true)
-  hospitalId   String               @db.Uuid
-  hospital     Hospital             @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
-  treatmentId  String               @db.Uuid
-  treatment    Treatment            @relation(fields: [treatmentId], references: [id], onDelete: Restrict)
-  currency     String               @db.Char(3)
-  currencyInfo Currency             @relation("PackageCurrency", fields: [currency], references: [code], onDelete: Restrict)
-  translations PackageTranslation[]
-  opinions     Opinion[]
-  createdAt    DateTime             @default(now()) @db.Timestamptz(3)
-  updatedAt    DateTime             @updatedAt @db.Timestamptz(3)
-  deletedAt    DateTime?            @db.Timestamptz(3)
+  id             String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name           String
+  roomCategory   String?
+  priceMinor     BigInt
+  stayDays       Int?
+  inclusions     String[]
+  exclusions     String[]
+  validFrom      DateTime?              @db.Date
+  validUntil     DateTime?              @db.Date
+  active         Boolean                @default(true)
+  published      Boolean                @default(false)
+  changeRequests PartnerChangeRequest[]
+  hospitalId     String                 @db.Uuid
+  hospital       Hospital               @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
+  treatmentId    String                 @db.Uuid
+  treatment      Treatment              @relation(fields: [treatmentId], references: [id], onDelete: Restrict)
+  currency       String                 @db.Char(3)
+  currencyInfo   Currency               @relation("PackageCurrency", fields: [currency], references: [code], onDelete: Restrict)
+  translations   PackageTranslation[]
+  opinions       Opinion[]
+  createdAt      DateTime               @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime               @updatedAt @db.Timestamptz(3)
+  deletedAt      DateTime?              @db.Timestamptz(3)
 
   @@index([hospitalId, treatmentId])
   @@index([treatmentId])
@@ -2618,4 +2635,48 @@ model FxOverride {
 
   @@index([baseCurrency, quoteCurrency])
   @@index([createdById])
+}
+
+/// What a partner asks us to approve.
+enum ChangeRequestKind {
+  hospital_onboarding
+  hospital_profile
+  package_price
+}
+
+enum ChangeRequestStatus {
+  pending
+  approved
+  rejected
+  withdrawn
+}
+
+/// A hospital's submission for review: the first onboarding, an edit to its profile, or a new package price. `current` is what
+/// the fields held when it was submitted and `proposed` what the hospital wants; approving applies `proposed` in one transaction.
+model PartnerChangeRequest {
+  id             String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  kind           ChangeRequestKind
+  status         ChangeRequestStatus @default(pending)
+  current        Json
+  proposed       Json
+  note           String?
+  decisionReason String?
+  decidedAt      DateTime?           @db.Timestamptz(3)
+  hospitalId     String              @db.Uuid
+  hospital       Hospital            @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
+  packageId      String?             @db.Uuid
+  package        Package?            @relation(fields: [packageId], references: [id], onDelete: Restrict)
+  submittedById  String?             @db.Uuid
+  submittedBy    User?               @relation("ChangeRequestSubmittedBy", fields: [submittedById], references: [id], onDelete: SetNull)
+  decidedById    String?             @db.Uuid
+  decidedBy      User?               @relation("ChangeRequestDecidedBy", fields: [decidedById], references: [id], onDelete: SetNull)
+  createdAt      DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime            @updatedAt @db.Timestamptz(3)
+  deletedAt      DateTime?           @db.Timestamptz(3)
+
+  @@index([status, createdAt])
+  @@index([hospitalId])
+  @@index([packageId])
+  @@index([submittedById])
+  @@index([decidedById])
 }

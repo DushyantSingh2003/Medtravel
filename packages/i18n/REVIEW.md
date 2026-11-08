@@ -76,3 +76,9 @@ The whole `pricing.*` namespace (price list, publish and history dialogs, margin
 their confirmations) is machine-drafted Arabic. Worth a native reader: "الهوامش" for margins, "هامش التحويل" for the conversion
 markup, and the wording of the manual-rate explanation. Add-on and package names and inclusions are admin-entered English text
 (the price list has no translations yet).
+
+## AD-02 (hospital and doctor approvals)
+
+The whole `partners.*` namespace (review queue, diff table, approve and reject, hospital management, agreement, accreditation
+verification, publishing and the partner health view) is machine-drafted Arabic. Worth a native reader: the plural forms for requests,
+hospitals and days, "عمولة الإحالة" for the referral fee, and "موثّق" for a verified accreditation.
