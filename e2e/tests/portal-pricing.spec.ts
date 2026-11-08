@@ -60,9 +60,10 @@ test.describe('pricing rules', () => {
 
     await premium.getByRole('button', { name: 'History' }).click();
     const history = page.getByRole('dialog', { name: 'Price history: Premium' });
-    await expect(history.getByText(`Version ${before + 1}`)).toBeVisible();
-    await expect(history.getByText(`Version ${before}`, { exact: true })).toBeVisible();
-    await expect(history.getByText('Browser test')).toBeVisible();
+    // Each entry reads "Version N" followed by its date, so match the start of the line.
+    await expect(history.getByText(new RegExp(`^Version ${before + 1}(?!\\d)`))).toBeVisible();
+    await expect(history.getByText(new RegExp(`^Version ${before}(?!\\d)`))).toBeVisible();
+    await expect(history.getByText('Browser test').first()).toBeVisible();
   });
 
   test('refuses a price list without the rupee price and shows why', async ({ page }) => {
