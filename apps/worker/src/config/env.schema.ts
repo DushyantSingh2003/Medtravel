@@ -43,6 +43,9 @@ export const envSchema = z
     /** Where daily exchange rates come from. `static` is fixed development data. */
     FX_PROVIDER: z.enum(['static', 'frankfurter', 'openexchangerates']).default('static'),
     OPEN_EXCHANGE_RATES_APP_ID: z.string().optional(),
+    /** Where the worker tells the public website to refresh pages (publish, unpublish, approved price changes). Both unset: skipped. */
+    WEB_REVALIDATE_URL: z.preprocess((value) => (value === '' ? undefined : value), z.url().optional()),
+    WEB_REVALIDATE_SECRET: z.preprocess((value) => (value === '' ? undefined : value), z.string().min(16).optional()),
     /** When rates are refreshed (cron, in Asia/Kolkata): every day at 06:00 India time. */
     FX_REFRESH_CRON: z.string().default('0 6 * * *'),
   })

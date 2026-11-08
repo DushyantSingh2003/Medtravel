@@ -25,6 +25,7 @@ describe('database enums', () => {
           'QUEUE_NAMES',
           'WEEKDAYS',
           'STAFF_ROLES',
+          'PROFILE_FIELDS',
           'ARABIC_COUNTRIES',
         ].includes(name)
       )

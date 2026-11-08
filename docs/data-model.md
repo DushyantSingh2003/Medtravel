@@ -2,7 +2,7 @@
 
 > Generated from `packages/db/prisma/schema.prisma` by `pnpm --filter @medtravel/db docs:model`. Do not edit by hand: a test fails when this file is out of date.
 
-The database holds **89 tables** and **53 enums** (PRD section 11). The central entity is the **Case**: one patient, one treatment episode, and everything else hangs off it.
+The database holds **90 tables** and **55 enums** (PRD section 11). The central entity is the **Case**: one patient, one treatment episode, and everything else hangs off it.
 
 ## Overview
 
@@ -98,7 +98,7 @@ One `User` per login. What a user is linked to depends on the role: a Patient, a
 
 | Entity | What it is | Belongs to | Has | Notes |
 | --- | --- | --- | --- | --- |
-| **User** | One row per login. Linked to a Patient, Agent (AgentUser), HospitalStaff or StaffProfile by role. |  | Session (sessions), AuthChallenge (authChallenges), AuthChallenge (createdChallenges), BackupCode (backupCodes), StaffProfile (managedStaff), Team (managedTeams), PriceItemVersion (priceVersionsCreated), MarginRule (marginRulesUpdated), DiscountThreshold (discountThresholdsUpdated), FxSetting (fxSettingsUpdated), FxOverride (fxOverridesCreated), StaffLeave (leaves), Case (ownedCases), Case (reviewedCases), CaseStageHistory (stageChanges), MedicalSummary (medicalSummaries), Document (uploadedDocuments), FileUpload (fileUploads), NotificationPreference (notificationPreferences), DocumentShare (documentShares), CaseNote (caseNotes), HospitalStaff (hospitalStaffs), OpinionRequest (sentOpinionRequests), Opinion (submittedOpinions), Quote (acceptedQuotes), Quote (createdQuotes), Refund (requestedRefunds), Refund (approvedRefunds), Task (assignedTasks), Task (createdTasks), Message (sentMessages), Notification (notifications), Incident (reportedIncidents), Incident (assignedIncidents), Incident (escalatedIncidents), StaffProfile (staffProfile), AgentUser (agentUser), Patient (patient), Attendant (attendant), Interpreter (interpreter) | soft delete |
+| **User** | One row per login. Linked to a Patient, Agent (AgentUser), HospitalStaff or StaffProfile by role. |  | Session (sessions), AuthChallenge (authChallenges), AuthChallenge (createdChallenges), BackupCode (backupCodes), StaffProfile (managedStaff), Team (managedTeams), PriceItemVersion (priceVersionsCreated), PartnerChangeRequest (changeRequestsSubmitted), PartnerChangeRequest (changeRequestsDecided), Accreditation (accreditationsVerified), MarginRule (marginRulesUpdated), DiscountThreshold (discountThresholdsUpdated), FxSetting (fxSettingsUpdated), FxOverride (fxOverridesCreated), StaffLeave (leaves), Case (ownedCases), Case (reviewedCases), CaseStageHistory (stageChanges), MedicalSummary (medicalSummaries), Document (uploadedDocuments), FileUpload (fileUploads), NotificationPreference (notificationPreferences), DocumentShare (documentShares), CaseNote (caseNotes), HospitalStaff (hospitalStaffs), OpinionRequest (sentOpinionRequests), Opinion (submittedOpinions), Quote (acceptedQuotes), Quote (createdQuotes), Refund (requestedRefunds), Refund (approvedRefunds), Task (assignedTasks), Task (createdTasks), Message (sentMessages), Notification (notifications), Incident (reportedIncidents), Incident (assignedIncidents), Incident (escalatedIncidents), StaffProfile (staffProfile), AgentUser (agentUser), Patient (patient), Attendant (attendant), Interpreter (interpreter) | soft delete |
 | **Session** | A signed-in browser or device. Only a hash of the token is stored. One sign-in on one device. `tokenHash` is the hash of the current refresh token; it rotates on every refresh and the previous hash is kept so that a replayed (stolen) refresh token revokes the whole session. | User (user), Case (scopeCase, optional) |  |  |
 | **AuthChallenge** | A one-time secret sent to a person: email verification, password reset, a sign-in code, an invitation or a magic link. Only hashes are stored; the token or code itself exists in the email and nowhere else. | User (user, optional), User (createdBy, optional) |  |  |
 | **BackupCode** | A single-use recovery code for a user who lost their authenticator app. Stored hashed. | User (user) |  |  |
@@ -131,7 +131,7 @@ The central entity: one patient, one treatment episode. Everything else hangs of
 | **CaseStageHistory** | Every stage change of a case, who made it and when. | Case (case), User (actor, optional) |  |  |
 | **StageConfig** | What an admin changed about a stage: its target time, owner role and automatic tasks. A stage with no row uses the defaults in `packages/contracts` (`DEFAULT_STAGE_TARGET_MINUTES`, `STAGE_OWNER_ROLE`, `DEFAULT_AUTO_TASKS`). |  |  |  |
 | **MedicalSummary** | The reviewer's structured summary. One current version per case; older versions are kept. | Case (case), User (reviewer, optional), Speciality (recommendedSpeciality, optional) | OpinionRequest (opinionRequests) | unique: caseId + version |
-| **Document** | A file in the private bucket. Only metadata is here; downloads go through presigned URLs and are audited. | Patient (patient, optional), Case (case, optional), Agent (agent, optional), Hospital (hospital, optional), DocumentType (type, optional), User (uploadedBy, optional) | DocumentShare (shares), Admission (admissionsDischarged), Accreditation (accreditations), Quote (quotes), Invoice (invoices), VisaApplication (visaInvitations), MessageAttachment (messageAttachments) | soft delete |
+| **Document** | A file in the private bucket. Only metadata is here; downloads go through presigned URLs and are audited. | Patient (patient, optional), Case (case, optional), Agent (agent, optional), Hospital (hospital, optional), DocumentType (type, optional), User (uploadedBy, optional) | DocumentShare (shares), Admission (admissionsDischarged), Accreditation (accreditations), Hospital (hospitalAgreements), Quote (quotes), Invoice (invoices), VisaApplication (visaInvitations), MessageAttachment (messageAttachments) | soft delete |
 | **FileUpload** | One browser upload of a file to the private bucket. The API creates it when it signs the start of the multipart upload and only signs later requests for keys it knows, for the same user, while it is open. | User (user) |  |  |
 | **DocumentShare** | A patient-consented share of one document with one hospital. A hospital sees a document only through a live row here. | Document (document), Hospital (hospital), Consent (consent), User (sharedBy, optional) |  | soft delete; unique: documentId + hospitalId |
 
@@ -141,14 +141,14 @@ Partner hospitals, their doctors and fixed-price packages.
 
 | Entity | What it is | Belongs to | Has | Notes |
 | --- | --- | --- | --- | --- |
-| **Hospital** | A partner hospital. `agreementBp` is the referral-fee share in basis points (1250 = 12.5%). Bank details are stored encrypted by the application. | City (city) | Consent (consents), Case (cases), Document (documents), DocumentShare (documentShares), Admission (admissions), HospitalBranch (branches), HospitalStaff (staff), Accreditation (accreditations), Department (departments), Doctor (doctors), HospitalTranslation (translations), Package (packages), OpinionRequest (opinionRequests), Invoice (invoices), StayHospitalDistance (stayDistances), CommissionRule (commissionRules), Conversation (conversations), Feedback (feedbacks) | soft delete; full-text search |
+| **Hospital** | A partner hospital. `agreementBp` is the referral-fee share in basis points (1250 = 12.5%). Bank details are stored encrypted by the application. | Document (agreementDocument, optional), City (city) | Consent (consents), Case (cases), Document (documents), DocumentShare (documentShares), Admission (admissions), HospitalBranch (branches), HospitalStaff (staff), Accreditation (accreditations), Department (departments), Doctor (doctors), HospitalTranslation (translations), Package (packages), OpinionRequest (opinionRequests), Invoice (invoices), StayHospitalDistance (stayDistances), CommissionRule (commissionRules), Conversation (conversations), Feedback (feedbacks), PartnerChangeRequest (changeRequests) | soft delete; full-text search |
 | **HospitalTranslation** | Hospital text in one language. | Hospital (hospital) |  | unique: hospitalId + locale |
 | **HospitalBranch** | A branch of a hospital group, managed from one login. | Hospital (hospital), City (city) | HospitalStaff (hospitalStaffs), Doctor (doctors) | soft delete |
-| **Accreditation** | NABH, JCI and other accreditations, with the certificate and its expiry. | Hospital (hospital), Document (certificate, optional) |  | soft delete |
+| **Accreditation** | NABH, JCI and other accreditations, with the certificate and its expiry. | Hospital (hospital), User (verifiedBy, optional), Document (certificate, optional) |  | soft delete |
 | **Department** | A speciality a hospital offers. | Hospital (hospital), Speciality (speciality) |  | soft delete; unique: hospitalId + specialityId |
 | **Doctor** | A treating specialist at a hospital. | Hospital (hospital), HospitalBranch (branch, optional), Speciality (speciality) | Admission (admissions), HospitalStaff (hospitalStaffs), DoctorTranslation (translations), OpinionRequest (opinionRequests), Opinion (opinions), Feedback (feedbacks) | soft delete; full-text search; money in minor units |
 | **DoctorTranslation** | Doctor text in one language. | Doctor (doctor) |  | unique: doctorId + locale |
-| **Package** | A fixed-price package per procedure and room category; used by the cost estimator and the quote builder. | Hospital (hospital), Treatment (treatment) | PackageTranslation (translations), Opinion (opinions) | soft delete; money in minor units |
+| **Package** | A fixed-price package per procedure and room category; used by the cost estimator and the quote builder. | Hospital (hospital), Treatment (treatment) | PartnerChangeRequest (changeRequests), PackageTranslation (translations), Opinion (opinions) | soft delete; money in minor units |
 | **PackageTranslation** | Package text in one language. | Package (package) |  | unique: packageId + locale |
 | **Admission** | The treatment stay at a hospital: admission, surgery and discharge dates, and the estimate, running bill and final bill. Referral fees, commission and the bill-versus-estimate alert read these. | Case (case), Hospital (hospital), Doctor (doctor, optional), Document (dischargeSummary, optional) |  | soft delete; money in minor units; unique: caseId + hospitalId |
 
@@ -176,6 +176,14 @@ What we charge (AD-05). A price change adds a `PriceItemVersion` and never edits
 | **DiscountThreshold** | The biggest discount (basis points of the quote) a role may give without someone above them approving it. | User (updatedBy, optional) |  |  |
 | **FxSetting** | Exchange-rate settings; always one row with id `default`. A null provider means the environment's FX_PROVIDER. | User (updatedBy, optional) |  |  |
 | **FxOverride** | A rate set by hand instead of the provider's: 1 base = rate quote, with a reason, until it expires or is removed. | User (createdBy, optional) |  |  |
+
+## Partner approvals
+
+What hospitals send us for review (AD-02). A `PartnerChangeRequest` holds the fields as submitted (`current`) and as proposed; approving applies `proposed` in the same transaction as the decision. Referral fee, agreement dates and accreditation checks live on `Hospital` and `Accreditation`.
+
+| Entity | What it is | Belongs to | Has | Notes |
+| --- | --- | --- | --- | --- |
+| **PartnerChangeRequest** | A hospital's submission for review: the first onboarding, an edit to its profile, or a new package price. `current` is what the fields held when it was submitted and `proposed` what the hospital wants; approving applies `proposed` in one transaction. | Hospital (hospital), Package (package, optional), User (submittedBy, optional), User (decidedBy, optional) |  | soft delete |
 
 ## Money
 
@@ -300,3 +308,5 @@ Audit trail, the event outbox and the counters behind human-readable numbers.
 | **InterpreterEmployment** | `in_house`, `freelance` |
 | **FxProvider** | `static`, `frankfurter`, `openexchangerates` |
 | **PriceItemKind** | `service_package`, `add_on` |
+| **ChangeRequestKind** | `hospital_onboarding`, `hospital_profile`, `package_price` |
+| **ChangeRequestStatus** | `pending`, `approved`, `rejected`, `withdrawn` |

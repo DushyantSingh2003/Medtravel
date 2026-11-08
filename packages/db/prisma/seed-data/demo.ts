@@ -960,6 +960,132 @@ async function seedCases(
 }
 
 /** Demo data for every portal. Returns the number of cases created (0 when it already exists). */
+const dayFrom = (days: number): Date => {
+  const today = new Date();
+  return new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + days));
+};
+
+/**
+ * Gives the demo hospitals agreements, accreditation expiries and verified certificates, publishes their packages, and leaves
+ * three things waiting in the review queue, so the approval screens have something to show. A hospital that already has an
+ * agreement date is left alone, so an admin's changes survive a second run.
+ */
+async function seedPartnerReview(prisma: PrismaClient, hospitalIds: string[]): Promise<void> {
+  const admin = await prisma.user.findFirst({
+    where: { role: 'super_admin', deletedAt: null },
+    select: { id: true },
+  });
+  const desk = await prisma.user.findFirst({
+    where: { role: 'hospital_desk', deletedAt: null },
+    select: { id: true },
+  });
+  for (const [index, id] of hospitalIds.entries()) {
+    const hospital = await prisma.hospital.findUniqueOrThrow({
+      where: { id },
+      select: { agreementStartsOn: true },
+    });
+    if (hospital.agreementStartsOn) continue;
+    // One agreement ends within weeks and one accreditation lapses soon, so the health view has something to flag.
+    const endsIn = index === 1 ? 24 : 300 + index * 30;
+    await prisma.hospital.update({
+      where: { id },
+      data: { agreementStartsOn: dayFrom(endsIn - 365), agreementEndsOn: dayFrom(endsIn) },
+    });
+    const accreditations = await prisma.accreditation.findMany({
+      where: { hospitalId: id, deletedAt: null },
+      orderBy: { body: 'asc' },
+      select: { id: true, body: true },
+    });
+    for (const [a, accreditation] of accreditations.entries()) {
+      await prisma.accreditation.update({
+        where: { id: accreditation.id },
+        data: {
+          certificateNo: `${accreditation.body.toUpperCase()}-${2020 + index}-${100 + a}`,
+          issuedAt: dayFrom(-400),
+          expiresAt: dayFrom(index === 2 && a === 0 ? 40 : 200 + a * 120),
+          verifiedAt: new Date(),
+          ...(admin ? { verifiedById: admin.id } : {}),
+          verificationNote: 'Checked on the accreditation body site (demo)',
+        },
+      });
+    }
+    await prisma.package.updateMany({
+      where: { hospitalId: id, active: true, deletedAt: null },
+      data: { published: true },
+    });
+  }
+
+  if ((await prisma.partnerChangeRequest.count()) > 0) return;
+  const [first, second] = hospitalIds;
+  if (!first || !second) return;
+  const firstHospital = await prisma.hospital.findUniqueOrThrow({
+    where: { id: first },
+    select: { name: true, bedCount: true, website: true },
+  });
+  const pack = await prisma.package.findFirst({
+    where: { hospitalId: first, deletedAt: null },
+    orderBy: { name: 'asc' },
+    select: { id: true, priceMinor: true, currency: true },
+  });
+  const submittedById = desk?.id ?? null;
+  await prisma.partnerChangeRequest.create({
+    data: {
+      kind: 'hospital_profile',
+      hospitalId: first,
+      current: { bedCount: firstHospital.bedCount, website: firstHospital.website },
+      proposed: { bedCount: (firstHospital.bedCount ?? 400) + 60, website: 'https://new-site.example.com' },
+      note: 'We opened a new wing and launched a new website (demo).',
+      submittedById,
+    },
+  });
+  if (pack)
+    await prisma.partnerChangeRequest.create({
+      data: {
+        kind: 'package_price',
+        hospitalId: first,
+        packageId: pack.id,
+        current: { priceMinor: Number(pack.priceMinor), currency: pack.currency },
+        proposed: {
+          priceMinor: Math.round((Number(pack.priceMinor) * 9) / 10 / 100) * 100,
+          currency: pack.currency,
+        },
+        note: 'Seasonal price (demo).',
+        submittedById,
+      },
+    });
+  const city = await prisma.hospital.findUniqueOrThrow({ where: { id: second }, select: { cityId: true } });
+  const pending = await prisma.hospital.upsert({
+    where: { slug: 'demo-new-hospital' },
+    update: {},
+    create: {
+      slug: 'demo-new-hospital',
+      name: 'Demo New Hospital',
+      status: 'pending_review',
+      cityId: city.cityId,
+      description: 'A fictional hospital waiting for approval.',
+      bedCount: 220,
+      phone: '+911140000000',
+      email: 'info@demo-new-hospital.example.com',
+    },
+  });
+  await prisma.partnerChangeRequest.create({
+    data: {
+      kind: 'hospital_onboarding',
+      hospitalId: pending.id,
+      current: {},
+      proposed: {
+        name: pending.name,
+        description: pending.description,
+        bedCount: 220,
+        phone: '+911140000000',
+        email: 'info@demo-new-hospital.example.com',
+      },
+      note: 'Please review our profile and accreditations (demo).',
+      submittedById,
+    },
+  });
+}
+
 export async function seedDemoData(
   prisma: PrismaClient,
 ): Promise<{ cases: number; hospitals: number }> {
@@ -971,6 +1097,7 @@ export async function seedDemoData(
     if (!ref.countries.has(code))
       throw new Error(`Seed the master data first: country ${code} is missing`);
   const hosp = await seedHospitals(prisma, ref);
+  await seedPartnerReview(prisma, hosp.hospitalIds);
   const agentIds = await seedAgents(prisma);
   await linkDevStaff(prisma, hosp, ref);
   await seedTeam(prisma);

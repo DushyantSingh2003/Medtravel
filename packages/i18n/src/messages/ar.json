@@ -1879,5 +1879,180 @@
         "saved": "تم تحديد السعر اليدوي"
       }
     }
+  },
+  "partners": {
+    "title": "اعتماد المستشفيات والأطباء",
+    "description": "راجع التسجيل وتحقق من الاعتماد وانشر الملفات أو ألغِ نشرها.",
+    "tabs": {
+      "requests": "قائمة المراجعة",
+      "hospitals": "المستشفيات",
+      "health": "صحة الشركاء"
+    },
+    "actions": {
+      "close": "إغلاق",
+      "cancel": "إلغاء"
+    },
+    "requests": {
+      "title": "طلبات المراجعة",
+      "retry": "حاول مرة أخرى",
+      "failed": "تعذّر تحميل الطلبات",
+      "empty": "لا شيء للمراجعة",
+      "emptyHint": "غيّر عوامل التصفية أو انتظر حتى يرسل مستشفى شيئًا.",
+      "filters": {
+        "status": "الحالة",
+        "kind": "النوع",
+        "all": "الكل"
+      },
+      "status": {
+        "pending": "بانتظار المراجعة",
+        "approved": "معتمد",
+        "rejected": "مرفوض",
+        "withdrawn": "مسحوب"
+      },
+      "kind": {
+        "hospital_onboarding": "مستشفى جديد",
+        "hospital_profile": "تعديل الملف",
+        "package_price": "سعر الباقة"
+      },
+      "review": "مراجعة",
+      "view": "عرض",
+      "total": "{count, plural, zero {لا طلبات} one {طلب واحد} two {طلبان} few {# طلبات} many {# طلبًا} other {# طلب}}",
+      "previous": "السابق",
+      "next": "التالي",
+      "note": "ملاحظة من المستشفى",
+      "reason": "السبب المذكور",
+      "decideFailed": "تعذّر حفظ القرار",
+      "approve": "اعتماد",
+      "reject": "رفض",
+      "approved": "تم اعتماد الطلب",
+      "rejected": "تم رفض الطلب",
+      "rejectReason": "السبب",
+      "rejectReasonHint": "سيُبلَّغ المستشفى بالسبب.",
+      "diff": {
+        "caption": "ما الذي سيتغيّر",
+        "field": "الحقل",
+        "current": "الآن",
+        "proposed": "المقترح",
+        "empty": "غير محدد",
+        "stale": "تغيّر منذ ذلك الحين",
+        "none": "لا يذكر هذا الطلب أي تغييرات: راجع ملف المستشفى كما هو."
+      },
+      "fields": {
+        "name": "الاسم",
+        "description": "الوصف",
+        "address": "العنوان",
+        "website": "الموقع الإلكتروني",
+        "phone": "الهاتف",
+        "email": "البريد الإلكتروني",
+        "internationalDeskName": "جهة اتصال المكتب الدولي",
+        "internationalDeskEmail": "بريد المكتب الدولي",
+        "internationalDeskPhone": "هاتف المكتب الدولي",
+        "bedCount": "عدد الأسرّة",
+        "establishedYear": "سنة التأسيس",
+        "priceMinor": "السعر",
+        "currency": "العملة"
+      }
+    },
+    "hospitals": {
+      "title": "المستشفيات",
+      "search": "بحث بالاسم",
+      "status": "الحالة",
+      "all": "الكل",
+      "retry": "حاول مرة أخرى",
+      "failed": "تعذّر تحميل المستشفيات",
+      "empty": "لا توجد مستشفيات مطابقة",
+      "statuses": {
+        "draft": "مسودة",
+        "pending_review": "قيد المراجعة",
+        "approved": "معتمد",
+        "published": "منشور",
+        "unpublished": "غير منشور",
+        "suspended": "موقوف"
+      },
+      "noFee": "لم تُحدَّد عمولة الإحالة",
+      "fee": "عمولة الإحالة {fee}",
+      "endsOn": "ينتهي الاتفاق {date}",
+      "waiting": "{count, plural, zero {لا طلبات} one {طلب واحد بالانتظار} two {طلبان بالانتظار} few {# طلبات بالانتظار} many {# طلبًا بالانتظار} other {# طلب بالانتظار}}",
+      "manage": "إدارة",
+      "total": "{count, plural, zero {لا مستشفيات} one {مستشفى واحد} two {مستشفيان} few {# مستشفيات} many {# مستشفى} other {# مستشفى}}",
+      "previous": "السابق",
+      "next": "التالي",
+      "publish": "النشر على الموقع",
+      "unpublish": "إزالة من الموقع",
+      "published": "تم نشر المستشفى",
+      "unpublished": "أُزيل المستشفى من الموقع",
+      "actionFailed": "لم تنجح العملية",
+      "agreement": {
+        "title": "عمولة الإحالة والاتفاق",
+        "fee": "عمولة الإحالة (%)",
+        "feeHint": "حصتنا من فاتورة المستشفى التي نُصدرها للمستشفى",
+        "startsOn": "بداية الاتفاق",
+        "endsOn": "نهاية الاتفاق",
+        "save": "حفظ الاتفاق",
+        "saved": "تم حفظ الاتفاق",
+        "failed": "تعذّر حفظ الاتفاق"
+      },
+      "accreditations": {
+        "title": "الاعتمادات",
+        "empty": "لا توجد اعتمادات مسجّلة",
+        "bodies": {
+          "nabh": "اعتماد NABH",
+          "jci": "اعتماد JCI",
+          "nabl": "اعتماد NABL",
+          "iso": "شهادة ISO",
+          "other": "أخرى"
+        },
+        "expires": "تنتهي {date}",
+        "noExpiry": "بلا تاريخ انتهاء",
+        "expired": "منتهية",
+        "noCertificate": "لم تُرفع شهادة",
+        "verifiedOn": "تم التحقق {date}",
+        "verified": "موثّق",
+        "unverified": "غير موثّق",
+        "verify": "وضع علامة موثّق",
+        "removeCheck": "إزالة التحقق",
+        "verifiedDone": "تم توثيق الاعتماد",
+        "unverifiedDone": "أُزيل التحقق"
+      },
+      "doctors": {
+        "title": "الأطباء",
+        "empty": "لا يوجد أطباء",
+        "onWebsite": "{name} على الموقع",
+        "published": "تم نشر الطبيب",
+        "unpublished": "أُزيل الطبيب من الموقع"
+      },
+      "packages": {
+        "title": "الباقات",
+        "empty": "لا توجد باقات",
+        "onWebsite": "{name} على الموقع",
+        "off": "غير متاحة",
+        "published": "تم نشر الباقة",
+        "unpublished": "أُزيلت الباقة من الموقع"
+      }
+    },
+    "health": {
+      "failed": "تعذّر تحميل صحة الشركاء",
+      "retry": "حاول مرة أخرى",
+      "accreditations": "اعتمادات تقترب من الانتهاء",
+      "agreements": "اتفاقات تقترب من الانتهاء",
+      "noneExpiring": "لا شيء ينتهي خلال 90 يومًا.",
+      "daysLeft": "{count, plural, zero {لم يتبقَّ شيء} one {بقي يوم واحد} two {بقي يومان} few {بقيت # أيام} many {بقي # يومًا} other {بقي # يوم}}",
+      "overdue": "{count, plural, zero {لا تأخير} one {تأخر يوم واحد} two {تأخر يومان} few {تأخر # أيام} many {تأخر # يومًا} other {تأخر # يوم}}",
+      "bodies": {
+        "nabh": "اعتماد NABH",
+        "jci": "اعتماد JCI",
+        "nabl": "اعتماد NABL",
+        "iso": "شهادة ISO",
+        "other": "أخرى"
+      },
+      "responseTimes": "سرعة ردّ المستشفيات",
+      "responseHint": "متوسط الساعات من إرسال طلب الرأي الطبي حتى الإجابة، حسب شهر الإرسال.",
+      "noRequests": "لا توجد طلبات رأي طبي في آخر ستة أشهر.",
+      "hospital": "المستشفى",
+      "noRequestsMonth": "لا طلبات",
+      "noAnswers": "لا إجابات",
+      "hours": "{hours} س",
+      "answered": "أُجيب على {answered} من {requests}"
+    }
   }
 }
