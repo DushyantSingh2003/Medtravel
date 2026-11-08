@@ -161,10 +161,12 @@
       "note": "Pricing rules: versioned price list (packages, add-ons), margins, discount limits, FX markup/provider and audited manual rates, /admin/pricing screen, quotes keep their price; pnpm check, API/worker/db e2e and browser tests green"
     },
     "AD-02": {
-      "status": "in-progress",
+      "status": "done",
       "attempts": 1,
       "claimedAt": "2026-11-08T03:01:31.767Z",
-      "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e"
+      "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e",
+      "finishedAt": "2026-11-08T03:29:54.895Z",
+      "note": "Partner approvals: review queue with diff, approve/reject, agreements and referral fee, accreditation verification, publish/unpublish with website refresh, partner health view; pnpm check, API/worker/db e2e and browser tests green"
     }
   },
   "approvals": [],
@@ -209,6 +211,7 @@
     "2026-11-03T14:23:59.422Z finish AD-01 done",
     "2026-11-08T02:34:49.106Z claim AD-05 attempt 1",
     "2026-11-08T03:00:48.232Z finish AD-05 done",
-    "2026-11-08T03:01:31.767Z claim AD-02 attempt 1"
+    "2026-11-08T03:01:31.767Z claim AD-02 attempt 1",
+    "2026-11-08T03:29:54.895Z finish AD-02 done"
   ]
 }
