@@ -168,6 +168,8 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12, AD-01, AD-02, AD-05.
 
 ### Deferred from AD-02
 
+- **CI:** GitHub run 50 on `develop` (AD-05 and AD-02 together) is green. Runs 47 to 49 failed only on one pricing browser test that matched history entries too strictly; fixed.
+
 - **The website does not use the cache tags yet, and there is no quote builder.** Approving or publishing writes the data and a
   `web.revalidate` event; the worker posts it to the website's `/api/revalidate`, which calls `revalidateTag`. The public pages (W-xx)
   must read hospitals, doctors and packages with the tags `hospitals`, `hospital:<slug>`, `doctors`, `doctor:<slug>` and `packages`, and
