@@ -4,7 +4,7 @@ Tick a task here when it is finished and `pnpm check` is green. The task queue t
 build loop is `loop/cloud-state.json`; this file is the human-readable view and also records
 what each task deferred.
 
-Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12, AD-01.
+Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12, AD-01, AD-05.
 
 ### Phase 0 — Scaffold (week 1)
 
@@ -100,7 +100,7 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12, AD-01.
 - [ ] **AD-02** Hospital and doctor approvals
 - [ ] **AD-03** Agent approvals and commission plans
 - [ ] **AD-04** CMS
-- [ ] **AD-05** Pricing rules and FX
+- [x] **AD-05** Pricing rules and FX
 - [ ] **AD-06** Templates
 - [ ] **AD-07** Settings and audit viewer
 
@@ -165,6 +165,16 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12, AD-01.
 - [ ] **G-08** Advanced analytics
 
 ## Notes and deferred work
+
+### Deferred from AD-05
+
+- **The quote builder does not exist yet.** Margins, discount limits and the price lookup are stored, audited and tested here; the
+  builder (C-xx) must call `GET /admin/pricing/items/:code/price`, apply `applyMargin` and `discountDecision`, and copy the price onto
+  the quote line. The acceptance check (a changed Premium price leaves a sent quote alone) is tested against a quote built that way.
+- **Prices and inclusions are English only.** The price list has no translations; the website's package page (W-xx) will need them.
+- **Package prices are global.** The PRD's per-hospital package prices (the existing `Package` model) and their approval are AD-02.
+- **FX refresh uses the setting on the next daily run**, not immediately; there is no "refresh now" button.
+- **The discount line has no margin**, and discount approval itself (who approved what) is a quote-workflow step (C-xx).
 
 ### Deferred from AD-01
 

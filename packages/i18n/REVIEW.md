@@ -69,3 +69,10 @@ The whole `users.*` namespace (list, invite, profile, working hours, leave, sign
 confirmations, the impersonation banner and the sign-out notices) and the gallery's `impersonation` strings are machine-drafted
 Arabic. Worth a native reader: the confirmation wording for deactivating and for viewing as another user, the sign-in event names
 (`users.logins.events`), and the plural forms for people and members.
+
+## AD-05 (pricing rules and FX)
+
+The whole `pricing.*` namespace (price list, publish and history dialogs, margins, discount limits, rate settings, manual rates and
+their confirmations) is machine-drafted Arabic. Worth a native reader: "الهوامش" for margins, "هامش التحويل" for the conversion
+markup, and the wording of the manual-rate explanation. Add-on and package names and inclusions are admin-entered English text
+(the price list has no translations yet).

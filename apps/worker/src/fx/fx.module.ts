@@ -2,7 +2,7 @@ import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
 import { BullModule } from '@nestjs/bullmq';
 import { Inject, Injectable, Logger, Module, type OnApplicationBootstrap } from '@nestjs/common';
 import type { PrismaClient } from '@medtravel/db';
-import { createFxProvider, type FxProvider, type FxProviderName } from '@medtravel/fx';
+import { createFxProvider, type FxProvider } from '@medtravel/fx';
 import { captureError } from '@medtravel/observability';
 import type { Queue } from 'bullmq';
 import { ENV } from '../config/config.module.js';
@@ -32,7 +32,7 @@ export class FxProcessor extends WorkerHost {
     });
     if (!setting?.provider || setting.provider === this.provider.name) return this.provider;
     return createFxProvider({
-      provider: setting.provider as FxProviderName,
+      provider: setting.provider,
       ...(this.env.OPEN_EXCHANGE_RATES_APP_ID
         ? { openExchangeRatesAppId: this.env.OPEN_EXCHANGE_RATES_APP_ID }
         : {}),

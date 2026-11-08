@@ -174,7 +174,14 @@ describe('schema.prisma conventions', () => {
   });
 
   it('uses database-generated UUID keys, except the code-keyed reference tables', () => {
-    const codeKeyed = new Set(['Country', 'Language', 'Currency', 'NumberSequence', 'StageConfig']);
+    const codeKeyed = new Set([
+      'Country',
+      'Language',
+      'Currency',
+      'NumberSequence',
+      'StageConfig',
+      'FxSetting',
+    ]);
     for (const model of models) {
       if (codeKeyed.has(model.name)) continue;
       const id = fieldsOf(model).find((f) => f.name === 'id');
@@ -273,6 +280,12 @@ describe('schema.prisma conventions', () => {
       'OutboxEvent',
       'NumberSequence',
       'StageConfig',
+      'FxSetting',
+      'MarginRule',
+      'DiscountThreshold',
+      'FxOverride',
+      'PriceItemVersion',
+      'PriceItemPrice',
       'ProcessedWebhook',
       'DoctorTranslation',
       'HospitalTranslation',

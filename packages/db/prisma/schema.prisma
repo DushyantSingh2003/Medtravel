@@ -2502,6 +2502,13 @@ model StageConfig {
   updatedById   String?   @db.Uuid
 }
 
+/// Where daily exchange rates come from.
+enum FxProvider {
+  static
+  frankfurter
+  openexchangerates
+}
+
 /// What a price list entry is: one of the three service packages, or an add-on.
 enum PriceItemKind {
   service_package
@@ -2523,6 +2530,7 @@ model PriceItem {
   versions   PriceItemVersion[]
   createdAt  DateTime           @default(now()) @db.Timestamptz(3)
   updatedAt  DateTime           @updatedAt @db.Timestamptz(3)
+  deletedAt  DateTime?          @db.Timestamptz(3)
 
   @@index([kind, sortOrder])
 }
@@ -2583,12 +2591,12 @@ model DiscountThreshold {
 
 /// Exchange-rate settings; always one row with id `default`. A null provider means the environment's FX_PROVIDER.
 model FxSetting {
-  id          String   @id
-  provider    String?
-  markupBp    Int      @default(0)
-  updatedById String?  @db.Uuid
-  updatedBy   User?    @relation("FxSettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
-  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+  id          String      @id
+  provider    FxProvider?
+  markupBp    Int         @default(0)
+  updatedById String?     @db.Uuid
+  updatedBy   User?       @relation("FxSettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  updatedAt   DateTime    @updatedAt @db.Timestamptz(3)
 
   @@index([updatedById])
 }

@@ -51,7 +51,7 @@ export class FxAdminService {
       select: { provider: true, markupBp: true, updatedAt: true, updatedBy: { select: { name: true } } },
     });
     return {
-      provider: (row?.provider as FxSettings['provider']) ?? null,
+      provider: row?.provider ?? null,
       markupBp: row?.markupBp ?? 0,
       updatedAt: row?.updatedAt.toISOString() ?? null,
       updatedByName: row?.updatedBy?.name ?? null,

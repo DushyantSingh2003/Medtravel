@@ -93,7 +93,7 @@ export class PricingService {
   // ---- price list -------------------------------------------------------------------------------------------
   async listItems(kind?: PriceItemKind): Promise<PriceItem[]> {
     const rows = await this.prisma.priceItem.findMany({
-      where: kind ? { kind } : {},
+      where: { deletedAt: null, ...(kind ? { kind } : {}) },
       select: ITEM_SELECT,
       orderBy: [{ kind: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }],
     });
@@ -101,7 +101,10 @@ export class PricingService {
   }
 
   private async load(db: Db, code: string): Promise<ItemRow> {
-    const row = await db.priceItem.findUnique({ where: { code }, select: ITEM_SELECT });
+    const row = await db.priceItem.findFirst({
+      where: { code, deletedAt: null },
+      select: ITEM_SELECT,
+    });
     if (!row) throw new NotFoundException('That price list entry does not exist');
     return row;
   }
@@ -170,8 +173,8 @@ export class PricingService {
   }
 
   async history(code: string): Promise<PriceHistory> {
-    const item = await this.prisma.priceItem.findUnique({
-      where: { code },
+    const item = await this.prisma.priceItem.findFirst({
+      where: { code, deletedAt: null },
       select: { versions: { select: VERSION_SELECT, orderBy: { version: 'desc' } } },
     });
     if (!item) throw new NotFoundException('That price list entry does not exist');
