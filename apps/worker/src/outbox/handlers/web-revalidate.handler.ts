@@ -30,6 +30,11 @@ export async function revalidateWebsite(
     body: JSON.stringify({ tags }),
     signal: AbortSignal.timeout(10_000),
   });
+  // A refusal that retrying cannot change (a bad request or secret) is logged and dropped; anything else is retried.
+  if (response.status === 400 || response.status === 403) {
+    logger.error(`website refresh refused with ${response.status}: check the tags and REVALIDATE_SECRET`);
+    return 'skipped';
+  }
   if (!response.ok) throw new Error(`The website answered ${response.status} to a refresh`);
   return 'sent';
 }

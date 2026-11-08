@@ -303,6 +303,73 @@ describe('reviewing a price change', () => {
   });
 });
 
+describe('withdrawing and edge cases', () => {
+  const sendPrice = async (priceMinor: number) =>
+    (
+      await asDesk(fx.deskToken, 'POST', '/hospital/change-requests/price', {
+        packageId: fx.packageId,
+        priceMinor,
+        currency: 'USD',
+      })
+    ).body as { id: string };
+
+  it('settles a withdrawal and an approval made at the same moment into one outcome', async () => {
+    const { id } = await sendPrice(333_000);
+    const [w, a] = await Promise.all([
+      asDesk(fx.deskToken, 'DELETE', `/hospital/change-requests/${id}`),
+      t.call('super_admin', 'POST', `/admin/partners/requests/${id}/approve`),
+    ]);
+    // One wins and the other is told it came too late.
+    expect([`${w.status}/${a.status}`]).toContainEqual(expect.stringMatching(/^(204\/409|409\/201)$/));
+    const request = await t.db.partnerChangeRequest.findUniqueOrThrow({ where: { id } });
+    const pack = await t.db.package.findUniqueOrThrow({ where: { id: fx.packageId } });
+    // Either the price was applied and the request says approved, or neither happened: never a mixture.
+    if (request.status === 'approved') {
+      expect(pack.priceMinor).toBe(333_000n);
+      expect(w.status).toBe(409);
+    } else {
+      expect(request.status).toBe('withdrawn');
+      expect(pack.priceMinor).not.toBe(333_000n);
+      expect(a.status).toBe(409);
+    }
+  });
+
+  it('does not let another hospital withdraw a request', async () => {
+    const { id } = await sendPrice(111_000);
+    expect((await asDesk(fx.otherDeskToken, 'DELETE', `/hospital/change-requests/${id}`)).status).toBe(403);
+    expect((await asDesk(fx.deskToken, 'DELETE', `/hospital/change-requests/${id}`)).status).toBe(204);
+  });
+
+  it('refuses a price of zero, and treats an empty text as clearing the field', async () => {
+    const zero = await asDesk(fx.deskToken, 'POST', '/hospital/change-requests/price', {
+      packageId: fx.packageId,
+      priceMinor: 0,
+      currency: 'USD',
+    });
+    expect(zero.status).toBe(400);
+    const cleared = await asDesk(fx.deskToken, 'POST', '/hospital/change-requests/profile', {
+      fields: { description: '' },
+    });
+    // The description is already empty, so clearing it changes nothing.
+    expect(cleared.status).toBe(422);
+  });
+
+  it('refuses to approve a price whose currency was switched off after it was submitted', async () => {
+    await t.db.currency.create({ data: { code: 'AED', name: 'Dirham', minorUnits: 2 } });
+    const sent = await asDesk(fx.deskToken, 'POST', '/hospital/change-requests/price', {
+      packageId: fx.packageId,
+      priceMinor: 99_000,
+      currency: 'AED',
+    });
+    const id = (sent.body as { id: string }).id;
+    await t.db.currency.update({ where: { code: 'AED' }, data: { active: false } });
+    const res = await t.call('super_admin', 'POST', `/admin/partners/requests/${id}/approve`);
+    expect(res.status).toBe(409);
+    expect((await t.db.partnerChangeRequest.findUniqueOrThrow({ where: { id } })).status).toBe('pending');
+    await t.call('super_admin', 'POST', `/admin/partners/requests/${id}/reject`, { reason: 'Currency switched off' });
+  });
+});
+
 describe('reviewing a profile edit and an onboarding', () => {
   it('applies only the approved fields, and a rejection leaves the profile alone and records why', async () => {
     const send = (fields: Record<string, unknown>) =>

@@ -24,9 +24,16 @@ describe('revalidateWebsite', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('throws when the website refuses, so the outbox tries again', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('no', { status: 403 }));
-    await expect(revalidateWebsite(target, event({ tags: ['a'] }))).rejects.toThrow('403');
+  it('throws when the website fails, so the outbox tries again', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('no', { status: 503 }));
+    await expect(revalidateWebsite(target, event({ tags: ['a'] }))).rejects.toThrow('503');
+  });
+
+  it('drops a refusal that retrying cannot change, instead of retrying it for ever', async () => {
+    for (const status of [400, 403]) {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('no', { status }));
+      expect(await revalidateWebsite(target, event({ tags: ['a'] }))).toBe('skipped');
+    }
   });
 
   it('rejects a payload without tags', async () => {

@@ -65,6 +65,18 @@ export const envSchema = z
         path: ['FX_PROVIDER'],
         message: 'Set a real exchange-rate provider in production',
       });
+    if (Boolean(env.WEB_REVALIDATE_URL) !== Boolean(env.WEB_REVALIDATE_SECRET))
+      ctx.addIssue({
+        code: 'custom',
+        path: ['WEB_REVALIDATE_URL'],
+        message: 'WEB_REVALIDATE_URL and WEB_REVALIDATE_SECRET must be set together',
+      });
+    if (env.NODE_ENV === 'production' && !env.WEB_REVALIDATE_URL)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['WEB_REVALIDATE_URL'],
+        message: 'Production needs WEB_REVALIDATE_URL and WEB_REVALIDATE_SECRET, or the website is never refreshed',
+      });
     if (env.FX_PROVIDER === 'openexchangerates' && !env.OPEN_EXCHANGE_RATES_APP_ID)
       ctx.addIssue({
         code: 'custom',

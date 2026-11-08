@@ -217,6 +217,8 @@ export class PartnerHospitalsService {
         select: { id: true, hospitalId: true, certificateId: true, verifiedAt: true },
       });
       if (!a) throw new NotFoundException('That accreditation does not exist');
+      // Publishing counts verified accreditations under this lock; a check removed at the same moment must wait for it.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`partner-publish:${a.hospitalId}`}))`;
       if (input.verified && !a.certificateId)
         throw fieldError('verified', 'There is no certificate to check: ask the hospital to upload it');
       await tx.accreditation.update({
@@ -278,7 +280,11 @@ export class PartnerHospitalsService {
         before: { status: h.status },
         after: { status: 'published' },
       });
-      await queueRevalidation(this.outbox, tx, { type: 'Hospital', id }, hospitalTags(h.slug));
+      await queueRevalidation(this.outbox, tx, { type: 'Hospital', id }, [
+        ...hospitalTags(h.slug),
+        'doctors',
+        'packages',
+      ]);
     });
     return { id, published: true };
   }
@@ -297,18 +303,27 @@ export class PartnerHospitalsService {
         before: { status: 'published' },
         after: { status: 'unpublished' },
       });
-      await queueRevalidation(this.outbox, tx, { type: 'Hospital', id }, hospitalTags(h.slug));
+      await queueRevalidation(this.outbox, tx, { type: 'Hospital', id }, [
+        ...hospitalTags(h.slug),
+        'doctors',
+        'packages',
+      ]);
     });
     return { id, published: false };
   }
 
   async setDoctorPublished(id: string, published: boolean, context: RequestContext): Promise<PublishResult> {
     await this.prisma.$transaction(async (tx) => {
-      const d = await tx.doctor.findFirst({
+      const found = await tx.doctor.findFirst({
+        where: { id, deletedAt: null },
+        select: { hospitalId: true },
+      });
+      if (!found) throw new NotFoundException('That doctor does not exist');
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`partner-publish:${found.hospitalId}`}))`;
+      const d = await tx.doctor.findFirstOrThrow({
         where: { id, deletedAt: null },
         select: { id: true, slug: true, published: true, hospital: { select: { slug: true, status: true } } },
       });
-      if (!d) throw new NotFoundException('That doctor does not exist');
       if (published && d.hospital.status !== 'published')
         throw fieldError('hospital', 'Publish the hospital first', HttpStatus.CONFLICT);
       if (d.published === published) return;
@@ -330,11 +345,16 @@ export class PartnerHospitalsService {
 
   async setPackagePublished(id: string, published: boolean, context: RequestContext): Promise<PublishResult> {
     await this.prisma.$transaction(async (tx) => {
-      const p = await tx.package.findFirst({
+      const found = await tx.package.findFirst({
+        where: { id, deletedAt: null },
+        select: { hospitalId: true },
+      });
+      if (!found) throw new NotFoundException('That package does not exist');
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`partner-publish:${found.hospitalId}`}))`;
+      const p = await tx.package.findFirstOrThrow({
         where: { id, deletedAt: null },
         select: { id: true, active: true, published: true, hospital: { select: { slug: true, status: true } } },
       });
-      if (!p) throw new NotFoundException('That package does not exist');
       if (published && p.hospital.status !== 'published')
         throw fieldError('hospital', 'Publish the hospital first', HttpStatus.CONFLICT);
       if (published && !p.active)

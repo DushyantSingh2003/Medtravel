@@ -67,7 +67,7 @@ export type SubmitProfileEdit = z.infer<typeof submitProfileEditSchema>;
 
 export const submitPriceChangeSchema = z.object({
   packageId: z.uuid(),
-  priceMinor: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
+  priceMinor: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER),
   currency: z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/),
   note: text(500).optional(),
 });

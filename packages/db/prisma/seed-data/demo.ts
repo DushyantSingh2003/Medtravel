@@ -967,7 +967,7 @@ const dayFrom = (days: number): Date => {
 
 /**
  * Gives the demo hospitals agreements, accreditation expiries and verified certificates, publishes their packages, and leaves
- * three things waiting in the review queue, so the approval screens have something to show. A hospital that already has an
+ * two things waiting in the review queue, so the approval screens have something to show. A hospital that already has an
  * agreement date is left alone, so an admin's changes survive a second run.
  */
 async function seedPartnerReview(prisma: PrismaClient, hospitalIds: string[]): Promise<void> {
@@ -1016,8 +1016,8 @@ async function seedPartnerReview(prisma: PrismaClient, hospitalIds: string[]): P
   }
 
   if ((await prisma.partnerChangeRequest.count()) > 0) return;
-  const [first, second] = hospitalIds;
-  if (!first || !second) return;
+  const [first] = hospitalIds;
+  if (!first) return;
   const firstHospital = await prisma.hospital.findUniqueOrThrow({
     where: { id: first },
     select: { name: true, bedCount: true, website: true },
@@ -1053,37 +1053,6 @@ async function seedPartnerReview(prisma: PrismaClient, hospitalIds: string[]): P
         submittedById,
       },
     });
-  const city = await prisma.hospital.findUniqueOrThrow({ where: { id: second }, select: { cityId: true } });
-  const pending = await prisma.hospital.upsert({
-    where: { slug: 'demo-new-hospital' },
-    update: {},
-    create: {
-      slug: 'demo-new-hospital',
-      name: 'Demo New Hospital',
-      status: 'pending_review',
-      cityId: city.cityId,
-      description: 'A fictional hospital waiting for approval.',
-      bedCount: 220,
-      phone: '+911140000000',
-      email: 'info@demo-new-hospital.example.com',
-    },
-  });
-  await prisma.partnerChangeRequest.create({
-    data: {
-      kind: 'hospital_onboarding',
-      hospitalId: pending.id,
-      current: {},
-      proposed: {
-        name: pending.name,
-        description: pending.description,
-        bedCount: 220,
-        phone: '+911140000000',
-        email: 'info@demo-new-hospital.example.com',
-      },
-      note: 'Please review our profile and accreditations (demo).',
-      submittedById,
-    },
-  });
 }
 
 export async function seedDemoData(

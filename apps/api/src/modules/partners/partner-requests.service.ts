@@ -108,9 +108,11 @@ export class PartnerRequestsService {
       const current = hospital as Fields;
       const proposed: Fields = {};
       const was: Fields = {};
-      for (const [field, value] of Object.entries(input.fields)) {
+      for (const [field, raw] of Object.entries(input.fields)) {
         if ((PROFILE_FIELDS as readonly string[]).indexOf(field) < 0) continue;
-        if (value === undefined || value === current[field]) continue;
+        // Clearing a field is null, whether it was sent as null or as an empty text.
+        const value = raw === '' ? null : raw;
+        if (value === undefined || value === (current[field] ?? null)) continue;
         proposed[field] = value as Scalar;
         was[field] = current[field] ?? null;
       }
@@ -247,6 +249,8 @@ export class PartnerRequestsService {
 
   async withdraw(actor: Actor, id: string, context: RequestContext): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
+      // The same lock a decision takes, so a withdrawal and an approval at the same moment cannot both win.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`partner-request:${id}`}))`;
       const request = await tx.partnerChangeRequest.findFirst({
         where: { id, deletedAt: null },
         select: { id: true, kind: true, status: true, hospitalId: true },
@@ -256,8 +260,8 @@ export class PartnerRequestsService {
       if (request.status !== 'pending')
         throw new ConflictException('Only a request still waiting for review can be withdrawn');
       if (request.kind === 'hospital_onboarding')
-        await tx.hospital.update({
-          where: { id: request.hospitalId },
+        await tx.hospital.updateMany({
+          where: { id: request.hospitalId, status: 'pending_review' },
           data: { status: 'draft' },
         });
       await tx.partnerChangeRequest.update({ where: { id }, data: { status: 'withdrawn' } });
@@ -429,6 +433,8 @@ export class PartnerRequestsService {
         const currency = proposed['currency'];
         if (typeof priceMinor !== 'number' || typeof currency !== 'string')
           throw fieldError('proposed', 'The proposed price is no longer valid');
+        if (!(await tx.currency.count({ where: { code: currency, active: true } })))
+          throw fieldError('proposed', `${currency} is no longer an active currency`, HttpStatus.CONFLICT);
         await tx.package.update({
           where: { id: pack.id },
           data: { priceMinor: BigInt(priceMinor), currency },
