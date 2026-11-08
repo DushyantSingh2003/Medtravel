@@ -2,7 +2,7 @@
 
 > Generated from `packages/db/prisma/schema.prisma` by `pnpm --filter @medtravel/db docs:model`. Do not edit by hand: a test fails when this file is out of date.
 
-The database holds **82 tables** and **51 enums** (PRD section 11). The central entity is the **Case**: one patient, one treatment episode, and everything else hangs off it.
+The database holds **89 tables** and **53 enums** (PRD section 11). The central entity is the **Case**: one patient, one treatment episode, and everything else hangs off it.
 
 ## Overview
 
@@ -79,7 +79,7 @@ Reference tables edited by admins (PRD 9.1). Countries, languages and currencies
 | **Country** | ISO 3166 country (patients, agents, cities). |  | City (cities), CountryTranslation (translations), Patient (patients), Patient (patientsResident), Attendant (attendants), Case (cases), Agent (agents) |  |
 | **CountryTranslation** | Country text in one language. The canonical (English) text lives on Country itself. | Country (country) |  | unique: countryCode + locale |
 | **Language** | Interface and content language, by BCP 47 code (en, ar, ru, fr, ...). |  |  |  |
-| **Currency** | ISO 4217 currency and how many minor-unit digits it has (2 for USD, 0 for JPY, 3 for KWD). |  | FxRate (fxRatesAsBase), FxRate (fxRatesAsQuote), Case (casesByBudgetCurrency), Admission (admissionsByCurrency), Doctor (doctorsByConsultFeeCurrency), Package (packagesByCurrency), Opinion (opinionsByCurrency), Quote (quotesByCurrency), Quote (quotesPricedFrom), QuoteLine (quoteLinesByCurrency), Invoice (invoicesByCurrency), CreditNote (creditNotesByCurrency), Payment (paymentsByCurrency), Refund (refundsByCurrency), StayRoom (stayRoomsByCurrency), Interpreter (interpretersByHourlyRateCurrency), Booking (bookingsByCurrency), Commission (commissionsByCurrency), Payout (payoutsByCurrency) |  |
+| **Currency** | ISO 4217 currency and how many minor-unit digits it has (2 for USD, 0 for JPY, 3 for KWD). |  | FxRate (fxRatesAsBase), FxRate (fxRatesAsQuote), Case (casesByBudgetCurrency), Admission (admissionsByCurrency), Doctor (doctorsByConsultFeeCurrency), Package (packagesByCurrency), Opinion (opinionsByCurrency), Quote (quotesByCurrency), Quote (quotesPricedFrom), QuoteLine (quoteLinesByCurrency), Invoice (invoicesByCurrency), CreditNote (creditNotesByCurrency), Payment (paymentsByCurrency), Refund (refundsByCurrency), StayRoom (stayRoomsByCurrency), Interpreter (interpretersByHourlyRateCurrency), Booking (bookingsByCurrency), Commission (commissionsByCurrency), Payout (payoutsByCurrency), PriceItemPrice (priceItemPrices), FxOverride (fxOverridesAsBase), FxOverride (fxOverridesAsQuote) |  |
 | **FxRate** | Exchange rate: 1 base = rate quote, as of a moment. Quotes and payments copy the rate they used. |  |  | unique: baseCurrency + quoteCurrency + asOf |
 | **Speciality** | Medical speciality (cardiology, orthopaedics). |  | Treatment (treatments), SpecialityTranslation (translations), MedicalSummary (medicalSummaries), Department (departments), Doctor (doctors) | soft delete |
 | **SpecialityTranslation** | Speciality text in one language. The canonical (English) text lives on Speciality itself. | Speciality (speciality) |  | unique: specialityId + locale |
@@ -98,7 +98,7 @@ One `User` per login. What a user is linked to depends on the role: a Patient, a
 
 | Entity | What it is | Belongs to | Has | Notes |
 | --- | --- | --- | --- | --- |
-| **User** | One row per login. Linked to a Patient, Agent (AgentUser), HospitalStaff or StaffProfile by role. |  | Session (sessions), AuthChallenge (authChallenges), AuthChallenge (createdChallenges), BackupCode (backupCodes), StaffProfile (managedStaff), Team (managedTeams), StaffLeave (leaves), Case (ownedCases), Case (reviewedCases), CaseStageHistory (stageChanges), MedicalSummary (medicalSummaries), Document (uploadedDocuments), FileUpload (fileUploads), NotificationPreference (notificationPreferences), DocumentShare (documentShares), CaseNote (caseNotes), HospitalStaff (hospitalStaffs), OpinionRequest (sentOpinionRequests), Opinion (submittedOpinions), Quote (acceptedQuotes), Quote (createdQuotes), Refund (requestedRefunds), Refund (approvedRefunds), Task (assignedTasks), Task (createdTasks), Message (sentMessages), Notification (notifications), Incident (reportedIncidents), Incident (assignedIncidents), Incident (escalatedIncidents), StaffProfile (staffProfile), AgentUser (agentUser), Patient (patient), Attendant (attendant), Interpreter (interpreter) | soft delete |
+| **User** | One row per login. Linked to a Patient, Agent (AgentUser), HospitalStaff or StaffProfile by role. |  | Session (sessions), AuthChallenge (authChallenges), AuthChallenge (createdChallenges), BackupCode (backupCodes), StaffProfile (managedStaff), Team (managedTeams), PriceItemVersion (priceVersionsCreated), MarginRule (marginRulesUpdated), DiscountThreshold (discountThresholdsUpdated), FxSetting (fxSettingsUpdated), FxOverride (fxOverridesCreated), StaffLeave (leaves), Case (ownedCases), Case (reviewedCases), CaseStageHistory (stageChanges), MedicalSummary (medicalSummaries), Document (uploadedDocuments), FileUpload (fileUploads), NotificationPreference (notificationPreferences), DocumentShare (documentShares), CaseNote (caseNotes), HospitalStaff (hospitalStaffs), OpinionRequest (sentOpinionRequests), Opinion (submittedOpinions), Quote (acceptedQuotes), Quote (createdQuotes), Refund (requestedRefunds), Refund (approvedRefunds), Task (assignedTasks), Task (createdTasks), Message (sentMessages), Notification (notifications), Incident (reportedIncidents), Incident (assignedIncidents), Incident (escalatedIncidents), StaffProfile (staffProfile), AgentUser (agentUser), Patient (patient), Attendant (attendant), Interpreter (interpreter) | soft delete |
 | **Session** | A signed-in browser or device. Only a hash of the token is stored. One sign-in on one device. `tokenHash` is the hash of the current refresh token; it rotates on every refresh and the previous hash is kept so that a replayed (stolen) refresh token revokes the whole session. | User (user), Case (scopeCase, optional) |  |  |
 | **AuthChallenge** | A one-time secret sent to a person: email verification, password reset, a sign-in code, an invitation or a magic link. Only hashes are stored; the token or code itself exists in the email and nowhere else. | User (user, optional), User (createdBy, optional) |  |  |
 | **BackupCode** | A single-use recovery code for a user who lost their authenticator app. Stored hashed. | User (user) |  |  |
@@ -162,6 +162,20 @@ A case goes to hospitals as `OpinionRequest`s, they answer with an `Opinion`, an
 | **Opinion** | The hospital's answer to an OpinionRequest: plan, doctor, stay, estimate. | OpinionRequest (opinionRequest), Doctor (doctor, optional), Package (package, optional), User (submittedBy, optional) | Quote (quotes) | soft delete; money in minor units; unique: opinionRequestId + version |
 | **Quote** | What we offer the patient. Stores the exchange rate it was priced with. | Case (case), Opinion (opinion, optional), User (acceptedBy, optional), User (createdBy, optional), Document (pdf, optional) | QuoteLine (lines), Payment (payments) | soft delete; money in minor units; unique: caseId + version |
 | **QuoteLine** | One line of a quote; `costMinor` is our cost, kept for the profit report. | Quote (quote) |  | money in minor units |
+
+## Pricing rules
+
+What we charge (AD-05). A price change adds a `PriceItemVersion` and never edits an old one; a quote copies its price onto its lines, so later versions do not touch it. A manual `FxOverride` wins over the provider rate while it is in force.
+
+| Entity | What it is | Belongs to | Has | Notes |
+| --- | --- | --- | --- | --- |
+| **PriceItem** | A thing we put a price on: Basic, Standard or Premium service, or an add-on (extra night, interpreter hour, SIM). The prices live in versions; changing a price adds a version and never edits an old one. |  | PriceItemVersion (versions) | soft delete |
+| **PriceItemVersion** | One published set of prices for an item. The newest version is the current price list; older ones stay for history. | PriceItem (item), User (createdBy, optional) | PriceItemPrice (prices) | unique: itemId + version |
+| **PriceItemPrice** | The price in one currency within a version. A currency with no row is converted from the INR price at the current rate. | PriceItemVersion (version) |  | money in minor units; unique: versionId + currency |
+| **MarginRule** | Our margin on one kind of quote line, in basis points of cost. One row per component. | User (updatedBy, optional) |  |  |
+| **DiscountThreshold** | The biggest discount (basis points of the quote) a role may give without someone above them approving it. | User (updatedBy, optional) |  |  |
+| **FxSetting** | Exchange-rate settings; always one row with id `default`. A null provider means the environment's FX_PROVIDER. | User (updatedBy, optional) |  |  |
+| **FxOverride** | A rate set by hand instead of the provider's: 1 base = rate quote, with a reason, until it expires or is removed. | User (createdBy, optional) |  |  |
 
 ## Money
 
@@ -284,3 +298,5 @@ Audit trail, the event outbox and the counters behind human-readable numbers.
 | **AdmissionStatus** | `planned`, `admitted`, `discharged`, `cancelled` |
 | **OutboxStatus** | `pending`, `processing`, `processed`, `failed` |
 | **InterpreterEmployment** | `in_house`, `freelance` |
+| **FxProvider** | `static`, `frankfurter`, `openexchangerates` |
+| **PriceItemKind** | `service_package`, `add_on` |

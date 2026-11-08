@@ -129,6 +129,51 @@ describe('looking up a rate', () => {
   });
 });
 
+describe('a manual rate', () => {
+  it('wins over the stored rate while it is in force, and the stored rate returns when it ends', async () => {
+    await storeRates(prisma, { base: 'USD', asOf: day('2026-06-01'), source: 'test', rates: { INR: '83.00' } });
+    await prisma.fxOverride.create({
+      data: {
+        baseCurrency: 'USD',
+        quoteCurrency: 'INR',
+        rate: '90',
+        reason: 'Bank rate',
+        createdAt: new Date('2026-06-01T08:00:00.000Z'),
+        expiresAt: new Date('2026-06-03T00:00:00.000Z'),
+      },
+    });
+    const during = await rateOn(prisma, 'USD', 'INR', new Date('2026-06-02T00:00:00.000Z'));
+    expect(during).toMatchObject({ rate: '90.00000000', source: 'manual', how: 'override' });
+    const inverse = await rateOn(prisma, 'INR', 'USD', new Date('2026-06-02T00:00:00.000Z'));
+    expect(inverse).toMatchObject({ source: 'manual', how: 'override' });
+    // After it expires, and before it was set, the provider's rate applies.
+    const after = await rateOn(prisma, 'USD', 'INR', new Date('2026-06-03T12:00:00.000Z'));
+    expect(after).toMatchObject({ rate: '83.00000000', how: 'direct' });
+    const before = await rateOn(prisma, 'USD', 'INR', new Date('2026-06-01T06:00:00.000Z'));
+    expect(before).toMatchObject({ rate: '83.00000000', how: 'direct' });
+  });
+
+  it('is ignored once it is revoked, but history asked about a day it was in force still sees it', async () => {
+    await prisma.fxOverride.create({
+      data: {
+        baseCurrency: 'USD',
+        quoteCurrency: 'AED',
+        rate: '4',
+        reason: 'Temporary',
+        createdAt: new Date('2026-06-01T08:00:00.000Z'),
+        revokedAt: new Date('2026-06-02T08:00:00.000Z'),
+      },
+    });
+    await storeRates(prisma, { base: 'USD', asOf: day('2026-06-01'), source: 'test', rates: { AED: '3.6725' } });
+    expect(
+      (await rateOn(prisma, 'USD', 'AED', new Date('2026-06-01T12:00:00.000Z'))).source,
+    ).toBe('manual');
+    expect(
+      (await rateOn(prisma, 'USD', 'AED', new Date('2026-06-02T12:00:00.000Z'))).source,
+    ).toBe('test');
+  });
+});
+
 describe('converting', () => {
   const on = new Date('2026-10-29T10:00:00Z');
 

@@ -1738,5 +1738,146 @@
       "deactivated": "Your account was deactivated. You have been signed out.",
       "twoFactorReset": "Your two-factor was reset. Sign in again to set it up."
     }
+  },
+  "pricing": {
+    "title": "Pricing rules",
+    "description": "Service package prices, margins and currency conversion rates updated daily.",
+    "tabs": {
+      "prices": "Price list",
+      "rules": "Margins and discounts",
+      "fx": "Exchange rates"
+    },
+    "actions": {
+      "close": "Close",
+      "cancel": "Cancel",
+      "retry": "Try again",
+      "error": "Something went wrong. Try again."
+    },
+    "kinds": {
+      "hospital": "Hospital",
+      "stay": "Stay",
+      "transfer": "Transfers",
+      "interpreter": "Interpreter",
+      "service_fee": "Service fee",
+      "add_on": "Add-ons",
+      "discount": "Discount",
+      "other": "Other"
+    },
+    "list": {
+      "failed": "The price list could not be loaded",
+      "per": "per {unit}",
+      "version": "Price list version {version}",
+      "off": "Not offered",
+      "noPrice": "No price set yet",
+      "setPrices": "Set prices",
+      "history": "History",
+      "edit": "Edit details",
+      "packages": "Service packages",
+      "addOns": "Add-ons",
+      "addAddOn": "Add an add-on",
+      "noAddOns": "No add-ons yet"
+    },
+    "publish": {
+      "title": "Set prices for {name}",
+      "hint": "Publishing creates a new version. Quotes that were already made keep the price they were made with.",
+      "priceIn": "Price in {currency}",
+      "remove": "Remove the {currency} price",
+      "addCurrency": "Add a currency",
+      "add": "Add",
+      "convertedHint": "A currency without a price here is converted from the rupee price at the day's rate plus the markup.",
+      "note": "Why the price changed (optional)",
+      "done": "New prices published",
+      "failed": "The prices could not be published",
+      "submit": "Publish prices"
+    },
+    "history": {
+      "title": "Price history: {name}",
+      "failed": "The history could not be loaded",
+      "empty": "No prices have been published",
+      "version": "Version {version}"
+    },
+    "edit": {
+      "title": "Edit {name}",
+      "done": "Details saved",
+      "failed": "The details could not be saved",
+      "submit": "Save"
+    },
+    "addOn": {
+      "title": "Add an add-on",
+      "done": "Add-on added",
+      "failed": "The add-on could not be added",
+      "submit": "Add"
+    },
+    "fields": {
+      "name": "Name",
+      "unit": "Unit",
+      "unitHint": "What one price buys, such as night, hour or item",
+      "inclusions": "What it includes",
+      "inclusionsHint": "One line for each thing included",
+      "active": "Offered to customers",
+      "code": "Code",
+      "codeHint": "Lower-case letters, digits and underscores; it cannot be changed later"
+    },
+    "rules": {
+      "failed": "The change could not be saved",
+      "loadFailed": "This could not be loaded",
+      "percentOf": "{name} margin (%)",
+      "margins": {
+        "title": "Margins",
+        "hint": "What we add on top of cost for each part of a quote.",
+        "saved": "Margins saved",
+        "save": "Save margins"
+      },
+      "discounts": {
+        "title": "Discount limits",
+        "hint": "The biggest discount each role can give without someone above them approving it. Limits cannot fall as the role goes up.",
+        "saved": "Discount limits saved",
+        "save": "Save limits",
+        "upTo": "{role}: up to (%)"
+      }
+    },
+    "fx": {
+      "failed": "The change could not be saved",
+      "loadFailed": "This could not be loaded",
+      "settings": {
+        "title": "Rate settings",
+        "hint": "Rates are refreshed every morning, India time.",
+        "provider": "Rate provider",
+        "providerHint": "Takes effect at the next daily refresh.",
+        "environment": "The environment's default",
+        "markup": "Markup when converting (%)",
+        "markupHint": "Added to converted prices to cover movement between quote and payment.",
+        "saved": "Rate settings saved",
+        "save": "Save settings"
+      },
+      "providers": {
+        "static": "Fixed development rates",
+        "frankfurter": "Frankfurter (European Central Bank)",
+        "openexchangerates": "Open Exchange Rates"
+      },
+      "overrides": {
+        "title": "Rates set by hand",
+        "hint": "A manual rate replaces the provider's for that pair until it expires or is removed. Every change is audited.",
+        "add": "Set a rate",
+        "addTitle": "Set a rate by hand",
+        "empty": "No manual rates",
+        "active": "In force",
+        "removed": "Removed",
+        "expired": "Expired",
+        "until": "until {when}",
+        "remove": "Remove",
+        "removeTitle": "Stop using this rate?",
+        "removeBody": "The provider's rate will apply again straight away. Quotes already made keep their rate.",
+        "removedDone": "Manual rate removed",
+        "base": "From",
+        "quote": "To",
+        "rate": "Rate",
+        "rateHint": "How many units of the second currency one unit of the first buys",
+        "reason": "Reason",
+        "reasonHint": "Shown in the audit log",
+        "submit": "Set rate",
+        "saved": "Manual rate set"
+      }
+    }
   }
 }

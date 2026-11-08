@@ -108,6 +108,20 @@ const DOMAINS: { title: string; blurb: string; models: string[] }[] = [
     models: ['OpinionRequest', 'Opinion', 'Quote', 'QuoteLine'],
   },
   {
+    title: 'Pricing rules',
+    blurb:
+      'What we charge (AD-05). A price change adds a `PriceItemVersion` and never edits an old one; a quote copies its price onto its lines, so later versions do not touch it. A manual `FxOverride` wins over the provider rate while it is in force.',
+    models: [
+      'PriceItem',
+      'PriceItemVersion',
+      'PriceItemPrice',
+      'MarginRule',
+      'DiscountThreshold',
+      'FxSetting',
+      'FxOverride',
+    ],
+  },
+  {
     title: 'Money',
     blurb: 'Invoices, payments, refunds. Amounts are integer minor units next to a currency code.',
     models: ['Invoice', 'InvoiceLine', 'CreditNote', 'Payment', 'Refund'],
