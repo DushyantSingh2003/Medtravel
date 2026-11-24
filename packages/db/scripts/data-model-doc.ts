@@ -128,6 +128,12 @@ const DOMAINS: { title: string; blurb: string; models: string[] }[] = [
     models: ['PartnerChangeRequest'],
   },
   {
+    title: 'Leads',
+    blurb:
+      'How an enquiry arrived (C-01). A `Lead` keeps the source, campaign and what was submitted; its `Case` is the work item. A repeat contact is attached to the existing patient and both leads are flagged; a merged patient is soft-deleted with `mergedIntoId` pointing at the survivor.',
+    models: ['Lead'],
+  },
+  {
     title: 'Money',
     blurb: 'Invoices, payments, refunds. Amounts are integer minor units next to a currency code.',
     models: ['Invoice', 'InvoiceLine', 'CreditNote', 'Payment', 'Refund'],

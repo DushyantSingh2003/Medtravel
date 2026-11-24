@@ -789,6 +789,7 @@ model User {
   priceVersionsCreated      PriceItemVersion[]       @relation("PriceItemVersionCreatedBy")
   changeRequestsSubmitted   PartnerChangeRequest[]   @relation("ChangeRequestSubmittedBy")
   changeRequestsDecided     PartnerChangeRequest[]   @relation("ChangeRequestDecidedBy")
+  leadsCreated              Lead[]                   @relation("LeadCreatedBy")
   accreditationsVerified    Accreditation[]          @relation("AccreditationVerifiedBy")
   marginRulesUpdated        MarginRule[]             @relation("MarginRuleUpdatedBy")
   discountThresholdsUpdated DiscountThreshold[]      @relation("DiscountThresholdUpdatedBy")
@@ -981,6 +982,12 @@ model Patient {
   address                  String?                  @db.Text
   preferredLanguage        String                   @default("en") @db.VarChar(8)
   anonymizedAt             DateTime?                @db.Timestamptz(3)
+  mergedIntoId             String?                  @db.Uuid
+  mergedInto               Patient?                 @relation("PatientMerge", fields: [mergedIntoId], references: [id], onDelete: SetNull)
+  mergedFrom               Patient[]                @relation("PatientMerge")
+  mergedAt                 DateTime?                @db.Timestamptz(3)
+  leads                    Lead[]                   @relation("LeadPatient")
+  leadDuplicates           Lead[]                   @relation("LeadDuplicateOf")
   emergencyContactName     String?
   emergencyContactPhone    String?                  @db.VarChar(20)
   emergencyContactRelation String?
@@ -1009,6 +1016,7 @@ model Patient {
   @@index([searchVector], type: Gin)
   @@index([nationalityCode])
   @@index([countryOfResidenceCode])
+  @@index([mergedIntoId])
 }
 
 /// A family member travelling with the patient.
@@ -1131,6 +1139,7 @@ model Case {
   medicalSummaries   MedicalSummary[]
   documents          Document[]
   caseIntake         CaseIntake?
+  lead               Lead?
   caseNotes          CaseNote[]
   admissions         Admission[]
   opinionRequests    OpinionRequest[]
@@ -2679,4 +2688,49 @@ model PartnerChangeRequest {
   @@index([packageId])
   @@index([submittedById])
   @@index([decidedById])
+}
+
+/// Where a lead stands on being a duplicate of someone we already know.
+enum DuplicateState {
+  none
+  possible
+  dismissed
+  merged
+}
+
+/// One enquiry as it arrived, from any source. The case is the work item; the lead keeps how it got here and what was submitted.
+/// Personal data: never logged.
+model Lead {
+  id                   String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  source               CaseSource
+  utmSource            String?
+  utmMedium            String?
+  utmCampaign          String?
+  referrer             String?
+  agentCode            String?
+  language             String?        @db.VarChar(8)
+  message              String?        @db.Text
+  submittedName        String
+  submittedEmail       String?
+  submittedPhone       String?        @db.VarChar(20)
+  submittedPassport    String?        @db.VarChar(32)
+  matchedOn            String[]
+  duplicateState       DuplicateState @default(none)
+  duplicateOfPatientId String?        @db.Uuid
+  duplicateOfPatient   Patient?       @relation("LeadDuplicateOf", fields: [duplicateOfPatientId], references: [id], onDelete: SetNull)
+  patientId            String         @db.Uuid
+  patient              Patient        @relation("LeadPatient", fields: [patientId], references: [id], onDelete: Restrict)
+  caseId               String         @unique @db.Uuid
+  case                 Case           @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  createdById          String?        @db.Uuid
+  createdBy            User?          @relation("LeadCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt            DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime       @updatedAt @db.Timestamptz(3)
+  deletedAt            DateTime?      @db.Timestamptz(3)
+
+  @@index([duplicateState, createdAt])
+  @@index([patientId])
+  @@index([duplicateOfPatientId])
+  @@index([createdById])
+  @@index([source, createdAt])
 }

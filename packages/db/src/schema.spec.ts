@@ -95,6 +95,7 @@ describe('schema.prisma enums', () => {
           'identifier',
           'notificationEventKey',
           'preferenceChannel',
+          'matchField',
         ].includes(base)
       )
         continue;

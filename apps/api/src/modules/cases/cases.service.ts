@@ -30,6 +30,24 @@ import { CASE_SELECT, toCaseView, type CaseRow } from './case-view.js';
 import { CaseStageService } from './case-stage.service.js';
 import { StageConfigService } from './stage-config.service.js';
 
+/** What opening a case needs; the optional parts are left out of the record when null. */
+export interface OpenEnquiry {
+  patientId: string;
+  source: CaseSource;
+  urgency?: CreateCase['urgency'] | undefined;
+  ownerId: string | null;
+  agentId: string | null;
+  /** Who is acting, or null for a public submission nobody is signed in for. */
+  actorUserId: string | null;
+  treatmentId?: string | null;
+  countryCode?: string | null;
+  preferredCityId?: string | null;
+  preferredLanguage?: string | null;
+  campaign?: string | null;
+  budget?: CreateCase['budget'] | null;
+  note?: string | null;
+}
+
 /** First answer to a new enquiry is due this soon (PRD section 3). */
 const FIRST_RESPONSE_MINUTES = 15;
 
@@ -157,8 +175,83 @@ export class CasesService {
     ).id;
   }
 
-  async create(actor: Actor, input: CreateCase, context: RequestContext): Promise<CaseView> {
+  /**
+   * Opens a case in stage `enquiry` for a patient: the number, first-response and SLA due times, stage history, automatic tasks, audit,
+   * outbox event and realtime push. Every way a case begins (staff, a patient, an agency, a lead) comes through here, inside the
+   * caller's transaction.
+   */
+  async openEnquiry(
+    tx: Db,
+    input: OpenEnquiry,
+    context: RequestContext,
+  ): Promise<{ id: string; caseNo: string }> {
     const now = new Date();
+    const enquiry = await this.config.get(tx, 'enquiry');
+    const caseNo = await this.nextCaseNo(tx, now);
+    const created = await tx.case.create({
+      data: {
+        caseNo,
+        patientId: input.patientId,
+        urgency: input.urgency ?? 'routine',
+        source: input.source,
+        ...(input.treatmentId ? { treatmentId: input.treatmentId } : {}),
+        ...(input.countryCode ? { countryCode: input.countryCode } : {}),
+        ...(input.preferredCityId ? { preferredCityId: input.preferredCityId } : {}),
+        ...(input.preferredLanguage ? { preferredLanguage: input.preferredLanguage } : {}),
+        ...(input.campaign ? { campaign: input.campaign } : {}),
+        ...(input.budget
+          ? {
+              budgetMinor: BigInt(input.budget.amountMinor),
+              budgetCurrency: input.budget.currency,
+            }
+          : {}),
+        ...(input.ownerId ? { ownerId: input.ownerId } : {}),
+        ...(input.agentId ? { agentId: input.agentId } : {}),
+        stageEnteredAt: now,
+        firstResponseDueAt: new Date(now.getTime() + FIRST_RESPONSE_MINUTES * 60_000),
+        slaDueAt: enquiry.targetMinutes
+          ? new Date(now.getTime() + enquiry.targetMinutes * 60_000)
+          : null,
+      },
+      select: { id: true, ownerId: true },
+    });
+    await tx.caseStageHistory.create({
+      data: { caseId: created.id, fromStage: null, toStage: 'enquiry', actorId: input.actorUserId },
+    });
+    if (input.note && input.actorUserId)
+      await tx.caseNote.create({
+        data: { caseId: created.id, body: input.note, authorId: input.actorUserId },
+      });
+    await this.stages.createAutoTasks(
+      tx,
+      created.id,
+      'enquiry',
+      created.ownerId,
+      input.actorUserId,
+      now,
+    );
+    await this.audit.record(tx, context, {
+      action: 'case.created',
+      entityType: 'Case',
+      entityId: created.id,
+      patientId: input.patientId,
+      after: { caseNo, stage: 'enquiry', status: 'new', source: input.source },
+    });
+    await this.outbox.publish(tx, {
+      type: 'case.created',
+      aggregateType: 'Case',
+      aggregateId: created.id,
+      payload: { caseId: created.id, caseNo, patientId: input.patientId },
+    });
+    await enqueueRealtime(tx, {
+      room: roomOf.case(created.id),
+      event: 'case.updated',
+      payload: { caseId: created.id, fields: ['stage'] },
+    });
+    return { id: created.id, caseNo };
+  }
+
+  async create(actor: Actor, input: CreateCase, context: RequestContext): Promise<CaseView> {
     const id = await this.prisma.$transaction(async (tx) => {
       await this.assertReferences(tx, input);
       const patientId = await this.patientFor(tx, actor, input);
@@ -171,67 +264,24 @@ export class CasesService {
           : null;
       if (actor.role === 'agent' && !agent)
         throw new ForbiddenException('No agency is linked to your account');
-      const enquiry = await this.config.get(tx, 'enquiry');
-      const caseNo = await this.nextCaseNo(tx, now);
-      const created = await tx.case.create({
-        data: {
-          caseNo,
-          patientId,
-          urgency: input.urgency,
-          source: this.sourceFor(actor, input),
-          ...(input.treatmentId ? { treatmentId: input.treatmentId } : {}),
-          ...(input.countryCode ? { countryCode: input.countryCode } : {}),
-          ...(input.preferredCityId ? { preferredCityId: input.preferredCityId } : {}),
-          ...(input.preferredLanguage ? { preferredLanguage: input.preferredLanguage } : {}),
-          ...(input.budget
-            ? {
-                budgetMinor: BigInt(input.budget.amountMinor),
-                budgetCurrency: input.budget.currency,
-              }
-            : {}),
-          ...(actor.role === 'case_manager' ? { ownerId: actor.userId } : {}),
-          ...(agent ? { agentId: agent.agentId } : {}),
-          stageEnteredAt: now,
-          firstResponseDueAt: new Date(now.getTime() + FIRST_RESPONSE_MINUTES * 60_000),
-          slaDueAt: enquiry.targetMinutes
-            ? new Date(now.getTime() + enquiry.targetMinutes * 60_000)
-            : null,
-        },
-        select: { id: true, ownerId: true },
-      });
-      await tx.caseStageHistory.create({
-        data: { caseId: created.id, fromStage: null, toStage: 'enquiry', actorId: actor.userId },
-      });
-      if (input.note)
-        await tx.caseNote.create({
-          data: { caseId: created.id, body: input.note, authorId: actor.userId },
-        });
-      await this.stages.createAutoTasks(
+      const created = await this.openEnquiry(
         tx,
-        created.id,
-        'enquiry',
-        created.ownerId,
-        actor.userId,
-        now,
+        {
+          patientId,
+          source: this.sourceFor(actor, input),
+          urgency: input.urgency,
+          ownerId: actor.role === 'case_manager' ? actor.userId : null,
+          agentId: agent?.agentId ?? null,
+          actorUserId: actor.userId,
+          treatmentId: input.treatmentId ?? null,
+          countryCode: input.countryCode ?? null,
+          preferredCityId: input.preferredCityId ?? null,
+          preferredLanguage: input.preferredLanguage ?? null,
+          budget: input.budget ?? null,
+          note: input.note ?? null,
+        },
+        context,
       );
-      await this.audit.record(tx, context, {
-        action: 'case.created',
-        entityType: 'Case',
-        entityId: created.id,
-        patientId,
-        after: { caseNo, stage: 'enquiry', status: 'new', source: input.source ?? null },
-      });
-      await this.outbox.publish(tx, {
-        type: 'case.created',
-        aggregateType: 'Case',
-        aggregateId: created.id,
-        payload: { caseId: created.id, caseNo, patientId },
-      });
-      await enqueueRealtime(tx, {
-        room: roomOf.case(created.id),
-        event: 'case.updated',
-        payload: { caseId: created.id, fields: ['stage'] },
-      });
       return created.id;
     });
     return this.stages.view(actor, id);

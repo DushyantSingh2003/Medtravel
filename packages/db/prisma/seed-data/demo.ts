@@ -1055,6 +1055,48 @@ async function seedPartnerReview(prisma: PrismaClient, hospitalIds: string[]): P
     });
 }
 
+/**
+ * Gives the newest demo cases an inbox entry, so the lead inbox has something in it. Where a patient has two of them, both are
+ * flagged as a repeat enquiry, which is what the duplicate banner shows. Cases that already have a lead are left alone.
+ */
+async function seedLeads(prisma: PrismaClient): Promise<void> {
+  const cases = await prisma.case.findMany({
+    where: { deletedAt: null, lead: null },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    take: 12,
+    select: {
+      id: true,
+      source: true,
+      campaign: true,
+      createdAt: true,
+      preferredLanguage: true,
+      patientId: true,
+      patient: { select: { fullName: true, phone: true, email: true } },
+    },
+  });
+  const perPatient = new Map<string, number>();
+  for (const c of cases) perPatient.set(c.patientId, (perPatient.get(c.patientId) ?? 0) + 1);
+  for (const c of cases) {
+    const repeat = (perPatient.get(c.patientId) ?? 0) > 1;
+    await prisma.lead.create({
+      data: {
+        source: c.source,
+        submittedName: c.patient.fullName,
+        submittedPhone: c.patient.phone,
+        submittedEmail: c.patient.email,
+        utmCampaign: c.campaign,
+        language: c.preferredLanguage,
+        message: 'Looking for a quote and the earliest available date (demo).',
+        matchedOn: repeat ? ['phone'] : [],
+        duplicateState: repeat ? 'possible' : 'none',
+        patientId: c.patientId,
+        caseId: c.id,
+        createdAt: c.createdAt,
+      },
+    });
+  }
+}
+
 export async function seedDemoData(
   prisma: PrismaClient,
 ): Promise<{ cases: number; hospitals: number }> {
@@ -1071,5 +1113,6 @@ export async function seedDemoData(
   await linkDevStaff(prisma, hosp, ref);
   await seedTeam(prisma);
   const cases = await seedCases(prisma, ref, hosp, agentIds);
+  await seedLeads(prisma);
   return { cases, hospitals: hosp.hospitalIds.length };
 }
