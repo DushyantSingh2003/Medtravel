@@ -69,6 +69,7 @@ describe('loadEnv', () => {
       NOTIFICATION_WEBHOOK_SECRET: 'a-real-webhook-secret',
       WHATSAPP_VERIFY_TOKEN: 'a-real-verify-token-1',
       METRICS_TOKEN: 'a-real-metrics-token-0123456789abcdef',
+      TURNSTILE_SECRET_KEY: 'a-real-turnstile-secret-key',
     };
     expect(loadEnv(production as NodeJS.ProcessEnv).NODE_ENV).toBe('production');
     expect(() =>
@@ -76,6 +77,9 @@ describe('loadEnv', () => {
     ).toThrow(/EMAIL_TRANSPORT/);
     const { METRICS_TOKEN: _omitted, ...withoutMetricsToken } = production;
     expect(() => loadEnv(withoutMetricsToken as NodeJS.ProcessEnv)).toThrow(/METRICS_TOKEN/);
+    // The public enquiry form must not go live without its bot check.
+    const { TURNSTILE_SECRET_KEY: _turnstile, ...withoutTurnstile } = production;
+    expect(() => loadEnv(withoutTurnstile as NodeJS.ProcessEnv)).toThrow(/TURNSTILE_SECRET_KEY/);
     expect(() => loadEnv({ ...production, TRUST_PROXY_HOPS: '0' } as NodeJS.ProcessEnv)).toThrow(
       /TRUST_PROXY_HOPS/,
     );

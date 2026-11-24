@@ -59,6 +59,7 @@ env_args=(
   -e WEB_REVALIDATE_URL=http://web.invalid/api/revalidate
   -e "WEB_REVALIDATE_SECRET=$(openssl rand -hex 16)"
   -e "METRICS_TOKEN=$(openssl rand -hex 24)"
+  -e "TURNSTILE_SECRET_KEY=$(openssl rand -hex 16)"
 )
 docker run -d --name "$name" --network host "${env_args[@]}" "$image" > /dev/null
 

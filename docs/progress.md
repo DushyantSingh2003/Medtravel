@@ -4,7 +4,7 @@ Tick a task here when it is finished and `pnpm check` is green. The task queue t
 build loop is `loop/cloud-state.json`; this file is the human-readable view and also records
 what each task deferred.
 
-Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12, AD-01, AD-02, AD-05.
+Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12, AD-01, AD-02, AD-05, C-01.
 
 ### Phase 0 — Scaffold (week 1)
 
@@ -32,7 +32,7 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12, AD-01, AD-02, AD-05.
 
 ### Phase 1B — Coordinator CRM (weeks 5–7)
 
-- [ ] **C-01** Lead capture and duplicate detection
+- [x] **C-01** Lead capture and duplicate detection
 - [ ] **C-02** Auto-assignment and SLA timers
 - [ ] **C-03** Lead inbox and case pipeline
 - [ ] **C-04** Case 360 view
@@ -165,6 +165,22 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12, AD-01, AD-02, AD-05.
 - [ ] **G-08** Advanced analytics
 
 ## Notes and deferred work
+
+### Deferred from C-01
+
+- **No website form or inbound listeners yet.** `POST /public/leads` and `LeadIntakeService.intake` exist; the quote form (W-xx), the
+  WhatsApp and email listeners and the agent referral link must call them. Set `TURNSTILE_SECRET_KEY` (API) and the site key (website).
+- **No acknowledgement to the person.** Nothing consumes `lead.created` or `case.created` yet. When something emails or messages the
+  enquirer, send it to the submitted contact, not to the matched patient's: an attacker can attach an enquiry to someone else's record.
+- **Auto-assignment is C-02.** Until then a public lead is unassigned and any case manager can take it (first one wins).
+- **Patient-record visibility.** A coordinator who takes a lead that was attached to an established patient gains that patient through
+  the case. A match outside a coordinator's own view is kept as a flagged hint for a manager, never attached.
+- **Duplicate matching is exact on phone, email and passport.** The name hint scans a few hundred patients by name stem without an
+  index; add a trigram index if the patient table grows large. The in-memory address limiter is per server: the per-contact limit
+  (5 an hour per phone or email) is the one that holds across servers.
+- **Possible races.** A merge deadlocking with an intake at the same moment would surface as a 500 (retry on 40P01 not added).
+  Turnstile is required in production only; its `hostname` and `action` are not checked.
+- **Passport numbers** are captured by staff entry only; the public form does not ask.
 
 ### Deferred from AD-02
 

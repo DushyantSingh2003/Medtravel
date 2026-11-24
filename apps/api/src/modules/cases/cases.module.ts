@@ -7,6 +7,6 @@ import { StageConfigService } from './stage-config.service.js';
 @Module({
   controllers: [CasesController],
   providers: [CasesService, CaseStageService, StageConfigService],
-  exports: [CaseStageService],
+  exports: [CaseStageService, CasesService],
 })
 export class CasesModule {}

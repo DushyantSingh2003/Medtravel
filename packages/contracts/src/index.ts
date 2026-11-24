@@ -21,4 +21,5 @@ export * from './time.js';
 export * from './users.js';
 export * from './pricing.js';
 export * from './partners.js';
+export * from './leads.js';
 export * from './translated.js';

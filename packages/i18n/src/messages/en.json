@@ -2054,5 +2054,106 @@
       "hours": "{hours} h",
       "answered": "{answered} of {requests} answered"
     }
+  },
+  "leads": {
+    "title": "Lead inbox",
+    "description": "Every lead from the website, WhatsApp, calls, agents and email, with source and duplicate detection.",
+    "retry": "Try again",
+    "close": "Close",
+    "cancel": "Cancel",
+    "required": "required",
+    "open": "Open",
+    "previous": "Previous",
+    "next": "Next",
+    "unassigned": "Unassigned",
+    "list": {
+      "title": "Leads",
+      "failed": "The leads could not be loaded",
+      "empty": "No leads yet",
+      "emptyHint": "New enquiries from every source appear here.",
+      "total": "{count, plural, one {# lead} other {# leads}}"
+    },
+    "filters": {
+      "search": "Search by name, phone, email or case number",
+      "source": "Source",
+      "duplicate": "Duplicates",
+      "all": "All"
+    },
+    "sources": {
+      "website": "Website",
+      "whatsapp": "WhatsApp",
+      "phone": "Phone call",
+      "email": "Email",
+      "agent": "Agent",
+      "referral": "Referral",
+      "walk_in": "Walk-in",
+      "other": "Other"
+    },
+    "duplicate": {
+      "none": "Not a duplicate",
+      "possible": "Possible duplicate",
+      "dismissed": "Marked as not a duplicate",
+      "merged": "Merged"
+    },
+    "new": {
+      "open": "New lead",
+      "title": "Enter a lead",
+      "source": "Where it came from",
+      "name": "Name",
+      "phone": "Phone",
+      "phoneHint": "International format, such as +971501234567",
+      "email": "Email",
+      "passport": "Passport number",
+      "passportHint": "Optional; helps find the person if we already know them",
+      "message": "What they asked",
+      "submit": "Create lead",
+      "created": "Lead created: {caseNo}",
+      "attached": "Added to a patient we already know: flagged as a repeat enquiry",
+      "failed": "The lead could not be created"
+    },
+    "detail": {
+      "title": "Lead",
+      "failed": "The lead could not be loaded",
+      "actionFailed": "That did not work",
+      "source": "Source",
+      "phone": "Phone",
+      "email": "Email",
+      "country": "Country",
+      "language": "Language",
+      "campaign": "Campaign",
+      "utmSource": "Campaign source",
+      "utmMedium": "Campaign medium",
+      "referrer": "Came from",
+      "agentCode": "Agent code",
+      "received": "Received",
+      "message": "Their message",
+      "otherEnquiries": "Other enquiries from the same patient",
+      "claim": "Take this lead",
+      "claimed": "The lead is yours",
+      "openCase": "Open the case"
+    },
+    "banner": {
+      "title": "Possible duplicate",
+      "matched": "Matched on: {fields}.",
+      "other": "This may be the same person as {name}, who has {count, plural, one {# enquiry} other {# enquiries}}.",
+      "same": "This person is already on file with {count, plural, one {# other enquiry} other {# other enquiries}}.",
+      "mergeOther": "Merge into {name}",
+      "mergeThis": "Keep this record instead",
+      "dismiss": "Not a duplicate",
+      "dismissed": "Marked as not a duplicate",
+      "restricted": "This matches a record you cannot see. Ask a manager to look at it."
+    },
+    "matchFields": {
+      "phone": "phone number",
+      "email": "email address",
+      "passport": "passport number",
+      "name": "similar name"
+    },
+    "merge": {
+      "title": "Merge the two patient records?",
+      "body": "All cases, documents and consents move to the record you keep, and the other record is retired. This is written to the audit log and cannot be undone here.",
+      "confirm": "Merge",
+      "done": "Records merged"
+    }
   }
 }

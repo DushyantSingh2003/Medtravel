@@ -32,6 +32,8 @@ export const envSchema = z
     REDIS_URL: urlString('REDIS_URL must be a Redis connection string'),
     /** Error reporting. Without a DSN nothing is sent. */
     // An empty value (a copied .env.example, an unset compose variable) means "off".
+    /** Cloudflare Turnstile secret for the public enquiry form. Unset in development and tests: any token is accepted. */
+    TURNSTILE_SECRET_KEY: z.preprocess((value) => (value === '' ? undefined : value), z.string().min(10).optional()),
     SENTRY_DSN: z.preprocess((value) => (value === '' ? undefined : value), z.url().optional()),
     SENTRY_ENVIRONMENT: z.string().min(1).optional(),
     /** The release (commit) the running build came from; tags every report. */
@@ -110,6 +112,11 @@ export const envSchema = z
         );
       if (env.S3_ACCESS_KEY === DEV_S3_ACCESS_KEY || env.S3_SECRET_KEY === DEV_S3_SECRET_KEY)
         issue('S3_SECRET_KEY', 'Set real S3_ACCESS_KEY and S3_SECRET_KEY in production');
+      if (!env.TURNSTILE_SECRET_KEY)
+        issue(
+          'TURNSTILE_SECRET_KEY',
+          'Set TURNSTILE_SECRET_KEY so the public enquiry form is protected from bots in production',
+        );
       if (!env.METRICS_TOKEN)
         issue(
           'METRICS_TOKEN',

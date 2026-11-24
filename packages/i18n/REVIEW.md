@@ -82,3 +82,9 @@ markup, and the wording of the manual-rate explanation. Add-on and package names
 The whole `partners.*` namespace (review queue, diff table, approve and reject, hospital management, agreement, accreditation
 verification, publishing and the partner health view) is machine-drafted Arabic. Worth a native reader: the plural forms for requests,
 hospitals and days, "عمولة الإحالة" for the referral fee, and "موثّق" for a verified accreditation.
+
+## C-01 (lead capture and duplicate detection)
+
+The whole `leads.*` namespace (inbox, new-lead dialog, lead detail, the possible-duplicate banner, merge confirmation and the source
+and match-field names) is machine-drafted Arabic. Worth a native reader: "قد يكون مكررًا" for a possible duplicate, "عميل محتمل" for
+lead, "غير مُسنَد" for unassigned, and the plural forms.
