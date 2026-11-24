@@ -2140,7 +2140,8 @@
       "mergeOther": "Merge into {name}",
       "mergeThis": "Keep this record instead",
       "dismiss": "Not a duplicate",
-      "dismissed": "Marked as not a duplicate"
+      "dismissed": "Marked as not a duplicate",
+      "restricted": "This matches a record you cannot see. Ask a manager to look at it."
     },
     "matchFields": {
       "phone": "phone number",

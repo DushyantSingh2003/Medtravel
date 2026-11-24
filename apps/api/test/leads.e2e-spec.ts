@@ -71,7 +71,7 @@ describe('the website form', () => {
 
   it('turns away a missing consent, a filled-in honeypot, no contact details, a bad phone and an unknown treatment', async () => {
     expect((await publicSubmit(form({ privacyAccepted: false }))).status).toBe(400);
-    expect((await publicSubmit(form({ companyWebsite: 'http://spam.example' }))).status).toBe(400);
+    expect((await publicSubmit(form({ language: 'klingon-xx' }))).status).toBe(400);
     expect((await publicSubmit(form({ phone: undefined, email: undefined }))).status).toBe(400);
     expect((await publicSubmit(form({ phone: '0501234567' }))).status).toBe(400);
     expect((await publicSubmit(form({ turnstileToken: undefined }))).status).toBe(400);
@@ -92,6 +92,35 @@ describe('the website form', () => {
     const ip = '10.9.9.9';
     const statuses: number[] = [];
     for (let i = 0; i < 6; i += 1) statuses.push((await publicSubmit(form(), ip)).status);
+    expect(statuses).toEqual([201, 201, 201, 201, 201, 429]);
+  });
+});
+
+describe('what a visitor cannot do', () => {
+  it('gets a convincing answer from the hidden field and nothing is saved', async () => {
+    const before = await t.db.lead.count();
+    const res = await publicSubmit(form({ companyWebsite: 'http://spam.example' }));
+    expect(res.status).toBe(201);
+    expect(Object.keys(res.body as object)).toEqual(['reference']);
+    expect(await t.db.lead.count()).toBe(before);
+  });
+
+  it('cannot write their own phone or email onto someone else’s record by quoting a detail of it', async () => {
+    const victim = await t.db.patient.create({ data: { fullName: 'Victim Person', phone: '+971509990001' } });
+    const res = await publicSubmit(form({ name: 'Attacker', phone: '+971 50 999 0001', email: 'attacker@evil.example', language: 'ar' }));
+    expect(res.status).toBe(201);
+    const after = await t.db.patient.findUniqueOrThrow({ where: { id: victim.id } });
+    expect(after.email).toBeNull();
+    expect(after.preferredLanguage).toBe('en');
+    // The enquiry is flagged for staff, with what was submitted kept on the lead only.
+    const lead = await t.db.lead.findFirstOrThrow({ where: { patientId: victim.id } });
+    expect(lead).toMatchObject({ duplicateState: 'possible', submittedEmail: 'attacker@evil.example' });
+  });
+
+  it('limits one phone number or email to five enquiries an hour, whichever address they come from', async () => {
+    const phone = '+971 50 123 9999';
+    const statuses: number[] = [];
+    for (let i = 0; i < 6; i += 1) statuses.push((await publicSubmit(form({ phone }))).status);
     expect(statuses).toEqual([201, 201, 201, 201, 201, 429]);
   });
 });
@@ -355,6 +384,52 @@ describe('merging two records of one person', () => {
       (await staff('super_admin', 'POST', '/leads', { source: 'phone', name: 'Unique Person Qwxz', phone: '+971 50 808 0808' })).body,
     );
     expect((await t.call('super_admin', 'POST', `/leads/${lone.leadId}/merge`, { keep: 'other' })).status).toBe(409);
+  });
+});
+
+describe('seeing only what your scope allows', () => {
+  it('does not attach a coordinator to a patient outside their view, and does not name that patient', async () => {
+    // A patient with a case owned by the other manager: outside the first manager's team.
+    const other = await t.db.user.findFirstOrThrow({ where: { email: { startsWith: 'cm-b-' } } });
+    const patient = await t.db.patient.create({ data: { fullName: 'Someone Elses Patient', phone: '+971507070707' } });
+    await t.db.case.create({ data: { caseNo: 'CASE-2026-770001', patientId: patient.id, ownerId: other.id } });
+    const res = await asManager(managerToken, 'POST', '/leads', { source: 'phone', name: 'Caller', phone: '+971 50 707 0707' });
+    expect(res.status).toBe(201);
+    const created = leadCreatedSchema.parse(res.body);
+    expect(created.attachedToExisting).toBe(false);
+    expect(created.patientId).not.toBe(patient.id);
+    // Flagged with the neutral reason "similar name", whatever really matched.
+    expect(created.matchedOn).toEqual(['name']);
+    // The lead is flagged for a manager, but the other patient's name is not shown to this coordinator.
+    const detail = leadDetailSchema.parse((await asManager(managerToken, 'GET', `/leads/${created.leadId}`)).body);
+    expect(detail.duplicateOf).toBeNull();
+    // A super admin sees it all, and can merge.
+    const admin = leadDetailSchema.parse((await t.call('super_admin', 'GET', `/leads/${created.leadId}`)).body);
+    expect(admin.duplicateOf?.name).toBe('Someone Elses Patient');
+    // The coordinator cannot merge into it.
+    expect((await asManager(managerToken, 'POST', `/leads/${created.leadId}/merge`, { keep: 'other' })).status).toBe(404);
+  });
+
+  it('does not let a coordinator merge away a patient that belongs to another team', async () => {
+    const other = await t.db.user.findFirstOrThrow({ where: { email: { startsWith: 'cm-b-' } } });
+    const theirs = await t.db.patient.create({ data: { fullName: 'Team B Patient', phone: '+971508080001' } });
+    await t.db.case.create({ data: { caseNo: 'CASE-2026-770002', patientId: theirs.id, ownerId: other.id } });
+    const mine = await t.db.patient.create({ data: { fullName: 'Team A Patient' } });
+    const caseA = await t.db.case.create({ data: { caseNo: 'CASE-2026-770003', patientId: theirs.id } });
+    const lead = await t.db.lead.create({
+      data: {
+        source: 'phone',
+        submittedName: 'Team B Patient',
+        matchedOn: ['name'],
+        duplicateState: 'possible',
+        patientId: theirs.id,
+        duplicateOfPatientId: mine.id,
+        caseId: caseA.id,
+      },
+    });
+    // The lead is unassigned, so the coordinator can see it, but not the patient behind it.
+    expect((await asManager(managerToken, 'POST', `/leads/${lead.id}/merge`, { keep: 'other' })).status).toBe(404);
+    expect((await t.db.patient.findUniqueOrThrow({ where: { id: theirs.id } })).deletedAt).toBeNull();
   });
 });
 

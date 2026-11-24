@@ -109,7 +109,11 @@ const leadFields = {
     .string()
     .regex(/^[A-Z]{2}$/)
     .optional(),
-  language: optional(8),
+  language: z
+    .string()
+    .trim()
+    .regex(/^[a-z]{2}(-[A-Z]{2})?$/, 'A language code such as en or ar')
+    .optional(),
   treatmentId: uuid.optional(),
   message: optional(5000),
   utmSource: optional(120),
@@ -134,8 +138,8 @@ export const publicLeadSchema = z
     privacyAccepted: z.literal(true, { error: 'Please accept the privacy notice' }),
     /** Cloudflare Turnstile's answer for this visitor. */
     turnstileToken: z.string().min(1).max(2048),
-    /** A field real visitors never see; a bot that fills it in is turned away. */
-    companyWebsite: z.string().max(0).optional(),
+    /** A field real visitors never see; a bot that fills it in gets a convincing answer and nothing is saved. */
+    companyWebsite: z.string().max(200).optional(),
   })
   .superRefine(contactable);
 export type PublicLead = z.infer<typeof publicLeadSchema>;

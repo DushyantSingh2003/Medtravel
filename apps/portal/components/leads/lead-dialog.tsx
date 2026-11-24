@@ -116,8 +116,10 @@ function LeadBody({ data }: { data: LeadDetailDto }) {
             <p className="text-sm">
               {t('banner.other', { name: data.duplicateOf.name, count: data.duplicateOf.enquiries })}
             </p>
-          ) : (
+          ) : data.otherEnquiries.length > 0 ? (
             <p className="text-sm">{t('banner.same', { count: data.otherEnquiries.length })}</p>
+          ) : (
+            <p className="text-sm">{t('banner.restricted')}</p>
           )}
           <div className="flex flex-wrap gap-2">
             {data.duplicateOf ? (

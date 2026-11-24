@@ -13,6 +13,7 @@ import {
   type MatchField,
 } from '@medtravel/contracts';
 import type { Actor } from '../../auth/actor.js';
+import { ScopeService } from '../../rbac/scope.service.js';
 import { AuditService } from '../../audit/audit.service.js';
 import type { RequestContext } from '../../common/request-context.js';
 import { PRISMA, type Db } from '../../database/database.module.js';
@@ -57,6 +58,7 @@ export class LeadIntakeService {
   constructor(
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     private readonly cases: CasesService,
+    private readonly scope: ScopeService,
     private readonly audit: AuditService,
     private readonly outbox: OutboxService,
   ) {}
@@ -88,7 +90,7 @@ export class LeadIntakeService {
     if (input.email)
       note(
         await db.patient.findMany({
-          where: { ...live, email: normaliseEmail(input.email) },
+          where: { ...live, email: { equals: normaliseEmail(input.email), mode: 'insensitive' } },
           select: { id: true },
           orderBy: { createdAt: 'asc' },
           take: 10,
@@ -147,6 +149,17 @@ export class LeadIntakeService {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`lead:${key}`}))`;
   }
 
+  /** How many enquiries used this phone number or email in the last hour: a limit that follows the person, not the address. */
+  async recentContactCount(input: Pick<LeadInput, 'phone' | 'email'>): Promise<number> {
+    const since = new Date(Date.now() - 3_600_000);
+    const contacts: Prisma.LeadWhereInput[] = [
+      ...(input.phone ? [{ submittedPhone: input.phone }] : []),
+      ...(input.email ? [{ submittedEmail: normaliseEmail(input.email) }] : []),
+    ];
+    if (contacts.length === 0) return 0;
+    return this.prisma.lead.count({ where: { createdAt: { gte: since }, OR: contacts } });
+  }
+
   async intake(
     input: LeadInput,
     actor: Actor | null,
@@ -176,9 +189,36 @@ export class LeadIntakeService {
           })
         : null;
 
-      const { strong, hint } = await this.findMatches(tx, input);
-      const primary = strong[0];
+      const found = await this.findMatches(tx, input);
+      // Staff may only be attached to a patient they are allowed to see: otherwise typing someone's phone number would open that
+      // patient's record to them. Anything outside their view is kept as a flagged hint for a manager instead.
+      let strong = found.strong;
+      let hint = found.hint;
+      if (actor && strong.length > 0 && actor.role !== 'super_admin') {
+        const patientWhere = await this.scope.patientWhere(actor);
+        const visible = new Set(
+          (
+            await tx.patient.findMany({
+              where: { AND: [{ id: { in: strong.map((m) => m.patientId) } }, patientWhere] },
+              select: { id: true },
+            })
+          ).map((p) => p.id),
+        );
+        const hidden = strong.filter((m) => !visible.has(m.patientId));
+        strong = strong.filter((m) => visible.has(m.patientId));
+        if (hidden[0] && !hint) hint = { patientId: hidden[0].patientId };
+      }
+      let primary = strong[0];
       const otherStrong = strong[1];
+      if (primary) {
+        // A merge that finished a moment ago may have retired this record: follow it to the survivor.
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`patient:${primary.patientId}`}))`;
+        const row = await tx.patient.findUniqueOrThrow({
+          where: { id: primary.patientId },
+          select: { mergedIntoId: true },
+        });
+        if (row.mergedIntoId) primary = { ...primary, patientId: row.mergedIntoId };
+      }
       let patientId: string;
       let duplicateOfPatientId: string | null = null;
       let duplicateState: DuplicateState = 'none';
@@ -190,7 +230,8 @@ export class LeadIntakeService {
         duplicateState = 'possible';
         // A second, different patient also matched: they may be one person on two records.
         duplicateOfPatientId = otherStrong?.patientId ?? null;
-        await this.fillBlanks(tx, patientId, input);
+        // Only what staff typed is trusted to complete a record; a visitor's details never overwrite or fill someone else's.
+        if (actor) await this.fillBlanks(tx, patientId, input);
       } else {
         const created = await tx.patient.create({
           data: {

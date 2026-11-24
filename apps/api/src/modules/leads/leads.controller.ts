@@ -1,4 +1,15 @@
-import { BadRequestException, Body, Controller, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpException,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiCookieAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Can, CurrentActor, Public, Throttle } from '../../auth/decorators.js';
 import type { Actor } from '../../auth/actor.js';
@@ -34,11 +45,16 @@ export class PublicLeadsController {
   @ApiOperation({ operationId: 'submitPublicLead', summary: 'Send an enquiry from the website form' })
   @ApiCreatedResponse({ type: PublicLeadReceivedDto })
   async submit(@Body() body: PublicLeadDto, @Ctx() context: RequestContext) {
+    // A bot that filled the hidden field is told it worked, so it learns nothing; nothing is saved.
+    if (body.companyWebsite) return { reference: 'CASE-0000-000000' };
     if (!(await this.turnstile.verify(body.turnstileToken, context.ip)))
       throw new BadRequestException({
         message: 'The security check failed. Please try again.',
         errors: [{ path: ['turnstileToken'], message: 'The security check failed. Please try again.' }],
       });
+    // The address limit is per server and easy to rotate; this one follows the phone number or email.
+    if ((await this.intake.recentContactCount(body)) >= 5)
+      throw new HttpException('Too many enquiries for these contact details. Please try later.', HttpStatus.TOO_MANY_REQUESTS);
     const { turnstileToken: _token, privacyAccepted: _accepted, companyWebsite: _trap, ...lead } = body;
     void _token;
     void _accepted;

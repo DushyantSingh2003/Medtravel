@@ -144,9 +144,12 @@ export class LeadsService {
       take: 20,
       select: { id: true, source: true, createdAt: true, case: { select: { id: true, caseNo: true } } },
     });
+    // The other record's name only goes to someone who may see that patient.
     const other = lead.duplicateOfPatientId
       ? await this.prisma.patient.findFirst({
-          where: { id: lead.duplicateOfPatientId, deletedAt: null },
+          where: {
+            AND: [{ id: lead.duplicateOfPatientId, deletedAt: null }, await this.scope.patientWhere(actor)],
+          },
           select: { id: true, fullName: true, _count: { select: { cases: { where: { deletedAt: null } } } } },
         })
       : null;
@@ -218,13 +221,12 @@ export class LeadsService {
         keep === 'other'
           ? [lead.patientId, lead.duplicateOfPatientId]
           : [lead.duplicateOfPatientId, lead.patientId];
-      // The lead's own patient is visible through the lead; the other record must be one this person may see, because a merge shows
-      // one record's history on the other.
+      // A merge shows one record's history on the other and retires one, so both must be records this person may see.
       const patientWhere = await this.scope.patientWhere(actor);
       const visible = await tx.patient.count({
-        where: { AND: [{ id: lead.duplicateOfPatientId }, patientWhere] },
+        where: { AND: [{ id: { in: [sourceId, targetId] } }, patientWhere] },
       });
-      if (visible !== 1) throw new NotFoundException('That patient record does not exist');
+      if (visible !== 2) throw new NotFoundException('That patient record does not exist');
       await this.merges.merge(tx, sourceId, targetId, context);
     });
     return this.get(actor, id).catch((error: unknown) => {

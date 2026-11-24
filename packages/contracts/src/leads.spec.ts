@@ -61,10 +61,12 @@ describe('lead schemas', () => {
     expect(createLeadSchema.safeParse({ ...base, phone: '0501234567', source: 'phone' }).success).toBe(false);
     expect(createLeadSchema.safeParse({ name: 'Asha Verma', email: 'asha@example.com', source: 'email' }).success).toBe(true);
   });
-  it('turns a filled-in honeypot or a missing consent away on the public form', () => {
+  it('turns a missing consent, token or contact away, and lets the controller handle a filled-in honeypot', () => {
     const form = { ...base, privacyAccepted: true, turnstileToken: 'token' };
     expect(publicLeadSchema.safeParse(form).success).toBe(true);
-    expect(publicLeadSchema.safeParse({ ...form, companyWebsite: 'http://spam' }).success).toBe(false);
+    // The hidden field is read by the controller, which answers a bot as if it had worked; the schema only bounds its size.
+    expect(publicLeadSchema.safeParse({ ...form, companyWebsite: 'http://spam' }).success).toBe(true);
+    expect(publicLeadSchema.safeParse({ ...form, language: 'klingon-xx' }).success).toBe(false);
     expect(publicLeadSchema.safeParse({ ...form, privacyAccepted: false }).success).toBe(false);
     expect(publicLeadSchema.safeParse({ ...form, turnstileToken: '' }).success).toBe(false);
   });
