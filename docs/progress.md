@@ -168,6 +168,8 @@ Tasks: 116 in the plan. Done: S-01 to S-06, F-01 to F-12, AD-01, AD-02, AD-05, C
 
 ### Deferred from C-01
 
+- **CI:** GitHub run 54 on `develop` ("loop: finish C-01") is green.
+
 - **No website form or inbound listeners yet.** `POST /public/leads` and `LeadIntakeService.intake` exist; the quote form (W-xx), the
   WhatsApp and email listeners and the agent referral link must call them. Set `TURNSTILE_SECRET_KEY` (API) and the site key (website).
 - **No acknowledgement to the person.** Nothing consumes `lead.created` or `case.created` yet. When something emails or messages the
