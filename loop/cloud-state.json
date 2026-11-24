@@ -169,10 +169,12 @@
       "note": "Partner approvals: review queue with diff, approve/reject, agreements and referral fee, accreditation verification, publish/unpublish with website refresh, partner health view; pnpm check, API/worker/db e2e and browser tests green"
     },
     "C-01": {
-      "status": "in-progress",
+      "status": "done",
       "attempts": 1,
       "claimedAt": "2026-11-24T09:59:21.781Z",
-      "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e"
+      "session": "d02f960a-0a67-5eb5-b37e-2ac8dc68944e",
+      "finishedAt": "2026-11-24T10:20:31.306Z",
+      "note": "Lead capture and duplicate detection: LeadIntakeService, public form endpoint with Turnstile, duplicate matching and patient merge, lead inbox; pnpm check, API/worker/db e2e and browser tests green"
     }
   },
   "approvals": [
@@ -222,6 +224,7 @@
     "2026-11-08T03:01:31.767Z claim AD-02 attempt 1",
     "2026-11-08T03:29:54.895Z finish AD-02 done",
     "2026-11-24T09:59:17.429Z approve C-01",
-    "2026-11-24T09:59:21.781Z claim C-01 attempt 1"
+    "2026-11-24T09:59:21.781Z claim C-01 attempt 1",
+    "2026-11-24T10:20:31.307Z finish C-01 done"
   ]
 }
